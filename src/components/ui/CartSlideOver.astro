@@ -1,0 +1,138 @@
+---
+import CartContent from '../islands/CartContent';
+// Este componente se renderiza en el servidor pero interactúa con el cliente via React Islands
+---
+
+<!-- Cart Slide Over Panel -->
+<div
+    id="cart-overlay"
+    class="fixed inset-0 z-50 hidden"
+    aria-labelledby="cart-title"
+    role="dialog"
+    aria-modal="true"
+>
+    <!-- Backdrop -->
+    <div
+        id="cart-backdrop"
+        class="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
+    >
+    </div>
+
+    <!-- Panel -->
+    <div class="absolute inset-y-0 right-0 flex max-w-full pl-10">
+        <div
+            id="cart-panel"
+            class="w-screen max-w-md transform transition-transform translate-x-full"
+        >
+            <div class="flex h-full flex-col bg-surface-primary shadow-strong">
+                <!-- Header -->
+                <div
+                    class="flex items-center justify-between px-6 py-5 border-b border-border-light"
+                >
+                    <h2
+                        id="cart-title"
+                        class="text-xl font-serif font-semibold text-brand-navy"
+                    >
+                        Tu Carrito
+                    </h2>
+                    <button
+                        id="close-cart-btn"
+                        class="p-2 text-text-muted hover:text-text-primary transition-colors rounded-lg hover:bg-surface-tertiary"
+                        aria-label="Cerrar carrito"
+                    >
+                        <svg
+                            class="w-5 h-5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Cart Content - Rendered by React -->
+                <div id="cart-content-root" class="flex-1 overflow-y-auto">
+                    <CartContent client:load />
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    import {
+        isCartOpen,
+        closeCart,
+        cartSubtotal,
+        cartItemsArray,
+    } from "../../stores/cart";
+
+    // Formatear precio
+    function formatPrice(cents: number): string {
+        return new Intl.NumberFormat("es-ES", {
+            style: "currency",
+            currency: "EUR",
+        }).format(cents / 100);
+    }
+
+    // Elementos del DOM
+    const overlay = document.getElementById("cart-overlay");
+    const backdrop = document.getElementById("cart-backdrop");
+    const panel = document.getElementById("cart-panel");
+    const closeBtn = document.getElementById("close-cart-btn");
+    const continueBtn = document.getElementById("continue-shopping-btn");
+    const footer = document.getElementById("cart-footer");
+    const subtotalEl = document.getElementById("cart-subtotal");
+
+    // Escuchar cambios en el estado del carrito
+    isCartOpen.subscribe((isOpen) => {
+        if (isOpen) {
+            overlay?.classList.remove("hidden");
+            document.body.style.overflow = "hidden";
+
+            // Animar entrada
+            requestAnimationFrame(() => {
+                panel?.classList.remove("translate-x-full");
+            });
+        } else {
+            panel?.classList.add("translate-x-full");
+            document.body.style.overflow = "";
+
+            // Ocultar después de la animación
+            setTimeout(() => {
+                overlay?.classList.add("hidden");
+            }, 300);
+        }
+    });
+
+    // Actualizar subtotal
+    cartSubtotal.subscribe((total) => {
+        if (subtotalEl) {
+            subtotalEl.textContent = formatPrice(total);
+        }
+    });
+
+    // Mostrar/ocultar footer según items
+    cartItemsArray.subscribe((items) => {
+        if (footer) {
+            footer.classList.toggle("hidden", items.length === 0);
+        }
+    });
+
+    // Event listeners
+    closeBtn?.addEventListener("click", closeCart);
+    backdrop?.addEventListener("click", closeCart);
+    continueBtn?.addEventListener("click", closeCart);
+
+    // Cerrar con Escape
+    document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && isCartOpen.get()) {
+            closeCart();
+        }
+    });
+</script>

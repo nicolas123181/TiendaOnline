@@ -1,0 +1,409 @@
+---
+import AdminLayout from "../../layouts/AdminLayout.astro";
+import { supabase } from "../../lib/supabase";
+
+export const prerender = false;
+
+// Obtener suscriptores activos
+const { data: subscribers, error } = await supabase
+    .from("newsletter_subscribers")
+    .select("*")
+    .eq("is_active", true)
+    .order("subscribed_at", { ascending: false });
+
+const subscriberCount = subscribers?.length || 0;
+---
+
+<AdminLayout title="Newsletter">
+    <div class="flex items-center justify-between mb-8">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Newsletter</h1>
+            <p class="text-gray-600 mt-1">
+                Envía noticias y ofertas a tus suscriptores
+            </p>
+        </div>
+        <a
+            href="/admin"
+            class="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-2"
+        >
+            <svg
+                class="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+            >
+                <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+            </svg>
+            Volver al Dashboard
+        </a>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+            <div class="flex items-center gap-4">
+                <div
+                    class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center"
+                >
+                    <svg
+                        class="w-6 h-6 text-green-600"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                        ></path>
+                    </svg>
+                </div>
+                <div>
+                    <p class="text-3xl font-bold text-gray-900">
+                        {subscriberCount}
+                    </p>
+                    <p class="text-sm text-gray-600">Suscriptores activos</p>
+                </div>
+            </div>
+        </div>
+        <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+            <div class="flex items-center gap-4">
+                <div
+                    class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center"
+                >
+                    <svg
+                        class="w-6 h-6 text-blue-600"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                        ></path>
+                    </svg>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-600">Último email</p>
+                    <p class="text-lg font-semibold text-gray-900">
+                        Nunca enviado
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+            <div class="flex items-center gap-4">
+                <div
+                    class="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center"
+                >
+                    <svg
+                        class="w-6 h-6 text-amber-600"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-600">Estado</p>
+                    <p class="text-lg font-semibold text-green-600">
+                        Listo para enviar
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Compose Newsletter -->
+    <div
+        class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-8"
+    >
+        <div class="p-6 border-b border-gray-100">
+            <h2
+                class="text-lg font-semibold text-gray-900 flex items-center gap-2"
+            >
+                <svg
+                    class="w-5 h-5 text-blue-600"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                >
+                    <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                    ></path>
+                </svg>
+                Redactar Newsletter
+            </h2>
+        </div>
+        <form id="newsletter-form" class="p-6">
+            <div class="space-y-6">
+                <div>
+                    <label
+                        for="subject"
+                        class="block text-sm font-medium text-gray-700 mb-2"
+                    >
+                        Asunto del email
+                    </label>
+                    <input
+                        type="text"
+                        id="subject"
+                        name="subject"
+                        placeholder="Ej: ¡Nuevas ofertas de temporada!"
+                        class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        required
+                    />
+                </div>
+                <div>
+                    <label
+                        for="preview"
+                        class="block text-sm font-medium text-gray-700 mb-2"
+                    >
+                        Texto de previsualización
+                        <span class="text-gray-400 font-normal">(opcional)</span
+                        >
+                    </label>
+                    <input
+                        type="text"
+                        id="preview"
+                        name="preview"
+                        placeholder="El texto que aparece junto al asunto en la bandeja de entrada"
+                        class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                </div>
+                <div>
+                    <label
+                        for="content"
+                        class="block text-sm font-medium text-gray-700 mb-2"
+                    >
+                        Contenido del newsletter
+                    </label>
+                    <textarea
+                        id="content"
+                        name="content"
+                        rows="10"
+                        placeholder="Escribe aquí el contenido de tu newsletter...
+
+Puedes incluir:
+• Información sobre nuevos productos
+• Ofertas y promociones
+• Noticias de la tienda
+• Consejos de moda"
+                        class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                        required></textarea>
+                </div>
+                <div class="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                    <div class="flex items-start gap-3">
+                        <svg
+                            class="w-5 h-5 text-amber-600 mt-0.5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                            ></path>
+                        </svg>
+                        <div>
+                            <p class="font-medium text-amber-800">
+                                Confirma antes de enviar
+                            </p>
+                            <p class="text-sm text-amber-700 mt-1">
+                                Este email se enviará a <strong
+                                    >{subscriberCount} suscriptores</strong
+                                >. Asegúrate de revisar el contenido antes de
+                                continuar.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-6 flex items-center gap-4">
+                <button
+                    type="submit"
+                    id="send-btn"
+                    class="px-8 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors flex items-center gap-2"
+                >
+                    <svg
+                        class="w-5 h-5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                    </svg>
+                    Enviar Newsletter
+                </button>
+                <span id="send-status" class="text-sm text-gray-500"></span>
+            </div>
+        </form>
+    </div>
+
+    <!-- Subscribers List -->
+    <div
+        class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
+    >
+        <div class="p-6 border-b border-gray-100">
+            <h2 class="text-lg font-semibold text-gray-900">
+                Lista de Suscriptores
+                <span class="text-sm font-normal text-gray-500"
+                    >({subscriberCount})</span
+                >
+            </h2>
+        </div>
+        {
+            subscriberCount === 0 ? (
+                <div class="p-12 text-center text-gray-500">
+                    <svg
+                        class="w-16 h-16 mx-auto text-gray-300 mb-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="1.5"
+                            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
+                        />
+                    </svg>
+                    <p class="font-medium text-gray-600">
+                        Aún no hay suscriptores
+                    </p>
+                    <p class="text-sm mt-1">
+                        Los clientes pueden suscribirse desde su perfil
+                    </p>
+                </div>
+            ) : (
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                                    Email
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                                    Nombre
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                                    Fecha de suscripción
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            {subscribers?.map((sub) => (
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-6 py-4 font-medium text-gray-900">
+                                        {sub.email}
+                                    </td>
+                                    <td class="px-6 py-4 text-gray-600">
+                                        {sub.name || "-"}
+                                    </td>
+                                    <td class="px-6 py-4 text-sm text-gray-500">
+                                        {new Date(
+                                            sub.subscribed_at,
+                                        ).toLocaleDateString("es-ES", {
+                                            day: "numeric",
+                                            month: "short",
+                                            year: "numeric",
+                                        })}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )
+        }
+    </div>
+</AdminLayout>
+
+<script>
+    document
+        .getElementById("newsletter-form")
+        ?.addEventListener("submit", async (e) => {
+            e.preventDefault();
+
+            const form = e.target as HTMLFormElement;
+            const sendBtn = document.getElementById(
+                "send-btn",
+            ) as HTMLButtonElement;
+            const statusEl = document.getElementById("send-status");
+
+            const subject = (form.querySelector("#subject") as HTMLInputElement)
+                .value;
+            const preview = (form.querySelector("#preview") as HTMLInputElement)
+                .value;
+            const content = (
+                form.querySelector("#content") as HTMLTextAreaElement
+            ).value;
+
+            if (
+                !confirm(
+                    `¿Estás seguro de enviar este newsletter?\n\nAsunto: ${subject}\n\nEsta acción no se puede deshacer.`,
+                )
+            ) {
+                return;
+            }
+
+            sendBtn.disabled = true;
+            sendBtn.innerHTML = `
+            <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Enviando...
+        `;
+            statusEl!.textContent = "";
+
+            try {
+                const response = await fetch("/api/admin/send-newsletter", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ subject, preview, content }),
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    statusEl!.textContent = `✅ Newsletter enviado a ${result.sentCount} suscriptores`;
+                    statusEl!.className = "text-sm text-green-600";
+                    form.reset();
+                } else {
+                    throw new Error(result.error || "Error al enviar");
+                }
+            } catch (error) {
+                statusEl!.textContent = `❌ ${(error as Error).message}`;
+                statusEl!.className = "text-sm text-red-600";
+            } finally {
+                sendBtn.disabled = false;
+                sendBtn.innerHTML = `
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                </svg>
+                Enviar Newsletter
+            `;
+            }
+        });
+</script>

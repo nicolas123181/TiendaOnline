@@ -1,0 +1,128 @@
+---
+import type { Product } from "../../lib/supabase";
+import { formatPrice } from "../../lib/utils";
+
+interface Props {
+    product: Product;
+}
+
+const { product } = Astro.props;
+
+const mainImage = product.images?.[0] || "/placeholder-product.jpg";
+
+// Calcular si está en oferta flash
+const isOnSale =
+    product.is_on_sale &&
+    product.sale_price &&
+    product.sale_price < product.price;
+const discountPercent = isOnSale
+    ? Math.round((1 - product.sale_price! / product.price) * 100)
+    : 0;
+
+// Stock
+const isOutOfStock = product.stock <= 0;
+const isLowStock = product.stock > 0 && product.stock <= 5;
+---
+
+<article class="group">
+    <!-- Image Container -->
+    <a
+        href={`/productos/${product.slug}`}
+        class="block aspect-[3/4] overflow-hidden bg-gray-100 relative"
+    >
+        <img
+            src={mainImage}
+            alt={product.name}
+            class="absolute inset-0 w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-700 ease-out"
+            loading="lazy"
+        />
+
+        <!-- Sale Badge - Minimal -->
+        {
+            isOnSale && (
+                <div class="absolute top-3 left-3">
+                    <span class="inline-block bg-red-600 text-white text-xs px-3 py-1.5 font-medium tracking-wide">
+                        -{discountPercent}%
+                    </span>
+                </div>
+            )
+        }
+
+        <!-- Stock Badges -->
+        {
+            isOutOfStock && (
+                <div class="absolute inset-0 bg-white/80 flex items-center justify-center">
+                    <span class="text-gray-900 text-sm tracking-widest uppercase">
+                        Agotado
+                    </span>
+                </div>
+            )
+        }
+
+        {
+            isLowStock && !isOutOfStock && (
+                <div class="absolute top-3 right-3">
+                    <span class="inline-block bg-amber-500 text-white text-xs px-2 py-1 font-medium">
+                        Últimas unidades
+                    </span>
+                </div>
+            )
+        }
+
+        <!-- Quick View on Hover -->
+        <div
+            class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300 flex items-end justify-center opacity-0 group-hover:opacity-100"
+        >
+            <span
+                class="mb-6 px-6 py-2 bg-white text-gray-900 text-xs tracking-widest uppercase transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300"
+            >
+                Vista Rápida
+            </span>
+        </div>
+    </a>
+
+    <!-- Info - Minimal -->
+    <div class="pt-4">
+        <!-- Category -->
+        {
+            product.category && (
+                <a
+                    href={`/categoria/${product.category.slug}`}
+                    class="text-xs text-gray-400 uppercase tracking-wider hover:text-gray-600 transition-colors"
+                >
+                    {product.category.name}
+                </a>
+            )
+        }
+
+        <!-- Name -->
+        <h3 class="mt-1">
+            <a
+                href={`/productos/${product.slug}`}
+                class="text-sm text-gray-900 hover:text-gray-600 transition-colors line-clamp-1"
+            >
+                {product.name}
+            </a>
+        </h3>
+
+        <!-- Price -->
+        <div class="mt-2 flex items-center gap-2">
+            {
+                isOnSale ? (
+                    <>
+                        <span class="text-sm font-medium text-red-600">
+                            {formatPrice(product.sale_price!)}
+                        </span>
+                        <span class="text-xs text-gray-400 line-through">
+                            {formatPrice(product.price)}
+                        </span>
+                    </>
+                ) : (
+                    <span class="text-sm text-gray-900">
+                        {formatPrice(product.price)}
+                    </span>
+                )
+            }
+        </div>
+    </div>
+</article>

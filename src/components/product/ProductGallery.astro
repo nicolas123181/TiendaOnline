@@ -1,0 +1,299 @@
+---
+interface Props {
+    images: string[];
+    productName: string;
+}
+
+const { images, productName } = Astro.props;
+
+// Si no hay imágenes, usar placeholder
+const galleryImages =
+    images?.length > 0 ? images : ["/placeholder-product.jpg"];
+---
+
+<div class="product-gallery">
+    <!-- Main Image -->
+    <div
+        class="relative aspect-[3/4] rounded-2xl overflow-hidden bg-surface-secondary mb-4"
+    >
+        <img
+            id="main-gallery-image"
+            src={galleryImages[0]}
+            alt={productName}
+            class="w-full h-full object-cover object-center transition-opacity duration-300"
+        />
+
+        <!-- Zoom Button -->
+        <button
+            id="zoom-btn"
+            class="absolute top-4 right-4 p-3 bg-surface-primary/90 backdrop-blur-sm rounded-xl shadow-soft hover:bg-surface-primary transition-colors"
+            aria-label="Ampliar imagen"
+        >
+            <svg
+                class="w-5 h-5 text-brand-navy"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+            >
+                <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"
+                ></path>
+            </svg>
+        </button>
+
+        <!-- Navigation Arrows (for mobile) -->
+        {
+            galleryImages.length > 1 && (
+                <>
+                    <button
+                        id="prev-image"
+                        class="absolute left-4 top-1/2 -translate-y-1/2 p-2 bg-surface-primary/90 backdrop-blur-sm rounded-full shadow-soft hover:bg-surface-primary transition-colors md:hidden"
+                        aria-label="Imagen anterior"
+                    >
+                        <svg
+                            class="w-5 h-5 text-brand-navy"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M15 19l-7-7 7-7"
+                            />
+                        </svg>
+                    </button>
+                    <button
+                        id="next-image"
+                        class="absolute right-4 top-1/2 -translate-y-1/2 p-2 bg-surface-primary/90 backdrop-blur-sm rounded-full shadow-soft hover:bg-surface-primary transition-colors md:hidden"
+                        aria-label="Siguiente imagen"
+                    >
+                        <svg
+                            class="w-5 h-5 text-brand-navy"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M9 5l7 7-7 7"
+                            />
+                        </svg>
+                    </button>
+                </>
+            )
+        }
+    </div>
+
+    <!-- Thumbnails -->
+    {
+        galleryImages.length > 1 && (
+            <div class="grid grid-cols-4 gap-3">
+                {galleryImages.map((image, index) => (
+                    <button
+                        class={`gallery-thumb aspect-square rounded-xl overflow-hidden border-2 transition-all ${
+                            index === 0
+                                ? "border-brand-navy"
+                                : "border-transparent hover:border-border-medium"
+                        }`}
+                        data-index={index}
+                        data-src={image}
+                    >
+                        <img
+                            src={image}
+                            alt={`${productName} - Vista ${index + 1}`}
+                            class="w-full h-full object-cover object-center"
+                            loading="lazy"
+                        />
+                    </button>
+                ))}
+            </div>
+        )
+    }
+</div>
+
+<!-- Lightbox Modal -->
+<div
+    id="lightbox-modal"
+    class="fixed inset-0 z-50 hidden items-center justify-center bg-black/95"
+    role="dialog"
+    aria-modal="true"
+>
+    <button
+        id="close-lightbox"
+        class="absolute top-6 right-6 p-3 text-white hover:text-gray-300 transition-colors"
+        aria-label="Cerrar"
+    >
+        <svg
+            class="w-8 h-8"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+        >
+            <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+    </button>
+
+    <img
+        id="lightbox-image"
+        src=""
+        alt=""
+        class="max-w-full max-h-[90vh] object-contain"
+    />
+
+    {
+        galleryImages.length > 1 && (
+            <>
+                <button
+                    id="lightbox-prev"
+                    class="absolute left-6 top-1/2 -translate-y-1/2 p-3 text-white hover:text-gray-300 transition-colors"
+                    aria-label="Imagen anterior"
+                >
+                    <svg
+                        class="w-10 h-10"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M15 19l-7-7 7-7"
+                        />
+                    </svg>
+                </button>
+                <button
+                    id="lightbox-next"
+                    class="absolute right-6 top-1/2 -translate-y-1/2 p-3 text-white hover:text-gray-300 transition-colors"
+                    aria-label="Siguiente imagen"
+                >
+                    <svg
+                        class="w-10 h-10"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M9 5l7 7-7 7"
+                        />
+                    </svg>
+                </button>
+            </>
+        )
+    }
+</div>
+
+<script define:vars={{ galleryImages }}>
+    let currentIndex = 0;
+    const images = galleryImages;
+
+    // Elements
+    const mainImage = document.getElementById("main-gallery-image");
+    const thumbs = document.querySelectorAll(".gallery-thumb");
+    const modal = document.getElementById("lightbox-modal");
+    const lightboxImage = document.getElementById("lightbox-image");
+    const zoomBtn = document.getElementById("zoom-btn");
+    const closeLightboxBtn = document.getElementById("close-lightbox");
+    const prevBtn = document.getElementById("prev-image");
+    const nextBtn = document.getElementById("next-image");
+    const lightboxPrev = document.getElementById("lightbox-prev");
+    const lightboxNext = document.getElementById("lightbox-next");
+
+    // Update main image
+    function updateMainImage(index) {
+        currentIndex = index;
+        if (mainImage) {
+            mainImage.style.opacity = "0";
+            setTimeout(() => {
+                mainImage.src = images[index];
+                mainImage.style.opacity = "1";
+            }, 150);
+        }
+
+        // Update thumb borders
+        thumbs.forEach((thumb, i) => {
+            thumb.classList.toggle("border-brand-navy", i === index);
+            thumb.classList.toggle("border-transparent", i !== index);
+        });
+    }
+
+    // Thumbnail clicks
+    thumbs.forEach((thumb) => {
+        thumb.addEventListener("click", () => {
+            const index = parseInt(thumb.dataset.index);
+            updateMainImage(index);
+        });
+    });
+
+    // Navigation
+    prevBtn?.addEventListener("click", () => {
+        const newIndex =
+            currentIndex > 0 ? currentIndex - 1 : images.length - 1;
+        updateMainImage(newIndex);
+    });
+
+    nextBtn?.addEventListener("click", () => {
+        const newIndex =
+            currentIndex < images.length - 1 ? currentIndex + 1 : 0;
+        updateMainImage(newIndex);
+    });
+
+    // Lightbox
+    function openLightbox() {
+        if (modal && lightboxImage) {
+            lightboxImage.src = images[currentIndex];
+            modal.classList.remove("hidden");
+            modal.classList.add("flex");
+            document.body.style.overflow = "hidden";
+        }
+    }
+
+    function closeLightbox() {
+        if (modal) {
+            modal.classList.add("hidden");
+            modal.classList.remove("flex");
+            document.body.style.overflow = "";
+        }
+    }
+
+    zoomBtn?.addEventListener("click", openLightbox);
+    closeLightboxBtn?.addEventListener("click", closeLightbox);
+    modal?.addEventListener("click", (e) => {
+        if (e.target === modal) closeLightbox();
+    });
+
+    lightboxPrev?.addEventListener("click", () => {
+        currentIndex = currentIndex > 0 ? currentIndex - 1 : images.length - 1;
+        if (lightboxImage) lightboxImage.src = images[currentIndex];
+        updateMainImage(currentIndex);
+    });
+
+    lightboxNext?.addEventListener("click", () => {
+        currentIndex = currentIndex < images.length - 1 ? currentIndex + 1 : 0;
+        if (lightboxImage) lightboxImage.src = images[currentIndex];
+        updateMainImage(currentIndex);
+    });
+
+    // Keyboard navigation
+    document.addEventListener("keydown", (e) => {
+        if (!modal?.classList.contains("hidden")) {
+            if (e.key === "Escape") closeLightbox();
+            if (e.key === "ArrowLeft") lightboxPrev?.click();
+            if (e.key === "ArrowRight") lightboxNext?.click();
+        }
+    });
+</script>

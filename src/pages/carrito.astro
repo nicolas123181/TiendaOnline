@@ -1,0 +1,177 @@
+---
+import PublicLayout from "../layouts/PublicLayout.astro";
+import CartContent from "../components/islands/CartContent";
+import Button from "../components/ui/Button.astro";
+
+// SSR - Esta página necesita renderizado en servidor
+export const prerender = false;
+---
+
+<PublicLayout
+    title="Tu Carrito"
+    description="Revisa tu carrito de compra y procede al checkout"
+>
+    <section class="py-12 lg:py-16">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <!-- Header -->
+            <div class="mb-10">
+                <nav
+                    class="flex items-center gap-2 text-sm text-text-muted mb-4"
+                >
+                    <a href="/" class="hover:text-brand-navy transition-colors"
+                        >Inicio</a
+                    >
+                    <span>/</span>
+                    <span class="text-text-primary">Carrito</span>
+                </nav>
+                <h1
+                    class="text-3xl lg:text-4xl font-serif font-bold text-brand-navy"
+                >
+                    Tu Carrito
+                </h1>
+            </div>
+
+            <!-- Cart Content -->
+            <div class="grid lg:grid-cols-3 gap-8">
+                <!-- Items -->
+                <div class="lg:col-span-2">
+                    <div id="cart-page-content">
+                        <CartContent client:load />
+                    </div>
+                </div>
+
+                <!-- Order Summary -->
+                <div class="lg:col-span-1">
+                    <div
+                        class="bg-surface-secondary rounded-2xl p-6 sticky top-24"
+                    >
+                        <h2 class="text-lg font-semibold text-brand-navy mb-6">
+                            Resumen del Pedido
+                        </h2>
+
+                        <div class="space-y-4 text-sm">
+                            <div class="flex justify-between">
+                                <span class="text-text-secondary">Subtotal</span
+                                >
+                                <span id="summary-subtotal" class="font-medium"
+                                    >0,00 €</span
+                                >
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-text-secondary">Envío</span>
+                                <span
+                                    id="summary-shipping"
+                                    class="font-medium text-status-success"
+                                    >Gratis</span
+                                >
+                            </div>
+                            <div class="flex justify-between text-text-muted">
+                                <span>Impuestos (incluidos)</span>
+                                <span id="summary-taxes">0,00 €</span>
+                            </div>
+
+                            <hr class="border-border-light my-4" />
+
+                            <div class="flex justify-between text-lg">
+                                <span class="font-semibold text-brand-navy"
+                                    >Total</span
+                                >
+                                <span
+                                    id="summary-total"
+                                    class="font-bold text-brand-navy"
+                                    >0,00 €</span
+                                >
+                            </div>
+                        </div>
+
+                        <Button
+                            href="/checkout"
+                            variant="primary"
+                            size="lg"
+                            fullWidth
+                            class="mt-6"
+                        >
+                            Proceder al Pago
+                        </Button>
+
+                        <p class="text-xs text-text-muted text-center mt-4">
+                            Pago seguro con encriptación SSL
+                        </p>
+
+                        <!-- Payment Methods -->
+                        <div
+                            class="flex items-center justify-center gap-3 mt-6 pt-6 border-t border-border-light"
+                        >
+                            <img
+                                src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/ba/Stripe_Logo%2C_revised_2016.svg/512px-Stripe_Logo%2C_revised_2016.svg.png"
+                                alt="Stripe"
+                                class="h-6 opacity-50"
+                            />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Continue Shopping -->
+            <div class="mt-12 text-center">
+                <a
+                    href="/productos"
+                    class="inline-flex items-center gap-2 text-brand-leather hover:text-brand-leather-dark transition-colors"
+                >
+                    <svg
+                        class="w-5 h-5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                    </svg>
+                    Continuar comprando
+                </a>
+            </div>
+        </div>
+    </section>
+</PublicLayout>
+
+<script>
+    import { cartSubtotal, isCartEmpty, cartItemsArray } from "../stores/cart";
+
+    function formatPrice(cents: number): string {
+        return new Intl.NumberFormat("es-ES", {
+            style: "currency",
+            currency: "EUR",
+        }).format(cents / 100);
+    }
+
+    const subtotalEl = document.getElementById("summary-subtotal");
+    const taxesEl = document.getElementById("summary-taxes");
+    const totalEl = document.getElementById("summary-total");
+    const checkoutBtn = document.getElementById("checkout-btn") as HTMLAnchorElement;
+
+    // Actualizar precios
+    cartSubtotal.subscribe((subtotal) => {
+        const taxes = Math.round((subtotal * 0.21) / 1.21);
+        if (subtotalEl) subtotalEl.textContent = formatPrice(subtotal);
+        if (taxesEl) taxesEl.textContent = formatPrice(taxes);
+        if (totalEl) totalEl.textContent = formatPrice(subtotal);
+    });
+
+    // Actualizar visibilidad del botón
+    cartItemsArray.subscribe((items) => {
+        if (checkoutBtn) {
+            // Si hay items, permitir clickear
+            if (items.length > 0) {
+                checkoutBtn.classList.remove("opacity-50", "cursor-not-allowed", "pointer-events-none");
+                checkoutBtn.style.pointerEvents = "auto";
+            } else {
+                // Si no hay items, deshabilitar
+                checkoutBtn.classList.add("opacity-50", "cursor-not-allowed", "pointer-events-none");
+                checkoutBtn.style.pointerEvents = "none";
+            }
+        }
+    });
+</script>

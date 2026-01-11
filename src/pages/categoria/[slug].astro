@@ -1,0 +1,188 @@
+---
+import PublicLayout from "../../layouts/PublicLayout.astro";
+import ProductCard from "../../components/product/ProductCard.astro";
+import {
+    getCategories,
+    getProductsByCategory,
+    getCategoryBySlug,
+} from "../../lib/supabase";
+
+// SSG
+export const prerender = true;
+
+export async function getStaticPaths() {
+    const categories = await getCategories();
+
+    return categories.map((category) => ({
+        params: { slug: category.slug },
+        props: { category },
+    }));
+}
+
+interface Props {
+    category: Awaited<ReturnType<typeof getCategoryBySlug>>;
+}
+
+const { category } = Astro.props;
+
+if (!category) {
+    return Astro.redirect("/404");
+}
+
+const products = await getProductsByCategory(category.slug);
+const allCategories = await getCategories();
+---
+
+<PublicLayout
+    title={category.name}
+    description={`Descubre nuestra colección de ${category.name.toLowerCase()} para hombre. Moda premium con estilo sofisticado.`}
+>
+    <!-- Category Header -->
+    <section
+        class="relative py-20 lg:py-28 bg-gradient-to-br from-brand-navy via-brand-navy-light to-brand-charcoal overflow-hidden"
+    >
+        <!-- Background Pattern -->
+        <div class="absolute inset-0 opacity-5">
+            <div
+                class="absolute inset-0"
+                style="background-image: url('data:image/svg+xml,%3Csvg width=\"
+                60\"
+                height='\"60\"'
+                viewBox='\"0'
+                0
+                60
+                60\"
+                xmlns='\"http://www.w3.org/2000/svg\"%3E%3Cg'
+                fill='\"none\"'
+                fill-rule='\"evenodd\"%3E%3Cg'
+                fill='\"%23ffffff\"'
+                fill-opacity='\"0.4\"%3E%3Cpath'
+                d='\"M36'
+                34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6
+                34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6
+                4V0H4v4H0v2h4v4h2V6h4V4H6z\"
+                %3E%3C
+                g%3E%3C
+                g%3E%3C
+                svg%3E');"
+            >
+            </div>
+        </div>
+
+        <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <nav class="flex items-center gap-2 text-sm text-gray-400 mb-6">
+                <a href="/" class="hover:text-white transition-colors">Inicio</a
+                >
+                <span>/</span>
+                <a href="/productos" class="hover:text-white transition-colors"
+                    >Productos</a
+                >
+                <span>/</span>
+                <span class="text-white">{category.name}</span>
+            </nav>
+
+            <h1
+                class="text-4xl lg:text-5xl font-serif font-bold text-white mb-4"
+            >
+                {category.name}
+            </h1>
+            <p class="text-lg text-gray-300 max-w-2xl">
+                {
+                    category.description ||
+                        `Explora nuestra selección de ${category.name.toLowerCase()} de alta calidad, diseñados para el hombre moderno que valora la elegancia y el confort.`
+                }
+            </p>
+
+            <div class="mt-8 flex items-center gap-4 text-sm text-gray-400">
+                <span>{products.length} productos</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Products Section -->
+    <section class="py-12 lg:py-16">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col lg:flex-row gap-8">
+                <!-- Sidebar -->
+                <aside class="lg:w-64 flex-shrink-0">
+                    <div class="sticky top-24">
+                        <h3
+                            class="text-sm font-semibold text-brand-navy uppercase tracking-wider mb-4"
+                        >
+                            Categorías
+                        </h3>
+                        <ul class="space-y-2">
+                            <li>
+                                <a
+                                    href="/productos"
+                                    class="block py-2 text-text-secondary hover:text-brand-navy transition-colors"
+                                >
+                                    Todas las categorías
+                                </a>
+                            </li>
+                            {
+                                allCategories.map((cat) => (
+                                    <li>
+                                        <a
+                                            href={`/categoria/${cat.slug}`}
+                                            class={`block py-2 transition-colors ${
+                                                cat.id === category.id
+                                                    ? "text-brand-leather font-medium"
+                                                    : "text-text-secondary hover:text-brand-navy"
+                                            }`}
+                                        >
+                                            {cat.name}
+                                        </a>
+                                    </li>
+                                ))
+                            }
+                        </ul>
+                    </div>
+                </aside>
+
+                <!-- Products Grid -->
+                <div class="flex-1">
+                    {
+                        products.length > 0 ? (
+                            <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 lg:gap-8">
+                                {products.map((product) => (
+                                    <ProductCard product={product} />
+                                ))}
+                            </div>
+                        ) : (
+                            <div class="text-center py-20 bg-surface-secondary rounded-2xl">
+                                <div class="w-24 h-24 mx-auto mb-6 text-gray-200">
+                                    <svg
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke="currentColor"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="1"
+                                            d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                                        />
+                                    </svg>
+                                </div>
+                                <h3 class="text-xl font-semibold text-brand-navy mb-2">
+                                    No hay productos en esta categoría
+                                </h3>
+                                <p class="text-text-muted mb-6">
+                                    Pronto añadiremos nuevos productos a{" "}
+                                    {category.name.toLowerCase()}.
+                                </p>
+                                <a
+                                    href="/productos"
+                                    class="inline-flex items-center gap-2 px-6 py-3 bg-brand-navy text-white font-medium rounded-xl hover:bg-brand-navy-light transition-colors"
+                                >
+                                    Ver todos los productos
+                                </a>
+                            </div>
+                        )
+                    }
+                </div>
+            </div>
+        </div>
+    </section>
+</PublicLayout>

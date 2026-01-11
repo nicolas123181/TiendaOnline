@@ -1,0 +1,459 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import { getProducts, getCategories } from "../../../lib/supabase";
+import { formatPrice } from "../../../lib/utils";
+
+// SSR
+export const prerender = false;
+
+const products = await getProducts();
+const categories = await getCategories();
+
+// Agrupar por categoría para filtros
+const productsByCategory = categories.map((cat) => ({
+    ...cat,
+    count: products.filter((p) => p.category_id === cat.id).length,
+}));
+
+// Helper functions para estados de stock (evitar <= en template)
+function isLowStock(stock: number): boolean {
+    return stock > 0 && stock < 6;
+}
+
+function isOutOfStock(stock: number): boolean {
+    return stock < 1;
+}
+
+function isInStock(stock: number): boolean {
+    return stock > 5;
+}
+
+// Enriquecer productos con estados
+const enrichedProducts = products.map((p) => ({
+    ...p,
+    isLowStock: isLowStock(p.stock),
+    isOutOfStock: isOutOfStock(p.stock),
+    isInStock: isInStock(p.stock),
+    hasStock: p.stock > 0,
+}));
+---
+
+<AdminLayout title="Gestión de Productos">
+    <!-- Header con acciones -->
+    <div
+        class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8"
+    >
+        <div>
+            <p class="text-text-muted">
+                {products.length} productos en el catálogo
+            </p>
+        </div>
+        <a
+            href="/admin/productos/nuevo"
+            class="inline-flex items-center gap-2 px-6 py-3 bg-brand-navy text-white font-medium rounded-xl hover:bg-brand-navy-light transition-colors"
+        >
+            <svg
+                class="w-5 h-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+            >
+                <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 4v16m8-8H4"></path>
+            </svg>
+            Nuevo Producto
+        </a>
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-surface-primary rounded-2xl p-4 shadow-soft mb-6">
+        <div class="flex flex-wrap items-center gap-4">
+            <!-- Search -->
+            <div class="flex-1 min-w-[200px]">
+                <div class="relative">
+                    <svg
+                        class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-muted"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                        ></path>
+                    </svg>
+                    <input
+                        type="text"
+                        id="search-input"
+                        placeholder="Buscar productos..."
+                        class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-border-light bg-surface-primary focus:border-brand-navy focus:outline-none focus:ring-2 focus:ring-brand-navy/20"
+                    />
+                </div>
+            </div>
+
+            <!-- Category Filter -->
+            <select
+                id="category-filter"
+                class="px-4 py-2.5 rounded-xl border border-border-light bg-surface-primary text-sm focus:border-brand-navy focus:outline-none"
+            >
+                <option value="">Todas las categorías</option>
+                {
+                    productsByCategory.map((cat) => (
+                        <option value={cat.id}>
+                            {cat.name} ({cat.count})
+                        </option>
+                    ))
+                }
+            </select>
+
+            <!-- Stock Filter -->
+            <select
+                id="stock-filter"
+                class="px-4 py-2.5 rounded-xl border border-border-light bg-surface-primary text-sm focus:border-brand-navy focus:outline-none"
+            >
+                <option value="">Todo el stock</option>
+                <option value="in-stock">En stock</option>
+                <option value="low-stock">Stock bajo</option>
+                <option value="out-of-stock">Agotado</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Products Table -->
+    <div class="bg-surface-primary rounded-2xl shadow-soft overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full" id="products-table">
+                <thead class="bg-surface-secondary">
+                    <tr>
+                        <th
+                            class="px-6 py-4 text-left text-xs font-medium text-text-muted uppercase tracking-wider"
+                        >
+                            <input
+                                type="checkbox"
+                                id="select-all"
+                                class="w-4 h-4 rounded border-border-medium text-brand-navy focus:ring-brand-navy"
+                            />
+                        </th>
+                        <th
+                            class="px-6 py-4 text-left text-xs font-medium text-text-muted uppercase tracking-wider"
+                        >
+                            Producto
+                        </th>
+                        <th
+                            class="px-6 py-4 text-left text-xs font-medium text-text-muted uppercase tracking-wider"
+                        >
+                            Categoría
+                        </th>
+                        <th
+                            class="px-6 py-4 text-left text-xs font-medium text-text-muted uppercase tracking-wider"
+                        >
+                            Precio
+                        </th>
+                        <th
+                            class="px-6 py-4 text-left text-xs font-medium text-text-muted uppercase tracking-wider"
+                        >
+                            Stock
+                        </th>
+                        <th
+                            class="px-6 py-4 text-left text-xs font-medium text-text-muted uppercase tracking-wider"
+                        >
+                            Estado
+                        </th>
+                        <th
+                            class="px-6 py-4 text-right text-xs font-medium text-text-muted uppercase tracking-wider"
+                        >
+                            Acciones
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-border-light">
+                    {
+                        enrichedProducts.map((product) => (
+                            <tr
+                                class="hover:bg-surface-secondary transition-colors product-row"
+                                data-name={product.name.toLowerCase()}
+                                data-category={product.category_id}
+                                data-stock={product.stock}
+                            >
+                                <td class="px-6 py-4">
+                                    <input
+                                        type="checkbox"
+                                        class="product-checkbox w-4 h-4 rounded border-border-medium text-brand-navy focus:ring-brand-navy"
+                                        value={product.id}
+                                    />
+                                </td>
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center gap-4">
+                                        <div class="w-14 h-14 bg-surface-tertiary rounded-xl overflow-hidden flex-shrink-0">
+                                            <img
+                                                src={
+                                                    product.images?.[0] ||
+                                                    "/placeholder-product.jpg"
+                                                }
+                                                alt={product.name}
+                                                class="w-full h-full object-cover"
+                                            />
+                                        </div>
+                                        <div>
+                                            <a
+                                                href={`/admin/productos/${product.id}`}
+                                                class="font-medium text-brand-navy hover:text-brand-leather transition-colors"
+                                            >
+                                                {product.name}
+                                            </a>
+                                            <p class="text-xs text-text-muted mt-0.5">
+                                                {product.slug}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span class="inline-flex items-center px-3 py-1 rounded-lg bg-surface-tertiary text-sm text-text-secondary">
+                                        {product.category?.name ||
+                                            "Sin categoría"}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span class="font-semibold text-brand-navy">
+                                        {formatPrice(product.price)}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-medium text-text-primary">
+                                            {product.stock}
+                                        </span>
+                                        {product.isLowStock && (
+                                            <svg
+                                                class="w-4 h-4 text-status-warning"
+                                                fill="currentColor"
+                                                viewBox="0 0 20 20"
+                                            >
+                                                <path
+                                                    fill-rule="evenodd"
+                                                    d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                                                    clip-rule="evenodd"
+                                                />
+                                            </svg>
+                                        )}
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    {product.isInStock ? (
+                                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-status-success-bg text-status-success">
+                                            Disponible
+                                        </span>
+                                    ) : product.hasStock ? (
+                                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-status-warning-bg text-status-warning">
+                                            Bajo stock
+                                        </span>
+                                    ) : (
+                                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-status-error-bg text-status-error">
+                                            Agotado
+                                        </span>
+                                    )}
+                                </td>
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center justify-end gap-2">
+                                        <a
+                                            href={`/productos/${product.slug}`}
+                                            target="_blank"
+                                            class="p-2 text-text-muted hover:text-brand-navy hover:bg-surface-tertiary rounded-lg transition-colors"
+                                            title="Ver en tienda"
+                                        >
+                                            <svg
+                                                class="w-5 h-5"
+                                                fill="none"
+                                                viewBox="0 0 24 24"
+                                                stroke="currentColor"
+                                            >
+                                                <path
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                    stroke-width="2"
+                                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                                />
+                                                <path
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                    stroke-width="2"
+                                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                                />
+                                            </svg>
+                                        </a>
+                                        <a
+                                            href={`/admin/productos/${product.id}`}
+                                            class="p-2 text-text-muted hover:text-brand-leather hover:bg-surface-tertiary rounded-lg transition-colors"
+                                            title="Editar producto"
+                                        >
+                                            <svg
+                                                class="w-5 h-5"
+                                                fill="none"
+                                                viewBox="0 0 24 24"
+                                                stroke="currentColor"
+                                            >
+                                                <path
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                    stroke-width="2"
+                                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                                />
+                                            </svg>
+                                        </a>
+                                        <button
+                                            class="delete-btn p-2 text-text-muted hover:text-status-error hover:bg-status-error-bg rounded-lg transition-colors"
+                                            data-id={product.id}
+                                            data-name={product.name}
+                                            title="Eliminar producto"
+                                        >
+                                            <svg
+                                                class="w-5 h-5"
+                                                fill="none"
+                                                viewBox="0 0 24 24"
+                                                stroke="currentColor"
+                                            >
+                                                <path
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                    stroke-width="2"
+                                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                                />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        ))
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        {
+            products.length === 0 && (
+                <div class="text-center py-16">
+                    <div class="w-20 h-20 mx-auto mb-4 text-gray-200">
+                        <svg
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="1"
+                                d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                            />
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-semibold text-brand-navy mb-2">
+                        No hay productos
+                    </h3>
+                    <p class="text-text-muted mb-6">
+                        Comienza añadiendo tu primer producto al catálogo.
+                    </p>
+                    <a
+                        href="/admin/productos/nuevo"
+                        class="inline-flex items-center gap-2 px-6 py-3 bg-brand-navy text-white font-medium rounded-xl hover:bg-brand-navy-light transition-colors"
+                    >
+                        <svg
+                            class="w-5 h-5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M12 4v16m8-8H4"
+                            />
+                        </svg>
+                        Crear Producto
+                    </a>
+                </div>
+            )
+        }
+    </div>
+</AdminLayout>
+
+<script>
+    // Filtrado de productos
+    const searchInput = document.getElementById(
+        "search-input",
+    ) as HTMLInputElement;
+    const categoryFilter = document.getElementById(
+        "category-filter",
+    ) as HTMLSelectElement;
+    const stockFilter = document.getElementById(
+        "stock-filter",
+    ) as HTMLSelectElement;
+    const rows = document.querySelectorAll(".product-row");
+
+    function filterProducts() {
+        const searchTerm = searchInput?.value.toLowerCase() || "";
+        const categoryId = categoryFilter?.value || "";
+        const stockStatus = stockFilter?.value || "";
+
+        rows.forEach((row) => {
+            const name = row.getAttribute("data-name") || "";
+            const category = row.getAttribute("data-category") || "";
+            const stock = parseInt(row.getAttribute("data-stock") || "0");
+
+            let show = true;
+
+            // Search filter
+            if (searchTerm && !name.includes(searchTerm)) {
+                show = false;
+            }
+
+            // Category filter
+            if (categoryId && category !== categoryId) {
+                show = false;
+            }
+
+            // Stock filter
+            if (stockStatus) {
+                if (stockStatus === "in-stock" && stock <= 5) show = false;
+                if (stockStatus === "low-stock" && (stock <= 0 || stock > 5))
+                    show = false;
+                if (stockStatus === "out-of-stock" && stock > 0) show = false;
+            }
+
+            (row as HTMLElement).style.display = show ? "" : "none";
+        });
+    }
+
+    searchInput?.addEventListener("input", filterProducts);
+    categoryFilter?.addEventListener("change", filterProducts);
+    stockFilter?.addEventListener("change", filterProducts);
+
+    // Select all checkbox
+    const selectAll = document.getElementById("select-all") as HTMLInputElement;
+    const checkboxes = document.querySelectorAll(
+        ".product-checkbox",
+    ) as NodeListOf<HTMLInputElement>;
+
+    selectAll?.addEventListener("change", () => {
+        checkboxes.forEach((cb) => (cb.checked = selectAll.checked));
+    });
+
+    // Delete buttons
+    const deleteButtons = document.querySelectorAll(".delete-btn");
+    deleteButtons.forEach((btn) => {
+        btn.addEventListener("click", async () => {
+            const id = btn.getAttribute("data-id");
+            const name = btn.getAttribute("data-name");
+
+            if (confirm(`¿Estás seguro de que quieres eliminar "${name}"?`)) {
+                // Aquí iría la lógica de eliminación con Supabase
+                alert("Funcionalidad de eliminación - Implementar con API");
+            }
+        });
+    });
+</script>

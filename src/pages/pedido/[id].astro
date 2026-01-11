@@ -1,0 +1,346 @@
+---
+import PublicLayout from "../../layouts/PublicLayout.astro";
+
+export const prerender = false;
+
+const orderId = Astro.params.id;
+---
+
+<PublicLayout
+    title={`Pedido #${orderId} - Vantage`}
+    description="Detalle de tu pedido"
+>
+    <section class="py-12">
+        <div class="max-w-3xl mx-auto px-4">
+            <!-- Loading State -->
+            <div
+                id="loading-state"
+                class="flex items-center justify-center py-16"
+            >
+                <div class="text-center">
+                    <div
+                        class="w-12 h-12 border-4 border-gray-200 border-t-blue-900 rounded-full animate-spin mx-auto mb-4"
+                    >
+                    </div>
+                    <p class="text-gray-600">Cargando pedido...</p>
+                </div>
+            </div>
+
+            <!-- Not Found State -->
+            <div id="not-found-state" class="hidden text-center py-16">
+                <div
+                    class="w-20 h-20 mx-auto mb-6 bg-red-50 rounded-full flex items-center justify-center"
+                >
+                    <svg
+                        class="w-10 h-10 text-red-500"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-900 mb-2">
+                    Pedido no encontrado
+                </h2>
+                <p class="text-gray-600 mb-6">
+                    No se encontró el pedido o no tienes permiso para verlo.
+                </p>
+                <a
+                    href="/perfil"
+                    class="inline-flex items-center gap-2 px-6 py-3 bg-blue-900 text-white font-semibold rounded-xl hover:bg-blue-800 transition-colors"
+                >
+                    Volver a Mis Pedidos
+                </a>
+            </div>
+
+            <!-- Order Content -->
+            <div id="order-content" class="hidden">
+                <!-- Header -->
+                <div class="mb-8">
+                    <a
+                        href="/perfil"
+                        class="inline-flex items-center gap-2 text-amber-700 font-medium hover:underline mb-4"
+                    >
+                        <svg
+                            class="w-4 h-4"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                        </svg>
+                        Volver a Mis Pedidos
+                    </a>
+                    <div class="flex items-center justify-between gap-4">
+                        <div>
+                            <h1
+                                class="text-3xl font-serif font-bold text-brand-navy"
+                                id="order-number"
+                            >
+                                Pedido #00000
+                            </h1>
+                            <p class="text-text-muted" id="order-date">
+                                Fecha del pedido
+                            </p>
+                        </div>
+                        <span
+                            id="order-status"
+                            class="px-4 py-2 text-sm font-semibold rounded-full bg-gray-100 text-gray-800"
+                        >
+                            Estado
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Order Summary Card -->
+                <div
+                    class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-6"
+                >
+                    <div class="p-6 border-b border-gray-100">
+                        <h2 class="text-lg font-semibold text-gray-900">
+                            Productos
+                        </h2>
+                    </div>
+                    <div id="order-items" class="divide-y divide-gray-100">
+                        <!-- Items will be inserted here -->
+                    </div>
+                    <div class="p-6 bg-gray-50">
+                        <div class="space-y-2 text-sm">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Subtotal</span>
+                                <span id="order-subtotal" class="font-medium"
+                                    >0,00 €</span
+                                >
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Envío</span>
+                                <span id="order-shipping" class="font-medium"
+                                    >0,00 €</span
+                                >
+                            </div>
+                            <div
+                                id="discount-row"
+                                class="hidden flex justify-between text-green-600"
+                            >
+                                <span>Descuento</span>
+                                <span id="order-discount">-0,00 €</span>
+                            </div>
+                            <div
+                                class="flex justify-between text-lg font-bold pt-2 border-t border-gray-200"
+                            >
+                                <span>Total</span>
+                                <span id="order-total" class="text-brand-navy"
+                                    >0,00 €</span
+                                >
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Shipping Info -->
+                <div
+                    class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
+                >
+                    <div class="p-6 border-b border-gray-100">
+                        <h2 class="text-lg font-semibold text-gray-900">
+                            Dirección de Envío
+                        </h2>
+                    </div>
+                    <div class="p-6">
+                        <p id="shipping-name" class="font-medium text-gray-900">
+                        </p>
+                        <p id="shipping-address" class="text-gray-600"></p>
+                        <p id="shipping-city" class="text-gray-600"></p>
+                        <p id="shipping-phone" class="text-gray-500 mt-2"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</PublicLayout>
+
+<!-- Pasar el orderId como data attribute -->
+<div id="order-data" data-order-id={orderId} class="hidden"></div>
+
+<script>
+    import { createClient } from "@supabase/supabase-js";
+
+    const supabaseUrl =
+        import.meta.env.PUBLIC_SUPABASE_URL ||
+        "https://kggjqbhcvvayqwkbpwvp.supabase.co";
+    const supabaseAnonKey =
+        import.meta.env.PUBLIC_SUPABASE_ANON_KEY ||
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtnZ2pxYmhjdnZheXF3a2Jwd3ZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzYyNDI2NDQsImV4cCI6MjA1MTgxODY0NH0.P9eqbIFVBt2IuHnzTcCDbGb6w72xR-AQ60aKEkqJnYY";
+    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+    // Obtener el orderId del data attribute
+    const orderDataEl = document.getElementById("order-data");
+    const orderId = orderDataEl?.dataset.orderId || "";
+
+    const loadingState = document.getElementById("loading-state");
+    const notFoundState = document.getElementById("not-found-state");
+    const orderContent = document.getElementById("order-content");
+
+    function formatPrice(cents: number): string {
+        return new Intl.NumberFormat("es-ES", {
+            style: "currency",
+            currency: "EUR",
+        }).format(cents / 100);
+    }
+
+    const statusLabels: Record<string, string> = {
+        pending: "Pendiente de Pago",
+        paid: "Pagado",
+        ready_for_pickup: "Listo para Recoger",
+        shipped: "Enviado",
+        delivered: "Entregado",
+        cancelled: "Cancelado",
+    };
+
+    const statusColors: Record<string, string> = {
+        pending: "bg-yellow-100 text-yellow-800",
+        paid: "bg-blue-100 text-blue-800",
+        ready_for_pickup: "bg-orange-100 text-orange-800",
+        shipped: "bg-purple-100 text-purple-800",
+        delivered: "bg-green-100 text-green-800",
+        cancelled: "bg-red-100 text-red-800",
+    };
+
+    async function loadOrder() {
+        if (!orderId) {
+            loadingState?.classList.add("hidden");
+            notFoundState?.classList.remove("hidden");
+            return;
+        }
+
+        try {
+            // Verificar sesión
+            const {
+                data: { session },
+            } = await supabase.auth.getSession();
+
+            if (!session) {
+                window.location.href = "/login?returnTo=/pedido/" + orderId;
+                return;
+            }
+
+            // Cargar pedido
+            const { data: order, error } = await supabase
+                .from("orders")
+                .select("*, order_items(*)")
+                .eq("id", orderId)
+                .eq("customer_email", session.user.email)
+                .single();
+
+            if (error || !order) {
+                console.error("Order error:", error);
+                loadingState?.classList.add("hidden");
+                notFoundState?.classList.remove("hidden");
+                return;
+            }
+
+            // Mostrar datos del pedido
+            const orderNumberEl = document.getElementById("order-number");
+            if (orderNumberEl) {
+                orderNumberEl.textContent = `Pedido #${order.id.toString().padStart(5, "0")}`;
+            }
+
+            const orderDateEl = document.getElementById("order-date");
+            if (orderDateEl) {
+                orderDateEl.textContent = new Date(
+                    order.created_at,
+                ).toLocaleDateString("es-ES", {
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                });
+            }
+
+            const statusEl = document.getElementById("order-status");
+            if (statusEl) {
+                statusEl.textContent =
+                    statusLabels[order.status] || order.status;
+                statusEl.className = `px-4 py-2 text-sm font-semibold rounded-full ${statusColors[order.status] || "bg-gray-100 text-gray-800"}`;
+            }
+
+            // Items
+            const itemsContainer = document.getElementById("order-items");
+            if (itemsContainer && order.order_items) {
+                itemsContainer.innerHTML = order.order_items
+                    .map(
+                        (item: any) => `
+                    <div class="p-6 flex items-center gap-4">
+                        <div class="flex-1">
+                            <p class="font-medium text-gray-900">${item.product_name}</p>
+                            ${item.size ? `<p class="text-sm text-gray-500">Talla: ${item.size}</p>` : ""}
+                            <p class="text-sm text-gray-500">Cantidad: ${item.quantity}</p>
+                        </div>
+                        <p class="font-semibold text-gray-900">${formatPrice(item.product_price * item.quantity)}</p>
+                    </div>
+                `,
+                    )
+                    .join("");
+            }
+
+            // Totales
+            const subtotalEl = document.getElementById("order-subtotal");
+            if (subtotalEl)
+                subtotalEl.textContent = formatPrice(
+                    order.subtotal || order.total,
+                );
+
+            const shippingEl = document.getElementById("order-shipping");
+            if (shippingEl)
+                shippingEl.textContent = formatPrice(order.shipping_cost || 0);
+
+            const totalEl = document.getElementById("order-total");
+            if (totalEl) totalEl.textContent = formatPrice(order.total);
+
+            if (order.discount > 0) {
+                const discountRow = document.getElementById("discount-row");
+                const discountEl = document.getElementById("order-discount");
+                if (discountRow) discountRow.classList.remove("hidden");
+                if (discountEl)
+                    discountEl.textContent = `-${formatPrice(order.discount)}`;
+            }
+
+            // Dirección
+            const nameEl = document.getElementById("shipping-name");
+            if (nameEl) nameEl.textContent = order.customer_name;
+
+            const addressEl = document.getElementById("shipping-address");
+            if (addressEl) addressEl.textContent = order.customer_address;
+
+            const cityEl = document.getElementById("shipping-city");
+            if (cityEl)
+                cityEl.textContent = `${order.customer_postal_code} ${order.customer_city}`;
+
+            const phoneEl = document.getElementById("shipping-phone");
+            if (phoneEl)
+                phoneEl.textContent = order.customer_phone
+                    ? `Tel: ${order.customer_phone}`
+                    : "";
+
+            // Mostrar contenido
+            loadingState?.classList.add("hidden");
+            orderContent?.classList.remove("hidden");
+        } catch (error) {
+            console.error("Error loading order:", error);
+            loadingState?.classList.add("hidden");
+            notFoundState?.classList.remove("hidden");
+        }
+    }
+
+    loadOrder();
+</script>

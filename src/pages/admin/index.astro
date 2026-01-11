@@ -1,0 +1,529 @@
+---
+import AdminLayout from "../../layouts/AdminLayout.astro";
+import { getProducts, getCategories } from "../../lib/supabase";
+import { formatPrice } from "../../lib/utils";
+
+// SSR protegido
+export const prerender = false;
+
+// Obtener estadísticas
+const products = await getProducts();
+const categories = await getCategories();
+
+const totalProducts = products.length;
+const totalStock = products.reduce((sum, p) => sum + p.stock, 0);
+const lowStockProducts = products.filter((p) => p.stock > 0 && p.stock < 6);
+const outOfStockProducts = products.filter((p) => p.stock < 1);
+const featuredProducts = products.filter((p) => p.featured);
+
+// Valor total del inventario
+const inventoryValue = products.reduce((sum, p) => sum + p.price * p.stock, 0);
+
+// Helper para clase de badge de stock
+function getStockBadgeClass(stock: number): string {
+    if (stock < 1) return "bg-status-error-bg text-status-error";
+    if (stock < 6) return "bg-status-warning-bg text-status-warning";
+    return "bg-status-success-bg text-status-success";
+}
+---
+
+<AdminLayout title="Dashboard">
+    <!-- Stats Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <!-- Total Products -->
+        <div class="bg-surface-primary rounded-2xl p-6 shadow-soft">
+            <div class="flex items-center justify-between mb-4">
+                <div class="p-3 bg-blue-100 rounded-xl">
+                    <svg
+                        class="w-6 h-6 text-blue-600"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                        ></path>
+                    </svg>
+                </div>
+                <span
+                    class="text-xs font-medium text-status-success bg-status-success-bg px-2 py-1 rounded-full"
+                >
+                    Activo
+                </span>
+            </div>
+            <h3 class="text-3xl font-bold text-brand-navy">{totalProducts}</h3>
+            <p class="text-sm text-text-muted mt-1">Total de productos</p>
+        </div>
+
+        <!-- Total Stock -->
+        <div class="bg-surface-primary rounded-2xl p-6 shadow-soft">
+            <div class="flex items-center justify-between mb-4">
+                <div class="p-3 bg-green-100 rounded-xl">
+                    <svg
+                        class="w-6 h-6 text-green-600"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
+                        ></path>
+                    </svg>
+                </div>
+            </div>
+            <h3 class="text-3xl font-bold text-brand-navy">{totalStock}</h3>
+            <p class="text-sm text-text-muted mt-1">Unidades en stock</p>
+        </div>
+
+        <!-- Low Stock Alert -->
+        <div class="bg-surface-primary rounded-2xl p-6 shadow-soft">
+            <div class="flex items-center justify-between mb-4">
+                <div class="p-3 bg-amber-100 rounded-xl">
+                    <svg
+                        class="w-6 h-6 text-amber-600"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                        ></path>
+                    </svg>
+                </div>
+                {
+                    lowStockProducts.length > 0 && (
+                        <span class="text-xs font-medium text-status-warning bg-status-warning-bg px-2 py-1 rounded-full">
+                            Atención
+                        </span>
+                    )
+                }
+            </div>
+            <h3 class="text-3xl font-bold text-brand-navy">
+                {lowStockProducts.length}
+            </h3>
+            <p class="text-sm text-text-muted mt-1">Productos con bajo stock</p>
+        </div>
+
+        <!-- Inventory Value -->
+        <div class="bg-surface-primary rounded-2xl p-6 shadow-soft">
+            <div class="flex items-center justify-between mb-4">
+                <div class="p-3 bg-purple-100 rounded-xl">
+                    <svg
+                        class="w-6 h-6 text-purple-600"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                        ></path>
+                    </svg>
+                </div>
+            </div>
+            <h3 class="text-3xl font-bold text-brand-navy">
+                {formatPrice(inventoryValue)}
+            </h3>
+            <p class="text-sm text-text-muted mt-1">Valor del inventario</p>
+        </div>
+    </div>
+
+    <!-- Quick Actions & Alerts -->
+    <div class="grid lg:grid-cols-2 gap-6 mb-8">
+        <!-- Quick Actions -->
+        <div class="bg-surface-primary rounded-2xl p-6 shadow-soft">
+            <h2 class="text-lg font-semibold text-brand-navy mb-4">
+                Acciones Rápidas
+            </h2>
+            <div class="grid grid-cols-2 gap-4">
+                <a
+                    href="/admin/productos/nuevo"
+                    class="flex items-center gap-3 p-4 bg-brand-navy text-white rounded-xl hover:bg-brand-navy-light transition-colors"
+                >
+                    <svg
+                        class="w-5 h-5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M12 4v16m8-8H4"></path>
+                    </svg>
+                    <span class="font-medium">Nuevo Producto</span>
+                </a>
+                <a
+                    href="/admin/productos"
+                    class="flex items-center gap-3 p-4 bg-surface-tertiary text-brand-navy rounded-xl hover:bg-brand-cream transition-colors"
+                >
+                    <svg
+                        class="w-5 h-5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>
+                    </svg>
+                    <span class="font-medium">Ver Productos</span>
+                </a>
+                <a
+                    href="/admin/pedidos"
+                    class="flex items-center gap-3 p-4 bg-surface-tertiary text-brand-navy rounded-xl hover:bg-brand-cream transition-colors"
+                >
+                    <svg
+                        class="w-5 h-5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                        ></path>
+                    </svg>
+                    <span class="font-medium">Ver Pedidos</span>
+                </a>
+                <a
+                    href="/admin/configuracion"
+                    class="flex items-center gap-3 p-4 bg-surface-tertiary text-brand-navy rounded-xl hover:bg-brand-cream transition-colors"
+                >
+                    <svg
+                        class="w-5 h-5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                        ></path>
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                    <span class="font-medium">Configuración</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Low Stock Alerts -->
+        <div class="bg-surface-primary rounded-2xl p-6 shadow-soft">
+            <h2 class="text-lg font-semibold text-brand-navy mb-4">
+                Alertas de Stock
+            </h2>
+
+            {
+                lowStockProducts.length > 0 || outOfStockProducts.length > 0 ? (
+                    <div class="space-y-3 max-h-62.5 overflow-y-auto">
+                        {outOfStockProducts.map((product) => (
+                            <div class="flex items-center justify-between p-3 bg-status-error-bg rounded-xl">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 bg-white rounded-lg overflow-hidden">
+                                        <img
+                                            src={
+                                                product.images?.[0] ||
+                                                "/placeholder-product.jpg"
+                                            }
+                                            alt={product.name}
+                                            class="w-full h-full object-cover"
+                                        />
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-sm text-brand-navy line-clamp-1">
+                                            {product.name}
+                                        </p>
+                                        <p class="text-xs text-status-error">
+                                            Sin stock
+                                        </p>
+                                    </div>
+                                </div>
+                                <a
+                                    href={`/admin/productos/${product.id}`}
+                                    class="text-xs font-medium text-status-error hover:underline"
+                                >
+                                    Gestionar
+                                </a>
+                            </div>
+                        ))}
+                        {lowStockProducts.map((product) => (
+                            <div class="flex items-center justify-between p-3 bg-status-warning-bg rounded-xl">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 bg-white rounded-lg overflow-hidden">
+                                        <img
+                                            src={
+                                                product.images?.[0] ||
+                                                "/placeholder-product.jpg"
+                                            }
+                                            alt={product.name}
+                                            class="w-full h-full object-cover"
+                                        />
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-sm text-brand-navy line-clamp-1">
+                                            {product.name}
+                                        </p>
+                                        <p class="text-xs text-status-warning">
+                                            {product.stock} unidades
+                                        </p>
+                                    </div>
+                                </div>
+                                <a
+                                    href={`/admin/productos/${product.id}`}
+                                    class="text-xs font-medium text-status-warning hover:underline"
+                                >
+                                    Gestionar
+                                </a>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div class="text-center py-8">
+                        <div class="w-16 h-16 mx-auto mb-4 text-status-success">
+                            <svg
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="1.5"
+                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                                />
+                            </svg>
+                        </div>
+                        <p class="text-text-secondary">
+                            Todo el inventario está en orden
+                        </p>
+                    </div>
+                )
+            }
+
+            <!-- Botón de Verificación Manual -->
+            <div class="mt-4 pt-4 border-t border-border-light">
+                <button
+                    id="check-stock-btn"
+                    type="button"
+                    class="w-full flex items-center justify-center gap-2 py-3 px-4 bg-brand-navy text-white font-medium rounded-xl hover:bg-brand-navy-light transition-colors"
+                >
+                    <svg
+                        class="w-5 h-5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                        ></path>
+                    </svg>
+                    <span>Enviar Alertas por Email</span>
+                </button>
+                <p class="text-xs text-text-muted text-center mt-2">
+                    Enviará alertas de productos agotados y con stock bajo
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Products -->
+    <div class="bg-surface-primary rounded-2xl shadow-soft overflow-hidden">
+        <div class="p-6 border-b border-border-light">
+            <div class="flex items-center justify-between">
+                <h2 class="text-lg font-semibold text-brand-navy">
+                    Productos Recientes
+                </h2>
+                <a
+                    href="/admin/productos"
+                    class="text-sm text-brand-leather hover:text-brand-leather-dark transition-colors"
+                >
+                    Ver todos →
+                </a>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-surface-secondary">
+                    <tr>
+                        <th
+                            class="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider"
+                        >
+                            Producto
+                        </th>
+                        <th
+                            class="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider"
+                        >
+                            Categoría
+                        </th>
+                        <th
+                            class="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider"
+                        >
+                            Precio
+                        </th>
+                        <th
+                            class="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider"
+                        >
+                            Stock
+                        </th>
+                        <th
+                            class="px-6 py-3 text-right text-xs font-medium text-text-muted uppercase tracking-wider"
+                        >
+                            Acciones
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-border-light">
+                    {
+                        products.slice(0, 5).map((product) => (
+                            <tr class="hover:bg-surface-secondary transition-colors">
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-12 h-12 bg-surface-tertiary rounded-lg overflow-hidden shrink-0">
+                                            <img
+                                                src={
+                                                    product.images?.[0] ||
+                                                    "/placeholder-product.jpg"
+                                                }
+                                                alt={product.name}
+                                                class="w-full h-full object-cover"
+                                            />
+                                        </div>
+                                        <div>
+                                            <p class="font-medium text-brand-navy">
+                                                {product.name}
+                                            </p>
+                                            <p class="text-xs text-text-muted">
+                                                ID: {product.id}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span class="text-sm text-text-secondary">
+                                        {product.category?.name ||
+                                            "Sin categoría"}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span class="font-medium text-brand-navy">
+                                        {formatPrice(product.price)}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span
+                                        class={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStockBadgeClass(product.stock)}`}
+                                    >
+                                        {product.stock} uds
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 text-right">
+                                    <a
+                                        href={`/admin/productos/${product.id}`}
+                                        class="text-sm text-brand-leather hover:text-brand-leather-dark transition-colors"
+                                    >
+                                        Editar
+                                    </a>
+                                </td>
+                            </tr>
+                        ))
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</AdminLayout>
+
+<script>
+    const checkStockBtn = document.getElementById("check-stock-btn");
+
+    checkStockBtn?.addEventListener("click", async () => {
+        const btn = checkStockBtn as HTMLButtonElement;
+        const originalContent = btn.innerHTML;
+
+        // Mostrar estado de carga
+        btn.disabled = true;
+        btn.innerHTML = `
+            <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span>Verificando inventario...</span>
+        `;
+
+        try {
+            const response = await fetch("/api/check-stock-alerts", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                let message = "";
+
+                if (result.outOfStock === 0 && result.lowStock === 0) {
+                    message = "✅ No hay productos con stock bajo ni agotados.";
+                } else {
+                    const parts = [];
+                    if (result.outOfStock > 0) {
+                        parts.push(
+                            `🚨 ${result.outOfStock} producto(s) agotado(s)`,
+                        );
+                    }
+                    if (result.lowStock > 0) {
+                        parts.push(
+                            `⚠️ ${result.lowStock} producto(s) con stock bajo`,
+                        );
+                    }
+                    message = parts.join("\n");
+
+                    if (
+                        result.emailsSent.outOfStock ||
+                        result.emailsSent.lowStock
+                    ) {
+                        message += "\n\n📧 Alertas enviadas por email.";
+                    } else {
+                        message +=
+                            "\n\n⚠️ No se pudieron enviar los emails. Verifica la configuración de Resend.";
+                    }
+                }
+
+                alert(message);
+            } else {
+                alert("❌ Error: " + (result.error || "Error desconocido"));
+            }
+        } catch (error) {
+            console.error("Error checking stock:", error);
+            alert("❌ Error al verificar el inventario");
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalContent;
+        }
+    });
+</script>

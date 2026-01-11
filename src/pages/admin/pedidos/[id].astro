@@ -1,0 +1,473 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import { supabase, updateOrderStatus } from "../../../lib/supabase";
+import { formatPrice } from "../../../lib/utils";
+import {
+    sendShippingNotificationEmail,
+    sendDeliveryConfirmationEmail,
+} from "../../../lib/email";
+
+// SSR
+export const prerender = false;
+
+const { id } = Astro.params;
+
+let success = "";
+let error = "";
+
+// Procesar cambio de estado si hay POST
+if (Astro.request.method === "POST") {
+    try {
+        const formData = await Astro.request.formData();
+        const action = formData.get("action")?.toString();
+        const newStatus = formData.get("status")?.toString() as any;
+
+        if (action === "update_status" && newStatus) {
+            const result = await updateOrderStatus(parseInt(id!), newStatus);
+            if (result) {
+                success = "Estado del pedido actualizado correctamente";
+
+                // Enviar email de notificación según el nuevo estado
+                const { data: orderData } = await supabase
+                    .from("orders")
+                    .select("*")
+                    .eq("id", id)
+                    .single();
+
+                if (orderData) {
+                    if (newStatus === "shipped") {
+                        try {
+                            await sendShippingNotificationEmail({
+                                customerName: orderData.customer_name,
+                                customerEmail: orderData.customer_email,
+                                orderNumber: orderData.id.toString(),
+                            });
+                            success += " y email de envío enviado al cliente";
+                        } catch (e) {
+                            console.error("Error sending shipping email:", e);
+                        }
+                    } else if (newStatus === "delivered") {
+                        try {
+                            await sendDeliveryConfirmationEmail({
+                                customerName: orderData.customer_name,
+                                customerEmail: orderData.customer_email,
+                                orderNumber: orderData.id.toString(),
+                            });
+                            success += " y email de entrega enviado al cliente";
+                        } catch (e) {
+                            console.error("Error sending delivery email:", e);
+                        }
+                    }
+                }
+            } else {
+                error = "Error al actualizar el pedido";
+            }
+        }
+    } catch (e) {
+        error = "Error procesando la solicitud";
+        console.error(e);
+    }
+}
+
+// Obtener pedido
+const { data: order, error: fetchError } = await supabase
+    .from("orders")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+if (fetchError || !order) {
+    return Astro.redirect("/admin/pedidos");
+}
+
+// Obtener items del pedido
+const { data: orderItems } = await supabase
+    .from("order_items")
+    .select("*")
+    .eq("order_id", id);
+
+const statusLabels: Record<string, string> = {
+    pending: "Pendiente de Pago",
+    paid: "Pagado",
+    shipped: "Enviado",
+    delivered: "Entregado",
+    cancelled: "Cancelado",
+};
+
+const statusColors: Record<string, string> = {
+    pending: "bg-yellow-100 text-yellow-800 border-yellow-200",
+    paid: "bg-blue-100 text-blue-800 border-blue-200",
+    shipped: "bg-purple-100 text-purple-800 border-purple-200",
+    delivered: "bg-green-100 text-green-800 border-green-200",
+    cancelled: "bg-red-100 text-red-800 border-red-200",
+};
+
+const nextStatusOptions: Record<string, string[]> = {
+    pending: ["paid", "cancelled"],
+    paid: ["shipped", "cancelled"],
+    shipped: ["delivered"],
+    delivered: [],
+    cancelled: [],
+};
+
+const availableStatusChanges = nextStatusOptions[order.status] || [];
+---
+
+<AdminLayout title={`Pedido #${id}`}>
+    <!-- Breadcrumb -->
+    <nav class="flex items-center gap-2 text-sm text-gray-500 mb-6">
+        <a href="/admin" class="hover:text-brand-navy">Dashboard</a>
+        <span>/</span>
+        <a href="/admin/pedidos" class="hover:text-brand-navy">Pedidos</a>
+        <span>/</span>
+        <span class="text-gray-900 font-medium"
+            >#{id?.toString().padStart(5, "0")}</span
+        >
+    </nav>
+
+    {
+        success && (
+            <div class="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl">
+                <p class="text-green-700 text-sm flex items-center gap-2">
+                    <svg
+                        class="w-5 h-5"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                    >
+                        <path
+                            fill-rule="evenodd"
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                            clip-rule="evenodd"
+                        />
+                    </svg>
+                    {success}
+                </p>
+            </div>
+        )
+    }
+
+    {
+        error && (
+            <div class="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl">
+                <p class="text-red-700 text-sm flex items-center gap-2">
+                    <svg
+                        class="w-5 h-5"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                    >
+                        <path
+                            fill-rule="evenodd"
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                            clip-rule="evenodd"
+                        />
+                    </svg>
+                    {error}
+                </p>
+            </div>
+        )
+    }
+
+    <div class="grid lg:grid-cols-3 gap-8">
+        <!-- Main Content -->
+        <div class="lg:col-span-2 space-y-6">
+            <!-- Order Summary -->
+            <div
+                class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100"
+            >
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-lg font-bold text-gray-900">
+                        Resumen del Pedido
+                    </h2>
+                    <span
+                        class={`px-4 py-2 text-sm font-semibold rounded-full border ${statusColors[order.status]}`}
+                    >
+                        {statusLabels[order.status]}
+                    </span>
+                </div>
+
+                <!-- Order Items -->
+                <div class="space-y-4">
+                    {
+                        orderItems?.map((item) => (
+                            <div class="flex items-center gap-4 p-4 bg-gray-50 rounded-xl">
+                                <div class="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center">
+                                    <svg
+                                        class="w-8 h-8 text-gray-400"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke="currentColor"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="2"
+                                            d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                                        />
+                                    </svg>
+                                </div>
+                                <div class="flex-1">
+                                    <h3 class="font-semibold text-gray-900">
+                                        {item.product_name}
+                                    </h3>
+                                    <div class="flex items-center gap-4 text-sm text-gray-600 mt-1">
+                                        {item.size && (
+                                            <span>Talla: {item.size}</span>
+                                        )}
+                                        <span>Cantidad: {item.quantity}</span>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <p class="font-semibold text-gray-900">
+                                        {formatPrice(
+                                            item.product_price * item.quantity,
+                                        )}
+                                    </p>
+                                    <p class="text-sm text-gray-500">
+                                        {formatPrice(item.product_price)} / ud.
+                                    </p>
+                                </div>
+                            </div>
+                        ))
+                    }
+                </div>
+
+                <!-- Totals -->
+                <div class="mt-6 pt-6 border-t border-gray-200 space-y-3">
+                    <div
+                        class="flex justify-between text-lg font-bold text-gray-900"
+                    >
+                        <span>Total</span>
+                        <span class="text-brand-leather"
+                            >{formatPrice(order.total)}</span
+                        >
+                    </div>
+                </div>
+            </div>
+
+            <!-- Timeline -->
+            <div
+                class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100"
+            >
+                <h2 class="text-lg font-bold text-gray-900 mb-6">
+                    Historial del Pedido
+                </h2>
+
+                <div class="space-y-4">
+                    <div class="flex items-start gap-4">
+                        <div
+                            class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0"
+                        >
+                            <svg
+                                class="w-5 h-5 text-blue-600"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="font-semibold text-gray-900">
+                                Pedido creado
+                            </p>
+                            <p class="text-sm text-gray-500">
+                                {
+                                    new Date(order.created_at).toLocaleString(
+                                        "es-ES",
+                                    )
+                                }
+                            </p>
+                        </div>
+                    </div>
+
+                    {
+                        order.updated_at !== order.created_at && (
+                            <div class="flex items-start gap-4">
+                                <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                    <svg
+                                        class="w-5 h-5 text-green-600"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke="currentColor"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="2"
+                                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                                        />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <p class="font-semibold text-gray-900">
+                                        Última actualización
+                                    </p>
+                                    <p class="text-sm text-gray-500">
+                                        {new Date(
+                                            order.updated_at,
+                                        ).toLocaleString("es-ES")}
+                                    </p>
+                                </div>
+                            </div>
+                        )
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="space-y-6">
+            <!-- Customer Info -->
+            <div
+                class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100"
+            >
+                <h2 class="text-lg font-bold text-gray-900 mb-6">
+                    Información del Cliente
+                </h2>
+
+                <div class="space-y-4">
+                    <div>
+                        <p class="text-sm text-gray-500">Nombre</p>
+                        <p class="font-medium text-gray-900">
+                            {order.customer_name}
+                        </p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Email</p>
+                        <a
+                            href={`mailto:${order.customer_email}`}
+                            class="font-medium text-brand-leather hover:underline"
+                        >
+                            {order.customer_email}
+                        </a>
+                    </div>
+                    {
+                        order.customer_phone && (
+                            <div>
+                                <p class="text-sm text-gray-500">Teléfono</p>
+                                <a
+                                    href={`tel:${order.customer_phone}`}
+                                    class="font-medium text-gray-900 hover:text-brand-leather"
+                                >
+                                    {order.customer_phone}
+                                </a>
+                            </div>
+                        )
+                    }
+                </div>
+            </div>
+
+            <!-- Shipping Address -->
+            <div
+                class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100"
+            >
+                <h2 class="text-lg font-bold text-gray-900 mb-6">
+                    Dirección de Envío
+                </h2>
+
+                <div class="space-y-2 text-gray-700">
+                    <p>{order.customer_address}</p>
+                    <p>{order.customer_postal_code} {order.customer_city}</p>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div
+                class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100"
+            >
+                <h2 class="text-lg font-bold text-gray-900 mb-6">Acciones</h2>
+
+                {
+                    availableStatusChanges.length > 0 ? (
+                        <form method="POST" class="space-y-3">
+                            <input
+                                type="hidden"
+                                name="action"
+                                value="update_status"
+                            />
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Cambiar estado
+                                </label>
+                                <select
+                                    name="status"
+                                    class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-brand-navy focus:outline-none focus:ring-2 focus:ring-brand-navy/20"
+                                >
+                                    <option value="">
+                                        Seleccionar nuevo estado
+                                    </option>
+                                    {availableStatusChanges.map((status) => (
+                                        <option value={status}>
+                                            {statusLabels[status]}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <button
+                                type="submit"
+                                class="w-full py-3 px-4 bg-brand-navy text-white font-medium rounded-xl hover:bg-brand-navy-light transition-colors"
+                            >
+                                Actualizar Estado
+                            </button>
+                        </form>
+                    ) : (
+                        <p class="text-gray-500 text-sm text-center py-4">
+                            {order.status === "delivered"
+                                ? "Este pedido ya ha sido entregado"
+                                : order.status === "cancelled"
+                                  ? "Este pedido ha sido cancelado"
+                                  : "No hay acciones disponibles"}
+                        </p>
+                    )
+                }
+
+                <div class="mt-4 pt-4 border-t border-gray-200">
+                    <a
+                        href="/admin/pedidos"
+                        class="flex items-center justify-center gap-2 w-full py-3 text-gray-600 hover:text-brand-navy transition-colors"
+                    >
+                        <svg
+                            class="w-4 h-4"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                        </svg>
+                        Volver a Pedidos
+                    </a>
+                </div>
+            </div>
+
+            <!-- Payment Info -->
+            {
+                order.stripe_payment_intent_id && (
+                    <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                        <h2 class="text-lg font-bold text-gray-900 mb-6">
+                            Información de Pago
+                        </h2>
+
+                        <div>
+                            <p class="text-sm text-gray-500">
+                                ID de Pago Stripe
+                            </p>
+                            <p class="font-mono text-xs text-gray-700 break-all mt-1">
+                                {order.stripe_payment_intent_id}
+                            </p>
+                        </div>
+                    </div>
+                )
+            }
+        </div>
+    </div>
+</AdminLayout>

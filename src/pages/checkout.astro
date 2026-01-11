@@ -1,0 +1,39 @@
+---
+import PublicLayout from "../layouts/PublicLayout.astro";
+import CheckoutForm from "../components/islands/CheckoutForm";
+import { getShippingMethods } from "../lib/supabase";
+
+export const prerender = false;
+
+// Obtener métodos de envío disponibles
+const shippingMethods = await getShippingMethods();
+---
+
+<PublicLayout
+    title="Checkout"
+    description="Completa tu pedido"
+>
+    <section class="py-12 lg:py-16">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <!-- Header -->
+            <div class="mb-10">
+                <nav class="flex items-center gap-2 text-sm text-gray-600 mb-4">
+                    <a href="/" class="hover:text-gray-900">Inicio</a>
+                    <span>/</span>
+                    <a href="/carrito" class="hover:text-gray-900">Carrito</a>
+                    <span>/</span>
+                    <span class="text-gray-900">Checkout</span>
+                </nav>
+                <h1 class="text-4xl lg:text-5xl font-bold text-gray-900">
+                    Finalizar Compra
+                </h1>
+            </div>
+
+            <!-- Checkout Form -->
+            <CheckoutForm 
+                client:only="react"
+                shippingMethods={shippingMethods}
+            />
+        </div>
+    </section>
+</PublicLayout>

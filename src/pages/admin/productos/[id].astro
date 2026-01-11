@@ -1,0 +1,818 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import { supabase, getCategories, type Product } from "../../../lib/supabase";
+import { slugify, formatPrice } from "../../../lib/utils";
+
+// SSR
+export const prerender = false;
+
+const { id } = Astro.params;
+
+// Obtener producto
+const { data: product, error: fetchError } = await supabase
+    .from("products")
+    .select("*, category:categories(*)")
+    .eq("id", id)
+    .single();
+
+if (fetchError || !product) {
+    return Astro.redirect("/admin/productos");
+}
+
+const categories = await getCategories();
+
+let success = false;
+let error = "";
+
+// Procesar actualización
+if (Astro.request.method === "POST") {
+    try {
+        const formData = await Astro.request.formData();
+        const action = formData.get("action")?.toString();
+
+        if (action === "delete") {
+            // Eliminar producto
+            const { error: deleteError } = await supabase
+                .from("products")
+                .delete()
+                .eq("id", id);
+
+            if (deleteError) {
+                error = `Error al eliminar: ${deleteError.message}`;
+            } else {
+                return Astro.redirect("/admin/productos?deleted=true");
+            }
+        } else {
+            // Actualizar producto
+            const name = formData.get("name")?.toString() || "";
+            const description = formData.get("description")?.toString() || "";
+            const priceStr = formData.get("price")?.toString() || "0";
+            const price = Math.round(parseFloat(priceStr) * 100);
+            const stock = parseInt(formData.get("stock")?.toString() || "0");
+            const category_id = parseInt(
+                formData.get("category_id")?.toString() || "0",
+            );
+            const featured = formData.get("featured") === "on";
+            const imagesStr = formData.get("images")?.toString() || "[]";
+
+            // Campos de oferta flash
+            const is_on_sale = formData.get("is_on_sale") === "on";
+            const salePriceStr = formData.get("sale_price")?.toString() || "";
+            const sale_price =
+                is_on_sale && salePriceStr
+                    ? Math.round(parseFloat(salePriceStr) * 100)
+                    : null;
+            const saleEndsStr = formData.get("sale_ends_at")?.toString() || "";
+            const sale_ends_at =
+                is_on_sale && saleEndsStr
+                    ? new Date(saleEndsStr).toISOString()
+                    : null;
+
+            let images: string[] = [];
+            try {
+                images = JSON.parse(imagesStr);
+            } catch {
+                images = product.images || [];
+            }
+
+            const slug = slugify(name);
+
+            // Validaciones
+            if (!name.trim()) {
+                error = "El nombre del producto es obligatorio";
+            } else if (price <= 0) {
+                error = "El precio debe ser mayor que 0";
+            } else if (stock < 0) {
+                error = "El stock no puede ser negativo";
+            } else if (!category_id) {
+                error = "Debes seleccionar una categoría";
+            } else if (is_on_sale && (!sale_price || sale_price >= price)) {
+                error =
+                    "El precio de oferta debe ser menor que el precio original";
+            } else {
+                const { error: updateError } = await supabase
+                    .from("products")
+                    .update({
+                        name,
+                        slug,
+                        description,
+                        price,
+                        sale_price,
+                        is_on_sale,
+                        sale_ends_at,
+                        stock,
+                        category_id,
+                        featured,
+                        images,
+                        updated_at: new Date().toISOString(),
+                    })
+                    .eq("id", id);
+
+                if (updateError) {
+                    error = `Error al actualizar: ${updateError.message}`;
+                } else {
+                    success = true;
+                    // Recargar datos del producto
+                    const { data: updatedProduct } = await supabase
+                        .from("products")
+                        .select("*, category:categories(*)")
+                        .eq("id", id)
+                        .single();
+
+                    if (updatedProduct) {
+                        Object.assign(product, updatedProduct);
+                    }
+                }
+            }
+        }
+    } catch (e) {
+        error = "Ha ocurrido un error inesperado.";
+        console.error(e);
+    }
+}
+
+// Convertir precio de céntimos a euros para el formulario
+const priceInEuros = (product.price / 100).toFixed(2);
+const salePriceInEuros = product.sale_price
+    ? (product.sale_price / 100).toFixed(2)
+    : "";
+---
+
+<AdminLayout title={`Editar: ${product.name}`}>
+    <!-- Breadcrumb -->
+    <nav class="flex items-center gap-2 text-sm text-text-muted mb-6">
+        <a href="/admin" class="hover:text-brand-navy">Dashboard</a>
+        <span>/</span>
+        <a href="/admin/productos" class="hover:text-brand-navy">Productos</a>
+        <span>/</span>
+        <span class="text-text-primary">{product.name}</span>
+    </nav>
+
+    {
+        success && (
+            <div class="mb-6 p-4 bg-status-success-bg border border-status-success/20 rounded-xl">
+                <p class="text-status-success flex items-center gap-2">
+                    <svg
+                        class="w-5 h-5"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                    >
+                        <path
+                            fill-rule="evenodd"
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                            clip-rule="evenodd"
+                        />
+                    </svg>
+                    Producto actualizado correctamente
+                </p>
+            </div>
+        )
+    }
+
+    {
+        error && (
+            <div class="mb-6 p-4 bg-status-error-bg border border-status-error/20 rounded-xl">
+                <p class="text-status-error flex items-center gap-2">
+                    <svg
+                        class="w-5 h-5"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                    >
+                        <path
+                            fill-rule="evenodd"
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                            clip-rule="evenodd"
+                        />
+                    </svg>
+                    {error}
+                </p>
+            </div>
+        )
+    }
+
+    <form method="POST" class="space-y-8">
+        <div class="grid lg:grid-cols-3 gap-8">
+            <!-- Main Content -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Basic Info -->
+                <div class="bg-surface-primary rounded-2xl p-6 shadow-soft">
+                    <h2 class="text-lg font-semibold text-brand-navy mb-6">
+                        Información Básica
+                    </h2>
+
+                    <div class="space-y-6">
+                        <div>
+                            <label
+                                for="name"
+                                class="block text-sm font-medium text-text-primary mb-2"
+                            >
+                                Nombre del producto <span
+                                    class="text-status-error">*</span
+                                >
+                            </label>
+                            <input
+                                type="text"
+                                id="name"
+                                name="name"
+                                required
+                                value={product.name}
+                                class="w-full px-4 py-3 rounded-xl border border-border-light bg-surface-primary focus:border-brand-navy focus:outline-none focus:ring-2 focus:ring-brand-navy/20"
+                            />
+                        </div>
+
+                        <div>
+                            <label
+                                for="description"
+                                class="block text-sm font-medium text-text-primary mb-2"
+                            >
+                                Descripción
+                            </label>
+                            <textarea
+                                id="description"
+                                name="description"
+                                rows="5"
+                                class="w-full px-4 py-3 rounded-xl border border-border-light bg-surface-primary focus:border-brand-navy focus:outline-none focus:ring-2 focus:ring-brand-navy/20 resize-none"
+                                >{product.description}</textarea
+                            >
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Images -->
+                <div class="bg-surface-primary rounded-2xl p-6 shadow-soft">
+                    <h2 class="text-lg font-semibold text-brand-navy mb-6">
+                        Imágenes del Producto
+                    </h2>
+
+                    <div
+                        id="drop-zone"
+                        class="border-2 border-dashed border-border-medium rounded-xl p-8 text-center hover:border-brand-navy hover:bg-surface-secondary transition-colors cursor-pointer"
+                    >
+                        <div class="w-16 h-16 mx-auto mb-4 text-text-muted">
+                            <svg
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="1.5"
+                                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                ></path>
+                            </svg>
+                        </div>
+                        <p class="text-text-secondary mb-2">
+                            Arrastra y suelta imágenes aquí
+                        </p>
+                        <button
+                            type="button"
+                            id="browse-btn"
+                            class="text-brand-leather font-medium hover:text-brand-leather-dark"
+                        >
+                            selecciona archivos
+                        </button>
+                        <input
+                            type="file"
+                            id="file-input"
+                            accept="image/*"
+                            multiple
+                            class="hidden"
+                        />
+                    </div>
+
+                    <div
+                        id="image-previews"
+                        class="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6"
+                    >
+                        {
+                            product.images?.map(
+                                (url: string, index: number) => (
+                                    <div
+                                        class="relative aspect-square rounded-xl overflow-hidden bg-surface-tertiary group image-preview"
+                                        data-url={url}
+                                    >
+                                        <img
+                                            src={url}
+                                            alt={`Imagen ${index + 1}`}
+                                            class="w-full h-full object-cover"
+                                        />
+                                        <button
+                                            type="button"
+                                            class="remove-image absolute top-2 right-2 p-1.5 bg-status-error text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                                        >
+                                            <svg
+                                                class="w-4 h-4"
+                                                fill="none"
+                                                viewBox="0 0 24 24"
+                                                stroke="currentColor"
+                                            >
+                                                <path
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                    stroke-width="2"
+                                                    d="M6 18L18 6M6 6l12 12"
+                                                />
+                                            </svg>
+                                        </button>
+                                        {index === 0 && (
+                                            <span class="absolute bottom-2 left-2 px-2 py-1 bg-brand-navy text-white text-xs rounded">
+                                                Principal
+                                            </span>
+                                        )}
+                                    </div>
+                                ),
+                            )
+                        }
+                    </div>
+
+                    <input
+                        type="hidden"
+                        name="images"
+                        id="images-input"
+                        value={JSON.stringify(product.images || [])}
+                    />
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="space-y-6">
+                <!-- Pricing & Stock -->
+                <div class="bg-surface-primary rounded-2xl p-6 shadow-soft">
+                    <h2 class="text-lg font-semibold text-brand-navy mb-6">
+                        Precio y Stock
+                    </h2>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label
+                                for="price"
+                                class="block text-sm font-medium text-text-primary mb-2"
+                            >
+                                Precio (€) <span class="text-status-error"
+                                    >*</span
+                                >
+                            </label>
+                            <div class="relative">
+                                <span
+                                    class="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted"
+                                    >€</span
+                                >
+                                <input
+                                    type="number"
+                                    id="price"
+                                    name="price"
+                                    required
+                                    min="0.01"
+                                    step="0.01"
+                                    value={priceInEuros}
+                                    class="w-full pl-10 pr-4 py-3 rounded-xl border border-border-light bg-surface-primary focus:border-brand-navy focus:outline-none focus:ring-2 focus:ring-brand-navy/20"
+                                />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label
+                                for="stock"
+                                class="block text-sm font-medium text-text-primary mb-2"
+                            >
+                                Stock disponible <span class="text-status-error"
+                                    >*</span
+                                >
+                            </label>
+                            <input
+                                type="number"
+                                id="stock"
+                                name="stock"
+                                required
+                                min="0"
+                                value={product.stock}
+                                class="w-full px-4 py-3 rounded-xl border border-border-light bg-surface-primary focus:border-brand-navy focus:outline-none focus:ring-2 focus:ring-brand-navy/20"
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Flash Sale -->
+                <div
+                    class="bg-gradient-to-br from-red-50 to-orange-50 rounded-2xl p-6 shadow-soft border-2 border-dashed border-red-200"
+                >
+                    <div class="flex items-center justify-between mb-4">
+                        <h2
+                            class="text-lg font-semibold text-red-700 flex items-center gap-2"
+                        >
+                            <span class="text-2xl">⚡</span>
+                            Oferta Flash
+                        </h2>
+                        <label
+                            class="relative inline-flex items-center cursor-pointer"
+                        >
+                            <input
+                                type="checkbox"
+                                name="is_on_sale"
+                                id="is_on_sale"
+                                class="sr-only peer"
+                                checked={product.is_on_sale}
+                            />
+                            <div
+                                class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-red-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"
+                            >
+                            </div>
+                        </label>
+                    </div>
+
+                    <div id="sale-fields" class="space-y-4">
+                        <div>
+                            <label
+                                for="sale_price"
+                                class="block text-sm font-medium text-red-700 mb-2"
+                            >
+                                Precio de Oferta (€)
+                            </label>
+                            <div class="relative">
+                                <span
+                                    class="absolute left-4 top-1/2 -translate-y-1/2 text-red-600"
+                                    >€</span
+                                >
+                                <input
+                                    type="number"
+                                    id="sale_price"
+                                    name="sale_price"
+                                    min="0.01"
+                                    step="0.01"
+                                    value={salePriceInEuros}
+                                    placeholder="Precio ofertado"
+                                    class="w-full pl-10 pr-4 py-3 rounded-xl border-2 border-red-200 bg-white focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-200"
+                                />
+                            </div>
+                            {
+                                product.is_on_sale && product.sale_price && (
+                                    <p class="text-sm text-green-600 mt-2 font-medium">
+                                        🏷️ Descuento:{" "}
+                                        {Math.round(
+                                            (1 -
+                                                product.sale_price /
+                                                    product.price) *
+                                                100,
+                                        )}
+                                        %
+                                    </p>
+                                )
+                            }
+                        </div>
+
+                        <div>
+                            <label
+                                for="sale_ends_at"
+                                class="block text-sm font-medium text-red-700 mb-2"
+                            >
+                                Finaliza (opcional)
+                            </label>
+                            <input
+                                type="datetime-local"
+                                id="sale_ends_at"
+                                name="sale_ends_at"
+                                value={product.sale_ends_at
+                                    ? new Date(product.sale_ends_at)
+                                          .toISOString()
+                                          .slice(0, 16)
+                                    : ""}
+                                class="w-full px-4 py-3 rounded-xl border-2 border-red-200 bg-white focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-200"
+                            />
+                            <p class="text-xs text-gray-500 mt-1">
+                                Deja vacío para oferta sin límite de tiempo
+                            </p>
+                        </div>
+                    </div>
+
+                    {
+                        product.is_on_sale && (
+                            <div class="mt-4 p-3 bg-red-100 rounded-lg">
+                                <p class="text-sm text-red-700 font-medium">
+                                    ✨ Este producto está actualmente en oferta
+                                    flash
+                                </p>
+                            </div>
+                        )
+                    }
+                </div>
+
+                <!-- Category -->
+                <div class="bg-surface-primary rounded-2xl p-6 shadow-soft">
+                    <h2 class="text-lg font-semibold text-brand-navy mb-6">
+                        Categoría
+                    </h2>
+
+                    <select
+                        id="category_id"
+                        name="category_id"
+                        required
+                        class="w-full px-4 py-3 rounded-xl border border-border-light bg-surface-primary focus:border-brand-navy focus:outline-none focus:ring-2 focus:ring-brand-navy/20"
+                    >
+                        <option value="">Selecciona una categoría</option>
+                        {
+                            categories.map((cat) => (
+                                <option
+                                    value={cat.id}
+                                    selected={cat.id === product.category_id}
+                                >
+                                    {cat.name}
+                                </option>
+                            ))
+                        }
+                    </select>
+                </div>
+
+                <!-- Featured -->
+                <div class="bg-surface-primary rounded-2xl p-6 shadow-soft">
+                    <h2 class="text-lg font-semibold text-brand-navy mb-6">
+                        Destacado
+                    </h2>
+
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            name="featured"
+                            checked={product.featured}
+                            class="w-5 h-5 rounded border-border-medium text-brand-leather focus:ring-brand-leather"
+                        />
+                        <span class="text-text-secondary"
+                            >Mostrar en ofertas flash</span
+                        >
+                    </label>
+                </div>
+
+                <!-- Actions -->
+                <div
+                    class="bg-surface-primary rounded-2xl p-6 shadow-soft space-y-3"
+                >
+                    <button
+                        type="submit"
+                        name="action"
+                        value="update"
+                        class="w-full py-4 px-6 bg-brand-navy text-white font-medium rounded-xl hover:bg-brand-navy-light transition-all"
+                    >
+                        Guardar Cambios
+                    </button>
+
+                    <a
+                        href={`/productos/${product.slug}`}
+                        target="_blank"
+                        class="flex items-center justify-center gap-2 w-full py-3 text-text-secondary hover:text-brand-navy border border-border-light rounded-xl transition-colors"
+                    >
+                        <svg
+                            class="w-4 h-4"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                            ></path>
+                        </svg>
+                        Ver en tienda
+                    </a>
+
+                    <a
+                        href="/admin/productos"
+                        class="block w-full py-3 text-center text-text-muted hover:text-text-secondary transition-colors"
+                    >
+                        Volver al listado
+                    </a>
+                </div>
+
+                <!-- Danger Zone -->
+                <div class="bg-status-error-bg rounded-2xl p-6">
+                    <h2 class="text-lg font-semibold text-status-error mb-4">
+                        Zona de Peligro
+                    </h2>
+                    <p class="text-sm text-status-error/80 mb-4">
+                        Esta acción es irreversible. El producto será eliminado
+                        permanentemente.
+                    </p>
+                    <button
+                        type="submit"
+                        name="action"
+                        value="delete"
+                        id="delete-btn"
+                        class="w-full py-3 px-6 bg-status-error text-white font-medium rounded-xl hover:bg-red-700 transition-colors"
+                    >
+                        Eliminar Producto
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</AdminLayout>
+
+<script define:vars={{ initialImages: product.images || [] }}>
+    let uploadedImages = [...initialImages];
+    let isUploading = false;
+    const imagesInput = document.getElementById("images-input");
+    const previewsContainer = document.getElementById("image-previews");
+    const dropZone = document.getElementById("drop-zone");
+    const fileInput = document.getElementById("file-input");
+    const browseBtn = document.getElementById("browse-btn");
+    const deleteBtn = document.getElementById("delete-btn");
+
+    // Remove existing image buttons
+    document.querySelectorAll(".remove-image").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+            const preview = (e.target as HTMLElement).closest(".image-preview");
+            const url = preview?.getAttribute("data-url");
+            if (url) {
+                uploadedImages = uploadedImages.filter((u) => u !== url);
+                preview?.remove();
+                imagesInput.value = JSON.stringify(uploadedImages);
+                updatePreviewLabels();
+            }
+        });
+    });
+
+    // File upload - browse button
+    browseBtn?.addEventListener("click", () => fileInput?.click());
+
+    // Drag & Drop
+    dropZone?.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dropZone.classList.add("border-brand-navy", "bg-surface-secondary");
+    });
+
+    dropZone?.addEventListener("dragleave", () => {
+        dropZone.classList.remove("border-brand-navy", "bg-surface-secondary");
+    });
+
+    dropZone?.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dropZone.classList.remove("border-brand-navy", "bg-surface-secondary");
+        const files = (e as DragEvent).dataTransfer?.files;
+        if (files) handleFiles(files);
+    });
+
+    fileInput?.addEventListener("change", () => {
+        if (fileInput.files) handleFiles(fileInput.files);
+    });
+
+    async function handleFiles(files: FileList) {
+        if (uploadedImages.length >= 5) {
+            alert("Máximo 5 imágenes por producto");
+            return;
+        }
+
+        if (isUploading) {
+            alert("Espera a que termine la subida actual");
+            return;
+        }
+
+        const filesToUpload = Array.from(files).slice(
+            0,
+            5 - uploadedImages.length,
+        );
+
+        for (const file of filesToUpload) {
+            if (!file.type.startsWith("image/")) {
+                alert(`${file.name} no es una imagen válida`);
+                continue;
+            }
+            if (file.size > 5 * 1024 * 1024) {
+                alert(`${file.name} es demasiado grande. Máximo 5MB.`);
+                continue;
+            }
+            await uploadToSupabase(file);
+        }
+    }
+
+    async function uploadToSupabase(file: File) {
+        isUploading = true;
+        showUploadingIndicator();
+
+        try {
+            const formData = new FormData();
+            formData.append("file", file);
+
+            const response = await fetch("/api/upload-image", {
+                method: "POST",
+                body: formData,
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || "Error al subir la imagen");
+            }
+
+            uploadedImages.push(result.url);
+            imagesInput.value = JSON.stringify(uploadedImages);
+            addImagePreview(result.url, uploadedImages.length - 1);
+        } catch (error) {
+            console.error("Error uploading image:", error);
+            alert(
+                `Error al subir ${file.name}: ${error instanceof Error ? error.message : "Error desconocido"}`,
+            );
+        } finally {
+            isUploading = false;
+            hideUploadingIndicator();
+        }
+    }
+
+    function showUploadingIndicator() {
+        const indicator = document.createElement("div");
+        indicator.id = "upload-indicator";
+        indicator.className =
+            "fixed inset-0 bg-black/50 flex items-center justify-center z-50";
+        indicator.innerHTML = `
+            <div class="bg-white rounded-2xl p-8 text-center shadow-lg">
+                <div class="w-12 h-12 border-4 border-brand-navy border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                <p class="text-brand-navy font-medium">Subiendo imagen...</p>
+                <p class="text-sm text-text-muted mt-1">Por favor, espera</p>
+            </div>
+        `;
+        document.body.appendChild(indicator);
+    }
+
+    function hideUploadingIndicator() {
+        document.getElementById("upload-indicator")?.remove();
+    }
+
+    function addImagePreview(url: string, index: number) {
+        if (!previewsContainer) return;
+
+        const div = document.createElement("div");
+        div.className =
+            "relative aspect-square rounded-xl overflow-hidden bg-surface-tertiary group image-preview";
+        div.setAttribute("data-url", url);
+        div.innerHTML = `
+            <img src="${url}" alt="Imagen ${index + 1}" class="w-full h-full object-cover" />
+            <button type="button" class="remove-image absolute top-2 right-2 p-1.5 bg-status-error text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+            ${index === 0 ? '<span class="principal-label absolute bottom-2 left-2 px-2 py-1 bg-brand-navy text-white text-xs rounded">Principal</span>' : ""}
+        `;
+
+        const removeBtn = div.querySelector(".remove-image");
+        removeBtn?.addEventListener("click", () => {
+            uploadedImages = uploadedImages.filter((u) => u !== url);
+            div.remove();
+            imagesInput.value = JSON.stringify(uploadedImages);
+            updatePreviewLabels();
+        });
+
+        previewsContainer.appendChild(div);
+    }
+
+    function updatePreviewLabels() {
+        const previews = previewsContainer?.querySelectorAll(".image-preview");
+        previews?.forEach((preview, index) => {
+            const existingLabel = preview.querySelector(".principal-label");
+            if (index === 0 && !existingLabel) {
+                const label = document.createElement("span");
+                label.className =
+                    "principal-label absolute bottom-2 left-2 px-2 py-1 bg-brand-navy text-white text-xs rounded";
+                label.textContent = "Principal";
+                preview.appendChild(label);
+            } else if (index !== 0 && existingLabel) {
+                existingLabel.remove();
+            }
+        });
+    }
+
+    // Delete confirmation
+    deleteBtn?.addEventListener("click", (e) => {
+        if (
+            !confirm(
+                "¿Estás seguro de que quieres eliminar este producto? Esta acción no se puede deshacer.",
+            )
+        ) {
+            e.preventDefault();
+        }
+    });
+
+    // Flash Sale toggle
+    const saleToggle = document.getElementById(
+        "is_on_sale",
+    ) as HTMLInputElement;
+    const saleFields = document.getElementById("sale-fields");
+
+    saleToggle?.addEventListener("change", () => {
+        if (saleFields) {
+            if (saleToggle.checked) {
+                saleFields.classList.remove(
+                    "opacity-50",
+                    "pointer-events-none",
+                );
+            } else {
+                saleFields.classList.add("opacity-50", "pointer-events-none");
+            }
+        }
+    });
+</script>

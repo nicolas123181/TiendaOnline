@@ -1,0 +1,12 @@
+---
+import { supabase } from "../../lib/supabase";
+
+// SSR
+export const prerender = false;
+
+// Desconectar usuario
+await supabase.auth.signOut();
+
+// Redirigir a login
+return Astro.redirect("/admin/login?message=Sesión cerrada correctamente");
+---

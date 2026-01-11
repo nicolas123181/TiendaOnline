@@ -1,0 +1,151 @@
+---
+import { supabase } from "../../lib/supabase";
+
+export const prerender = false;
+
+// Esta página maneja el callback de OAuth (Google)
+// Supabase automáticamente procesa los tokens en el hash de la URL
+
+const {
+    data: { session },
+    error,
+} = await supabase.auth.getSession();
+
+if (error) {
+    console.error("Auth callback error:", error);
+    return Astro.redirect("/login?error=" + encodeURIComponent(error.message));
+}
+
+// Redirigir a perfil si está logueado
+if (session) {
+    return Astro.redirect("/perfil");
+}
+
+// Si no hay sesión, esperar a que el cliente procese el hash
+---
+
+<!doctype html>
+<html lang="es">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Procesando autenticación...</title>
+        <style>
+            body {
+                font-family:
+                    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                    sans-serif;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                min-height: 100vh;
+                margin: 0;
+                background: #f9fafb;
+            }
+            .loader {
+                text-align: center;
+            }
+            .spinner {
+                width: 48px;
+                height: 48px;
+                border: 4px solid #e5e7eb;
+                border-top-color: #1e3a5f;
+                border-radius: 50%;
+                animation: spin 1s linear infinite;
+                margin: 0 auto 16px;
+            }
+            @keyframes spin {
+                to {
+                    transform: rotate(360deg);
+                }
+            }
+            p {
+                color: #6b7280;
+                font-size: 14px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="loader">
+            <div class="spinner"></div>
+            <p>Procesando autenticación...</p>
+        </div>
+
+        <script type="module">
+            import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+            const supabaseUrl =
+                document.querySelector('meta[name="supabase-url"]')?.content ||
+                window.__SUPABASE_URL__;
+            const supabaseAnonKey =
+                document.querySelector('meta[name="supabase-anon-key"]')
+                    ?.content || window.__SUPABASE_ANON_KEY__;
+
+            // Crear cliente de Supabase
+            const supabase = createClient(
+                import.meta.env?.PUBLIC_SUPABASE_URL ||
+                    "https://kggjqbhcvvayqwkbpwvp.supabase.co",
+                import.meta.env?.PUBLIC_SUPABASE_ANON_KEY ||
+                    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtnZ2pxYmhjdnZheXF3a2Jwd3ZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzYyNDI2NDQsImV4cCI6MjA1MTgxODY0NH0.P9eqbIFVBt2IuHnzTcCDbGb6w72xR-AQ60aKEkqJnYY",
+            );
+
+            async function handleCallback() {
+                try {
+                    // Supabase maneja automáticamente el hash
+                    const {
+                        data: { session },
+                        error,
+                    } = await supabase.auth.getSession();
+
+                    if (error) {
+                        console.error("Session error:", error);
+                        window.location.href =
+                            "/login?error=" + encodeURIComponent(error.message);
+                        return;
+                    }
+
+                    if (session) {
+                        console.log("Session found, redirecting to profile");
+                        window.location.href = "/perfil";
+                    } else {
+                        // Intentar obtener sesión del hash
+                        const hashParams = new URLSearchParams(
+                            window.location.hash.substring(1),
+                        );
+                        const accessToken = hashParams.get("access_token");
+
+                        if (accessToken) {
+                            const { data, error: setError } =
+                                await supabase.auth.setSession({
+                                    access_token: accessToken,
+                                    refresh_token:
+                                        hashParams.get("refresh_token") || "",
+                                });
+
+                            if (setError) {
+                                console.error("Set session error:", setError);
+                                window.location.href =
+                                    "/login?error=" +
+                                    encodeURIComponent(setError.message);
+                            } else {
+                                window.location.href = "/perfil";
+                            }
+                        } else {
+                            console.log(
+                                "No session found, redirecting to login",
+                            );
+                            window.location.href = "/login";
+                        }
+                    }
+                } catch (err) {
+                    console.error("Callback error:", err);
+                    window.location.href =
+                        "/login?error=" +
+                        encodeURIComponent("Error de autenticación");
+                }
+            }
+
+            handleCallback();
+        </script>
+    </body>
+</html>

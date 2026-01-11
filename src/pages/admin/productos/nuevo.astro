@@ -1,0 +1,545 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import {
+    getCategories,
+    supabase,
+    getServiceSupabase,
+} from "../../../lib/supabase";
+import { slugify } from "../../../lib/utils";
+
+// SSR
+export const prerender = false;
+
+const categories = await getCategories();
+
+let success = false;
+let error = "";
+let newProductId: number | null = null;
+
+// Procesar formulario
+if (Astro.request.method === "POST") {
+    try {
+        const formData = await Astro.request.formData();
+
+        const name = formData.get("name")?.toString() || "";
+        const description = formData.get("description")?.toString() || "";
+        const priceStr = formData.get("price")?.toString() || "0";
+        const price = Math.round(parseFloat(priceStr) * 100); // Convertir a céntimos
+        const stock = parseInt(formData.get("stock")?.toString() || "0");
+        const category_id = parseInt(
+            formData.get("category_id")?.toString() || "0",
+        );
+        const featured = formData.get("featured") === "on";
+        const imagesStr = formData.get("images")?.toString() || "[]";
+
+        let images: string[] = [];
+        try {
+            images = JSON.parse(imagesStr);
+        } catch {
+            images = [];
+        }
+
+        const slug = slugify(name);
+
+        // Validaciones
+        if (!name.trim()) {
+            error = "El nombre del producto es obligatorio";
+        } else if (price <= 0) {
+            error = "El precio debe ser mayor que 0";
+        } else if (stock < 0) {
+            error = "El stock no puede ser negativo";
+        } else if (!category_id) {
+            error = "Debes seleccionar una categoría";
+        } else {
+            // Insertar producto
+            const { data, error: insertError } = await supabase
+                .from("products")
+                .insert({
+                    name,
+                    slug,
+                    description,
+                    price,
+                    stock,
+                    category_id,
+                    featured,
+                    images,
+                })
+                .select("id")
+                .single();
+
+            if (insertError) {
+                error = `Error al crear el producto: ${insertError.message}`;
+            } else {
+                success = true;
+                newProductId = data.id;
+            }
+        }
+    } catch (e) {
+        error =
+            "Ha ocurrido un error inesperado. Por favor, inténtalo de nuevo.";
+        console.error(e);
+    }
+}
+---
+
+<AdminLayout title="Nuevo Producto">
+    {
+        success && newProductId && (
+            <div class="mb-6 p-4 bg-status-success-bg border border-status-success/20 rounded-xl">
+                <div class="flex items-center justify-between">
+                    <p class="text-status-success flex items-center gap-2">
+                        <svg
+                            class="w-5 h-5"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                        >
+                            <path
+                                fill-rule="evenodd"
+                                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                clip-rule="evenodd"
+                            />
+                        </svg>
+                        ¡Producto creado correctamente!
+                    </p>
+                    <div class="flex gap-3">
+                        <a
+                            href={`/admin/productos/${newProductId}`}
+                            class="text-sm font-medium text-status-success hover:underline"
+                        >
+                            Editar producto
+                        </a>
+                        <a
+                            href="/admin/productos/nuevo"
+                            class="text-sm font-medium text-status-success hover:underline"
+                        >
+                            Crear otro
+                        </a>
+                    </div>
+                </div>
+            </div>
+        )
+    }
+
+    {
+        error && (
+            <div class="mb-6 p-4 bg-status-error-bg border border-status-error/20 rounded-xl">
+                <p class="text-status-error flex items-center gap-2">
+                    <svg
+                        class="w-5 h-5"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                    >
+                        <path
+                            fill-rule="evenodd"
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                            clip-rule="evenodd"
+                        />
+                    </svg>
+                    {error}
+                </p>
+            </div>
+        )
+    }
+
+    <form method="POST" class="space-y-8">
+        <div class="grid lg:grid-cols-3 gap-8">
+            <!-- Main Content -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Basic Info -->
+                <div class="bg-surface-primary rounded-2xl p-6 shadow-soft">
+                    <h2 class="text-lg font-semibold text-brand-navy mb-6">
+                        Información Básica
+                    </h2>
+
+                    <div class="space-y-6">
+                        <!-- Name -->
+                        <div>
+                            <label
+                                for="name"
+                                class="block text-sm font-medium text-text-primary mb-2"
+                            >
+                                Nombre del producto <span
+                                    class="text-status-error">*</span
+                                >
+                            </label>
+                            <input
+                                type="text"
+                                id="name"
+                                name="name"
+                                required
+                                class="w-full px-4 py-3 rounded-xl border border-border-light bg-surface-primary focus:border-brand-navy focus:outline-none focus:ring-2 focus:ring-brand-navy/20"
+                                placeholder="Ej: Camisa Oxford Premium"
+                            />
+                        </div>
+
+                        <!-- Description -->
+                        <div>
+                            <label
+                                for="description"
+                                class="block text-sm font-medium text-text-primary mb-2"
+                            >
+                                Descripción
+                            </label>
+                            <textarea
+                                id="description"
+                                name="description"
+                                rows="5"
+                                class="w-full px-4 py-3 rounded-xl border border-border-light bg-surface-primary focus:border-brand-navy focus:outline-none focus:ring-2 focus:ring-brand-navy/20 resize-none"
+                                placeholder="Describe el producto en detalle..."
+                            ></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Images -->
+                <div class="bg-surface-primary rounded-2xl p-6 shadow-soft">
+                    <h2 class="text-lg font-semibold text-brand-navy mb-6">
+                        Imágenes del Producto
+                    </h2>
+
+                    <!-- Upload Area -->
+                    <div
+                        id="drop-zone"
+                        class="border-2 border-dashed border-border-medium rounded-xl p-8 text-center hover:border-brand-navy hover:bg-surface-secondary transition-colors cursor-pointer"
+                    >
+                        <div class="w-16 h-16 mx-auto mb-4 text-text-muted">
+                            <svg
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="1.5"
+                                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                ></path>
+                            </svg>
+                        </div>
+                        <p class="text-text-secondary mb-2">
+                            Arrastra y suelta imágenes aquí o
+                        </p>
+                        <button
+                            type="button"
+                            id="browse-btn"
+                            class="text-brand-leather font-medium hover:text-brand-leather-dark"
+                        >
+                            selecciona archivos
+                        </button>
+                        <p class="text-xs text-text-muted mt-2">
+                            PNG, JPG hasta 5MB. Máximo 5 imágenes.
+                        </p>
+                        <input
+                            type="file"
+                            id="file-input"
+                            accept="image/*"
+                            multiple
+                            class="hidden"
+                        />
+                    </div>
+
+                    <!-- Image Previews -->
+                    <div
+                        id="image-previews"
+                        class="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 hidden"
+                    >
+                    </div>
+
+                    <!-- Hidden input for image URLs -->
+                    <input
+                        type="hidden"
+                        name="images"
+                        id="images-input"
+                        value="[]"
+                    />
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="space-y-6">
+                <!-- Pricing & Stock -->
+                <div class="bg-surface-primary rounded-2xl p-6 shadow-soft">
+                    <h2 class="text-lg font-semibold text-brand-navy mb-6">
+                        Precio y Stock
+                    </h2>
+
+                    <div class="space-y-4">
+                        <!-- Price -->
+                        <div>
+                            <label
+                                for="price"
+                                class="block text-sm font-medium text-text-primary mb-2"
+                            >
+                                Precio (€) <span class="text-status-error"
+                                    >*</span
+                                >
+                            </label>
+                            <div class="relative">
+                                <span
+                                    class="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted"
+                                    >€</span
+                                >
+                                <input
+                                    type="number"
+                                    id="price"
+                                    name="price"
+                                    required
+                                    min="0.01"
+                                    step="0.01"
+                                    class="w-full pl-10 pr-4 py-3 rounded-xl border border-border-light bg-surface-primary focus:border-brand-navy focus:outline-none focus:ring-2 focus:ring-brand-navy/20"
+                                    placeholder="0.00"
+                                />
+                            </div>
+                        </div>
+
+                        <!-- Stock -->
+                        <div>
+                            <label
+                                for="stock"
+                                class="block text-sm font-medium text-text-primary mb-2"
+                            >
+                                Stock disponible <span class="text-status-error"
+                                    >*</span
+                                >
+                            </label>
+                            <input
+                                type="number"
+                                id="stock"
+                                name="stock"
+                                required
+                                min="0"
+                                class="w-full px-4 py-3 rounded-xl border border-border-light bg-surface-primary focus:border-brand-navy focus:outline-none focus:ring-2 focus:ring-brand-navy/20"
+                                placeholder="0"
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Category -->
+                <div class="bg-surface-primary rounded-2xl p-6 shadow-soft">
+                    <h2 class="text-lg font-semibold text-brand-navy mb-6">
+                        Categoría
+                    </h2>
+
+                    <select
+                        id="category_id"
+                        name="category_id"
+                        required
+                        class="w-full px-4 py-3 rounded-xl border border-border-light bg-surface-primary focus:border-brand-navy focus:outline-none focus:ring-2 focus:ring-brand-navy/20"
+                    >
+                        <option value="">Selecciona una categoría</option>
+                        {
+                            categories.map((cat) => (
+                                <option value={cat.id}>{cat.name}</option>
+                            ))
+                        }
+                    </select>
+                </div>
+
+                <!-- Featured -->
+                <div class="bg-surface-primary rounded-2xl p-6 shadow-soft">
+                    <h2 class="text-lg font-semibold text-brand-navy mb-6">
+                        Destacado
+                    </h2>
+
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            name="featured"
+                            class="w-5 h-5 rounded border-border-medium text-brand-leather focus:ring-brand-leather"
+                        />
+                        <span class="text-text-secondary"
+                            >Mostrar en ofertas flash</span
+                        >
+                    </label>
+                    <p class="text-xs text-text-muted mt-2">
+                        Los productos destacados aparecerán en la sección de
+                        "Ofertas Flash" de la home.
+                    </p>
+                </div>
+
+                <!-- Actions -->
+                <div class="bg-surface-primary rounded-2xl p-6 shadow-soft">
+                    <button
+                        type="submit"
+                        class="w-full py-4 px-6 bg-brand-navy text-white font-medium rounded-xl hover:bg-brand-navy-light focus:outline-none focus:ring-2 focus:ring-brand-navy focus:ring-offset-2 transition-all"
+                    >
+                        Crear Producto
+                    </button>
+
+                    <a
+                        href="/admin/productos"
+                        class="block w-full py-3 text-center text-text-secondary hover:text-brand-navy mt-3 transition-colors"
+                    >
+                        Cancelar
+                    </a>
+                </div>
+            </div>
+        </div>
+    </form>
+</AdminLayout>
+
+<script>
+    // File upload handling - Subida a Supabase Storage
+    const dropZone = document.getElementById("drop-zone");
+    const fileInput = document.getElementById("file-input") as HTMLInputElement;
+    const browseBtn = document.getElementById("browse-btn");
+    const previewsContainer = document.getElementById("image-previews");
+    const imagesInput = document.getElementById(
+        "images-input",
+    ) as HTMLInputElement;
+
+    let uploadedImages: string[] = [];
+    let isUploading = false;
+
+    browseBtn?.addEventListener("click", () => {
+        fileInput?.click();
+    });
+
+    // Drag & Drop
+    dropZone?.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dropZone.classList.add("border-brand-navy", "bg-surface-secondary");
+    });
+
+    dropZone?.addEventListener("dragleave", () => {
+        dropZone.classList.remove("border-brand-navy", "bg-surface-secondary");
+    });
+
+    dropZone?.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dropZone.classList.remove("border-brand-navy", "bg-surface-secondary");
+
+        const files = (e as DragEvent).dataTransfer?.files;
+        if (files) handleFiles(files);
+    });
+
+    fileInput?.addEventListener("change", () => {
+        if (fileInput.files) handleFiles(fileInput.files);
+    });
+
+    async function handleFiles(files: FileList) {
+        if (uploadedImages.length >= 5) {
+            alert("Máximo 5 imágenes por producto");
+            return;
+        }
+
+        if (isUploading) {
+            alert("Espera a que termine la subida actual");
+            return;
+        }
+
+        const filesToUpload = Array.from(files).slice(
+            0,
+            5 - uploadedImages.length,
+        );
+
+        for (const file of filesToUpload) {
+            if (!file.type.startsWith("image/")) {
+                alert(`${file.name} no es una imagen válida`);
+                continue;
+            }
+            if (file.size > 5 * 1024 * 1024) {
+                alert(`${file.name} es demasiado grande. Máximo 5MB.`);
+                continue;
+            }
+
+            // Subir a Supabase Storage
+            await uploadToSupabase(file);
+        }
+    }
+
+    async function uploadToSupabase(file: File) {
+        isUploading = true;
+
+        // Mostrar indicador de carga
+        showUploadingIndicator();
+
+        try {
+            const formData = new FormData();
+            formData.append("file", file);
+
+            const response = await fetch("/api/upload-image", {
+                method: "POST",
+                body: formData,
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || "Error al subir la imagen");
+            }
+
+            // Añadir URL de Supabase a la lista
+            uploadedImages.push(result.url);
+            updatePreviews();
+            imagesInput.value = JSON.stringify(uploadedImages);
+        } catch (error) {
+            console.error("Error uploading image:", error);
+            alert(
+                `Error al subir ${file.name}: ${error instanceof Error ? error.message : "Error desconocido"}`,
+            );
+        } finally {
+            isUploading = false;
+            hideUploadingIndicator();
+        }
+    }
+
+    function showUploadingIndicator() {
+        const indicator = document.createElement("div");
+        indicator.id = "upload-indicator";
+        indicator.className =
+            "fixed inset-0 bg-black/50 flex items-center justify-center z-50";
+        indicator.innerHTML = `
+            <div class="bg-white rounded-2xl p-8 text-center shadow-lg">
+                <div class="w-12 h-12 border-4 border-brand-navy border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                <p class="text-brand-navy font-medium">Subiendo imagen...</p>
+                <p class="text-sm text-text-muted mt-1">Por favor, espera</p>
+            </div>
+        `;
+        document.body.appendChild(indicator);
+    }
+
+    function hideUploadingIndicator() {
+        const indicator = document.getElementById("upload-indicator");
+        indicator?.remove();
+    }
+
+    function updatePreviews() {
+        if (!previewsContainer) return;
+
+        previewsContainer.innerHTML = "";
+        previewsContainer.classList.toggle(
+            "hidden",
+            uploadedImages.length === 0,
+        );
+
+        uploadedImages.forEach((url, index) => {
+            const div = document.createElement("div");
+            div.className =
+                "relative aspect-square rounded-xl overflow-hidden bg-surface-tertiary group";
+            div.innerHTML = `
+        <img src="${url}" alt="Preview ${index + 1}" class="w-full h-full object-cover" />
+        <button 
+          type="button"
+          class="absolute top-2 right-2 p-1.5 bg-status-error text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+          data-index="${index}"
+        >
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+        ${index === 0 ? '<span class="absolute bottom-2 left-2 px-2 py-1 bg-brand-navy text-white text-xs rounded">Principal</span>' : ""}
+      `;
+
+            const removeBtn = div.querySelector("button");
+            removeBtn?.addEventListener("click", () => {
+                uploadedImages.splice(index, 1);
+                updatePreviews();
+                imagesInput.value = JSON.stringify(uploadedImages);
+            });
+
+            previewsContainer.appendChild(div);
+        });
+    }
+</script>

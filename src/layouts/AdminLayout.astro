@@ -1,0 +1,329 @@
+---
+import BaseLayout from "./BaseLayout.astro";
+
+interface Props {
+    title: string;
+}
+
+const { title } = Astro.props;
+const currentPath = Astro.url.pathname;
+
+// Navigation items del admin
+const navItems = [
+    { href: "/admin", label: "Dashboard", icon: "home" },
+    { href: "/admin/productos", label: "Productos", icon: "package" },
+    { href: "/admin/pedidos", label: "Pedidos", icon: "shopping-bag" },
+    { href: "/admin/newsletter", label: "Newsletter", icon: "mail" },
+    { href: "/admin/configuracion", label: "Configuración", icon: "settings" },
+];
+
+function isActive(href: string): boolean {
+    if (href === "/admin") return currentPath === "/admin";
+    return currentPath.startsWith(href);
+}
+---
+
+<BaseLayout title={`Admin - ${title}`}>
+    <div class="min-h-screen bg-surface-secondary flex">
+        <!-- Sidebar -->
+        <aside
+            class="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-brand-navy"
+        >
+            <!-- Logo -->
+            <div
+                class="flex items-center h-16 px-6 border-b border-brand-navy-light"
+            >
+                <a
+                    href="/admin"
+                    class="text-xl font-serif font-bold text-white"
+                >
+                    Fashion<span class="text-brand-leather">Store</span>
+                </a>
+                <span
+                    class="ml-2 px-2 py-0.5 text-xs font-medium bg-brand-leather/20 text-brand-leather rounded"
+                    >Admin</span
+                >
+            </div>
+
+            <!-- Navigation -->
+            <nav class="flex-1 px-4 py-6 space-y-1">
+                {
+                    navItems.map((item) => (
+                        <a
+                            href={item.href}
+                            class={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+                                isActive(item.href)
+                                    ? "bg-brand-leather text-white"
+                                    : "text-gray-300 hover:bg-brand-navy-light hover:text-white"
+                            }`}
+                        >
+                            {item.icon === "home" && (
+                                <svg
+                                    class="w-5 h-5"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+                                    />
+                                </svg>
+                            )}
+                            {item.icon === "package" && (
+                                <svg
+                                    class="w-5 h-5"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                                    />
+                                </svg>
+                            )}
+                            {item.icon === "shopping-bag" && (
+                                <svg
+                                    class="w-5 h-5"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+                                    />
+                                </svg>
+                            )}
+                            {item.icon === "settings" && (
+                                <svg
+                                    class="w-5 h-5"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                                    />
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                    />
+                                </svg>
+                            )}
+                            {item.icon === "mail" && (
+                                <svg
+                                    class="w-5 h-5"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                                    />
+                                </svg>
+                            )}
+                            {item.label}
+                        </a>
+                    ))
+                }
+            </nav>
+
+            <!-- User Section -->
+            <div class="p-4 border-t border-brand-navy-light">
+                <button
+                    id="logout-btn"
+                    type="button"
+                    class="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-sm font-medium text-gray-300 hover:bg-red-500/20 hover:text-red-400 transition-colors"
+                >
+                    <svg
+                        class="w-5 h-5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                        ></path>
+                    </svg>
+                    Cerrar Sesión
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="lg:pl-64 flex-1">
+            <!-- Top Bar Mobile -->
+            <header
+                class="lg:hidden sticky top-0 z-40 flex items-center h-16 px-4 bg-brand-navy"
+            >
+                <button id="admin-menu-btn" class="p-2 text-white">
+                    <svg
+                        class="w-6 h-6"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M4 6h16M4 12h16M4 18h16"></path>
+                    </svg>
+                </button>
+                <span class="ml-4 text-lg font-serif font-bold text-white">
+                    Fashion<span class="text-brand-leather">Store</span>
+                </span>
+            </header>
+
+            <!-- Page Content -->
+            <main class="p-6 lg:p-8">
+                <!-- Page Header -->
+                <div class="mb-8">
+                    <h1
+                        class="text-2xl lg:text-3xl font-serif font-bold text-brand-navy"
+                    >
+                        {title}
+                    </h1>
+                </div>
+
+                <slot />
+            </main>
+        </div>
+
+        <!-- Mobile Sidebar Overlay -->
+        <div
+            id="admin-mobile-overlay"
+            class="hidden fixed inset-0 z-50 lg:hidden"
+        >
+            <div class="absolute inset-0 bg-black/50" id="admin-overlay-bg">
+            </div>
+            <aside
+                class="absolute inset-y-0 left-0 w-64 bg-brand-navy animate-slide-in-left"
+            >
+                <!-- Same content as desktop sidebar -->
+                <div
+                    class="flex items-center h-16 px-6 border-b border-brand-navy-light"
+                >
+                    <span class="text-xl font-serif font-bold text-white">
+                        Fashion<span class="text-brand-leather">Store</span>
+                    </span>
+                </div>
+                <nav class="px-4 py-6 space-y-1">
+                    {
+                        navItems.map((item) => (
+                            <a
+                                href={item.href}
+                                class={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+                                    isActive(item.href)
+                                        ? "bg-brand-leather text-white"
+                                        : "text-gray-300 hover:bg-brand-navy-light hover:text-white"
+                                }`}
+                            >
+                                {item.label}
+                            </a>
+                        ))
+                    }
+                </nav>
+
+                <!-- Mobile Logout Button -->
+                <div
+                    class="absolute bottom-0 left-0 right-0 p-4 border-t border-brand-navy-light"
+                >
+                    <button
+                        id="logout-btn-mobile"
+                        type="button"
+                        class="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-sm font-medium text-gray-300 hover:bg-red-500/20 hover:text-red-400 transition-colors"
+                    >
+                        <svg
+                            class="w-5 h-5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                            ></path>
+                        </svg>
+                        Cerrar Sesión
+                    </button>
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <script>
+        const menuBtn = document.getElementById("admin-menu-btn");
+        const overlay = document.getElementById("admin-mobile-overlay");
+        const overlayBg = document.getElementById("admin-overlay-bg");
+
+        menuBtn?.addEventListener("click", () => {
+            overlay?.classList.remove("hidden");
+        });
+
+        overlayBg?.addEventListener("click", () => {
+            overlay?.classList.add("hidden");
+        });
+
+        // Logout handler
+        const logoutBtn = document.getElementById("logout-btn");
+        logoutBtn?.addEventListener("click", async () => {
+            const btn = logoutBtn as HTMLButtonElement;
+            btn.disabled = true;
+            btn.innerHTML = `
+                <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Cerrando sesión...
+            `;
+
+            try {
+                const response = await fetch("/api/auth/logout", {
+                    method: "POST",
+                });
+                if (response.redirected) {
+                    window.location.href = response.url;
+                } else {
+                    window.location.href = "/";
+                }
+            } catch (error) {
+                console.error("Logout error:", error);
+                window.location.href = "/";
+            }
+        });
+
+        // Logout handler for mobile
+        const logoutBtnMobile = document.getElementById("logout-btn-mobile");
+        logoutBtnMobile?.addEventListener("click", async () => {
+            try {
+                await fetch("/api/auth/logout", { method: "POST" });
+                window.location.href = "/";
+            } catch (error) {
+                console.error("Logout error:", error);
+                window.location.href = "/";
+            }
+        });
+    </script>
+</BaseLayout>

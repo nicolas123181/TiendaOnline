@@ -1,0 +1,556 @@
+---
+import PublicLayout from "../layouts/PublicLayout.astro";
+
+export const prerender = false;
+---
+
+<PublicLayout title="Mi Perfil - Vantage" description="Tu cuenta en Vantage">
+    <section class="py-12">
+        <div class="max-w-4xl mx-auto px-4">
+            <!-- Loading State -->
+            <div
+                id="loading-state"
+                class="flex items-center justify-center py-16"
+            >
+                <div class="text-center">
+                    <div
+                        class="w-12 h-12 border-4 border-gray-200 border-t-blue-900 rounded-full animate-spin mx-auto mb-4"
+                    >
+                    </div>
+                    <p class="text-gray-600">Cargando perfil...</p>
+                </div>
+            </div>
+
+            <!-- Not Logged In State (hidden by default) -->
+            <div id="not-logged-state" class="hidden max-w-md mx-auto py-12">
+                <div
+                    class="bg-white rounded-2xl shadow-lg p-8 text-center border border-gray-100"
+                >
+                    <div
+                        class="w-20 h-20 mx-auto mb-6 bg-blue-50 rounded-full flex items-center justify-center"
+                    >
+                        <svg
+                            class="w-10 h-10 text-blue-900"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                            ></path>
+                        </svg>
+                    </div>
+                    <h2 class="text-2xl font-bold text-gray-900 mb-3">
+                        Inicia sesión
+                    </h2>
+                    <p class="text-gray-600 mb-8">
+                        Necesitas iniciar sesión para ver tu perfil
+                    </p>
+                    <a
+                        href="/login?returnTo=/perfil"
+                        class="block w-full py-4 bg-blue-900 text-white font-semibold rounded-xl hover:bg-blue-800 transition-colors"
+                    >
+                        Iniciar Sesión
+                    </a>
+                </div>
+            </div>
+
+            <!-- Profile Content (hidden by default) -->
+            <div id="profile-content" class="hidden">
+                <!-- Profile Header -->
+                <div
+                    class="bg-surface-primary rounded-2xl shadow-soft p-8 mb-8"
+                >
+                    <div class="flex items-center gap-6">
+                        <div
+                            id="user-avatar"
+                            class="w-20 h-20 rounded-full bg-brand-navy flex items-center justify-center text-white text-2xl font-bold"
+                        >
+                            ?
+                        </div>
+
+                        <div class="flex-1">
+                            <h1
+                                class="text-2xl font-serif font-bold text-brand-navy"
+                            >
+                                ¡Hola, <span id="user-name">Usuario</span>!
+                            </h1>
+                            <p class="text-text-muted" id="user-email"></p>
+                        </div>
+
+                        <button
+                            id="logout-btn"
+                            type="button"
+                            class="px-6 py-3 border border-gray-300 rounded-xl font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                        >
+                            Cerrar Sesión
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Orders Section -->
+                <div
+                    class="bg-surface-primary rounded-2xl shadow-soft overflow-hidden"
+                >
+                    <div class="p-6 border-b border-border-light">
+                        <h2
+                            class="text-xl font-serif font-bold text-brand-navy"
+                        >
+                            Mis Pedidos
+                        </h2>
+                        <p
+                            class="text-text-muted text-sm mt-1"
+                            id="orders-summary"
+                        >
+                            Cargando pedidos...
+                        </p>
+                    </div>
+
+                    <div id="orders-container">
+                        <div class="p-12 text-center">
+                            <div
+                                class="w-12 h-12 border-4 border-gray-200 border-t-blue-900 rounded-full animate-spin mx-auto mb-4"
+                            >
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Newsletter Section -->
+                <div
+                    class="bg-surface-primary rounded-2xl shadow-soft overflow-hidden mt-8"
+                >
+                    <div class="p-6 border-b border-border-light">
+                        <h2
+                            class="text-xl font-serif font-bold text-brand-navy flex items-center gap-2"
+                        >
+                            <svg
+                                class="w-5 h-5 text-amber-600"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                                ></path>
+                            </svg>
+                            Newsletter
+                        </h2>
+                        <p class="text-text-muted text-sm mt-1">
+                            Recibe noticias y ofertas exclusivas
+                        </p>
+                    </div>
+                    <div class="p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="font-medium text-gray-900">
+                                    Suscripción al Newsletter
+                                </p>
+                                <p
+                                    id="newsletter-status"
+                                    class="text-sm text-gray-500"
+                                >
+                                    Cargando...
+                                </p>
+                            </div>
+                            <label
+                                class="relative inline-flex items-center cursor-pointer"
+                            >
+                                <input
+                                    type="checkbox"
+                                    id="newsletter-toggle"
+                                    class="sr-only peer"
+                                    disabled
+                                />
+                                <div
+                                    class="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-amber-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-amber-600"
+                                >
+                                </div>
+                            </label>
+                        </div>
+                        <p
+                            id="newsletter-message"
+                            class="hidden mt-3 text-sm p-3 rounded-lg"
+                        >
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Continue Shopping -->
+                <div class="mt-8 text-center">
+                    <a
+                        href="/"
+                        class="inline-flex items-center gap-2 text-brand-leather font-medium hover:underline"
+                    >
+                        <svg
+                            class="w-4 h-4"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                        </svg>
+                        Seguir comprando
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+</PublicLayout>
+
+<script>
+    import { createClient } from "@supabase/supabase-js";
+
+    const supabaseUrl =
+        import.meta.env.PUBLIC_SUPABASE_URL ||
+        "https://kggjqbhcvvayqwkbpwvp.supabase.co";
+    const supabaseAnonKey =
+        import.meta.env.PUBLIC_SUPABASE_ANON_KEY ||
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtnZ2pxYmhjdnZheXF3a2Jwd3ZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzYyNDI2NDQsImV4cCI6MjA1MTgxODY0NH0.P9eqbIFVBt2IuHnzTcCDbGb6w72xR-AQ60aKEkqJnYY";
+    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+    const loadingState = document.getElementById("loading-state");
+    const notLoggedState = document.getElementById("not-logged-state");
+    const profileContent = document.getElementById("profile-content");
+
+    function formatPrice(cents: number): string {
+        return new Intl.NumberFormat("es-ES", {
+            style: "currency",
+            currency: "EUR",
+        }).format(cents / 100);
+    }
+
+    async function loadProfile() {
+        try {
+            const {
+                data: { session },
+                error,
+            } = await supabase.auth.getSession();
+
+            console.log("Session check:", session ? "Found" : "Not found");
+
+            if (!session) {
+                loadingState?.classList.add("hidden");
+                notLoggedState?.classList.remove("hidden");
+                return;
+            }
+
+            const user = session.user;
+            const userName =
+                user.user_metadata?.full_name ||
+                user.email?.split("@")[0] ||
+                "Usuario";
+            const userEmail = user.email || "";
+            const userAvatar = user.user_metadata?.avatar_url;
+
+            // Update UI
+            document.getElementById("user-name")!.textContent = userName;
+            document.getElementById("user-email")!.textContent = userEmail;
+
+            const avatarEl = document.getElementById("user-avatar")!;
+            if (userAvatar) {
+                avatarEl.innerHTML = `<img src="${userAvatar}" alt="${userName}" class="w-20 h-20 rounded-full object-cover border-4 border-amber-700">`;
+            } else {
+                avatarEl.textContent = userName.charAt(0).toUpperCase();
+            }
+
+            // Show profile
+            loadingState?.classList.add("hidden");
+            profileContent?.classList.remove("hidden");
+
+            // Load orders
+            await loadOrders(userEmail);
+        } catch (error) {
+            console.error("Error loading profile:", error);
+            loadingState?.classList.add("hidden");
+            notLoggedState?.classList.remove("hidden");
+        }
+    }
+
+    async function loadOrders(email: string) {
+        try {
+            const { data: orders, error } = await supabase
+                .from("orders")
+                .select("*, order_items(*)")
+                .eq("customer_email", email)
+                .order("created_at", { ascending: false });
+
+            const ordersContainer =
+                document.getElementById("orders-container")!;
+            const ordersSummary = document.getElementById("orders-summary")!;
+
+            if (error) {
+                console.error("Error loading orders:", error);
+                ordersContainer.innerHTML =
+                    '<div class="p-6 text-center text-red-600">Error al cargar pedidos</div>';
+                return;
+            }
+
+            if (!orders || orders.length === 0) {
+                ordersSummary.textContent =
+                    "Aún no has realizado ningún pedido";
+                ordersContainer.innerHTML = `
+                    <div class="p-12 text-center">
+                        <div class="w-20 h-20 mx-auto mb-6 bg-gray-100 rounded-full flex items-center justify-center">
+                            <svg class="w-10 h-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-semibold text-gray-900 mb-2">No tienes pedidos aún</h3>
+                        <p class="text-gray-600 mb-6">¡Explora nuestra tienda y encuentra algo que te encante!</p>
+                        <a href="/" class="inline-flex items-center gap-2 px-6 py-3 bg-blue-900 text-white font-semibold rounded-xl hover:bg-blue-800 transition-colors">
+                            Ir a la Tienda
+                        </a>
+                    </div>
+                `;
+                return;
+            }
+
+            ordersSummary.textContent = `Tienes ${orders.length} pedido${orders.length > 1 ? "s" : ""}`;
+
+            const statusLabels: Record<string, string> = {
+                pending: "Pendiente de Pago",
+                paid: "Pagado",
+                ready_for_pickup: "Listo para Recoger",
+                shipped: "Enviado",
+                delivered: "Entregado",
+                cancelled: "Cancelado",
+            };
+
+            const statusColors: Record<string, string> = {
+                pending: "bg-yellow-100 text-yellow-800",
+                paid: "bg-blue-100 text-blue-800",
+                ready_for_pickup: "bg-orange-100 text-orange-800",
+                shipped: "bg-purple-100 text-purple-800",
+                delivered: "bg-green-100 text-green-800",
+                cancelled: "bg-red-100 text-red-800",
+            };
+
+            ordersContainer.innerHTML = orders
+                .map(
+                    (order) => `
+                <div class="p-6 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0">
+                    <div class="flex items-start justify-between gap-4 mb-4">
+                        <div>
+                            <div class="flex items-center gap-3 mb-1">
+                                <span class="font-mono font-bold text-amber-700">
+                                    #${order.id.toString().padStart(5, "0")}
+                                </span>
+                                <span class="px-3 py-1 text-xs font-semibold rounded-full ${statusColors[order.status] || "bg-gray-100 text-gray-800"}">
+                                    ${statusLabels[order.status] || order.status}
+                                </span>
+                            </div>
+                            <p class="text-sm text-gray-500">
+                                ${new Date(order.created_at).toLocaleDateString(
+                                    "es-ES",
+                                    {
+                                        day: "numeric",
+                                        month: "long",
+                                        year: "numeric",
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                    },
+                                )}
+                            </p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-lg font-bold text-gray-900">
+                                ${formatPrice(order.total)}
+                            </p>
+                            <p class="text-sm text-gray-500">
+                                ${order.order_items?.length || 0} producto${(order.order_items?.length || 0) > 1 ? "s" : ""}
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex flex-wrap gap-2">
+                        ${
+                            order.order_items
+                                ?.slice(0, 3)
+                                .map(
+                                    (item: any) => `
+                            <span class="text-xs bg-gray-100 px-3 py-1 rounded-full text-gray-600">
+                                ${item.product_name} × ${item.quantity}
+                            </span>
+                        `,
+                                )
+                                .join("") || ""
+                        }
+                        ${
+                            order.order_items && order.order_items.length > 3
+                                ? `
+                            <span class="text-xs bg-gray-100 px-3 py-1 rounded-full text-gray-500">
+                                +${order.order_items.length - 3} más
+                            </span>
+                        `
+                                : ""
+                        }
+                    </div>
+
+                    <div class="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
+                        <p class="text-sm text-gray-500">
+                            <span class="font-medium text-gray-600">Envío a:</span> ${order.customer_address}, ${order.customer_postal_code} ${order.customer_city}
+                        </p>
+                        <a 
+                            href="/pedido/${order.id}" 
+                            class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-amber-700 bg-amber-50 rounded-lg hover:bg-amber-100 transition-colors"
+                        >
+                            Ver detalles
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+            `,
+                )
+                .join("");
+        } catch (error) {
+            console.error("Error loading orders:", error);
+        }
+    }
+
+    // Logout handler
+    document
+        .getElementById("logout-btn")
+        ?.addEventListener("click", async () => {
+            const btn = document.getElementById(
+                "logout-btn",
+            ) as HTMLButtonElement;
+            btn.disabled = true;
+            btn.textContent = "Cerrando sesión...";
+
+            await supabase.auth.signOut();
+            window.location.href = "/";
+        });
+
+    // Newsletter management
+    let userEmail = "";
+    let userName = "";
+
+    async function loadNewsletterStatus() {
+        const toggle = document.getElementById(
+            "newsletter-toggle",
+        ) as HTMLInputElement;
+        const statusText = document.getElementById("newsletter-status");
+
+        if (!userEmail) return;
+
+        try {
+            const { data } = await supabase
+                .from("newsletter_subscribers")
+                .select("is_active")
+                .eq("email", userEmail)
+                .single();
+
+            if (data) {
+                toggle.checked = data.is_active;
+                statusText!.textContent = data.is_active
+                    ? "Estás suscrito al newsletter"
+                    : "No estás suscrito";
+            } else {
+                toggle.checked = false;
+                statusText!.textContent = "No estás suscrito";
+            }
+            toggle.disabled = false;
+        } catch {
+            toggle.disabled = false;
+            toggle.checked = false;
+            statusText!.textContent = "No estás suscrito";
+        }
+    }
+
+    // Toggle newsletter subscription
+    document
+        .getElementById("newsletter-toggle")
+        ?.addEventListener("change", async (e) => {
+            const toggle = e.target as HTMLInputElement;
+            const statusText = document.getElementById("newsletter-status");
+            const messageEl = document.getElementById("newsletter-message");
+
+            toggle.disabled = true;
+
+            try {
+                if (toggle.checked) {
+                    // Suscribir
+                    const { error } = await supabase
+                        .from("newsletter_subscribers")
+                        .upsert(
+                            {
+                                email: userEmail,
+                                name: userName,
+                                is_active: true,
+                                unsubscribed_at: null,
+                            },
+                            { onConflict: "email" },
+                        );
+
+                    if (error) throw error;
+
+                    statusText!.textContent = "Estás suscrito al newsletter";
+                    messageEl!.textContent =
+                        "✅ ¡Te has suscrito al newsletter! Recibirás noticias y ofertas exclusivas.";
+                    messageEl!.className =
+                        "mt-3 text-sm p-3 rounded-lg bg-green-50 text-green-700";
+                } else {
+                    // Desuscribir
+                    const { error } = await supabase
+                        .from("newsletter_subscribers")
+                        .update({
+                            is_active: false,
+                            unsubscribed_at: new Date().toISOString(),
+                        })
+                        .eq("email", userEmail);
+
+                    if (error) throw error;
+
+                    statusText!.textContent = "No estás suscrito";
+                    messageEl!.textContent =
+                        "Has cancelado tu suscripción al newsletter.";
+                    messageEl!.className =
+                        "mt-3 text-sm p-3 rounded-lg bg-gray-50 text-gray-700";
+                }
+                messageEl!.classList.remove("hidden");
+                setTimeout(() => messageEl!.classList.add("hidden"), 5000);
+            } catch (error) {
+                console.error("Newsletter error:", error);
+                toggle.checked = !toggle.checked;
+                messageEl!.textContent = "Error al actualizar la suscripción";
+                messageEl!.className =
+                    "mt-3 text-sm p-3 rounded-lg bg-red-50 text-red-700";
+                messageEl!.classList.remove("hidden");
+            } finally {
+                toggle.disabled = false;
+            }
+        });
+
+    // Modified loadProfile to also load newsletter
+    const originalLoadProfile = loadProfile;
+    async function loadProfileWithNewsletter() {
+        const {
+            data: { session },
+        } = await supabase.auth.getSession();
+        if (session) {
+            userEmail = session.user.email || "";
+            userName =
+                session.user.user_metadata?.name ||
+                session.user.email?.split("@")[0] ||
+                "";
+        }
+        await originalLoadProfile();
+        await loadNewsletterStatus();
+    }
+
+    // Load profile on page load
+    loadProfileWithNewsletter();
+</script>

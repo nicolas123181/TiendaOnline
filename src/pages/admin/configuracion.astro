@@ -1,0 +1,357 @@
+---
+import AdminLayout from "../../layouts/AdminLayout.astro";
+import { supabase, getSetting } from "../../lib/supabase";
+
+// SSR
+export const prerender = false;
+
+// Obtener configuración actual
+const flashOffersEnabled = await getSetting("flash_offers_enabled");
+
+let success = false;
+let error = "";
+
+// Procesar formulario
+if (Astro.request.method === "POST") {
+    try {
+        const formData = await Astro.request.formData();
+        const flashOffers = formData.get("flash_offers") === "on";
+
+        // Actualizar o insertar configuración
+        const { error: upsertError } = await supabase
+            .from("app_settings")
+            .upsert(
+                {
+                    key: "flash_offers_enabled",
+                    value: flashOffers.toString(),
+                    updated_at: new Date().toISOString(),
+                },
+                {
+                    onConflict: "key",
+                },
+            );
+
+        if (upsertError) {
+            error = `Error al guardar: ${upsertError.message}`;
+        } else {
+            success = true;
+        }
+    } catch (e) {
+        error = "Ha ocurrido un error inesperado.";
+        console.error(e);
+    }
+}
+
+const isFlashOffersEnabled = flashOffersEnabled === "true";
+---
+
+<AdminLayout title="Configuración">
+    {
+        success && (
+            <div class="mb-6 p-4 bg-status-success-bg border border-status-success/20 rounded-xl">
+                <p class="text-status-success flex items-center gap-2">
+                    <svg
+                        class="w-5 h-5"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                    >
+                        <path
+                            fill-rule="evenodd"
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                            clip-rule="evenodd"
+                        />
+                    </svg>
+                    Configuración guardada correctamente
+                </p>
+            </div>
+        )
+    }
+
+    {
+        error && (
+            <div class="mb-6 p-4 bg-status-error-bg border border-status-error/20 rounded-xl">
+                <p class="text-status-error flex items-center gap-2">
+                    <svg
+                        class="w-5 h-5"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                    >
+                        <path
+                            fill-rule="evenodd"
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                            clip-rule="evenodd"
+                        />
+                    </svg>
+                    {error}
+                </p>
+            </div>
+        )
+    }
+
+    <div class="grid lg:grid-cols-2 gap-8">
+        <!-- Flash Offers Toggle -->
+        <div class="bg-surface-primary rounded-2xl p-6 shadow-soft">
+            <div class="flex items-start gap-4">
+                <div class="p-3 bg-amber-100 rounded-xl">
+                    <svg
+                        class="w-6 h-6 text-amber-600"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                </div>
+                <div class="flex-1">
+                    <h2 class="text-lg font-semibold text-brand-navy mb-2">
+                        Ofertas Flash
+                    </h2>
+                    <p class="text-sm text-text-muted mb-4">
+                        Controla la visibilidad de la sección de "Ofertas Flash"
+                        en la página de inicio. Los productos marcados como
+                        destacados aparecerán en esta sección.
+                    </p>
+
+                    <form method="POST">
+                        <div
+                            class="flex items-center justify-between p-4 bg-surface-secondary rounded-xl"
+                        >
+                            <div>
+                                <p class="font-medium text-text-primary">
+                                    Estado actual
+                                </p>
+                                <p class="text-sm text-text-muted">
+                                    {
+                                        isFlashOffersEnabled
+                                            ? "Visible para los clientes"
+                                            : "Oculto de la tienda"
+                                    }
+                                </p>
+                            </div>
+
+                            <label
+                                class="relative inline-flex items-center cursor-pointer"
+                            >
+                                <input
+                                    type="checkbox"
+                                    name="flash_offers"
+                                    checked={isFlashOffersEnabled}
+                                    class="sr-only peer"
+                                    onchange="this.form.submit()"
+                                />
+                                <div
+                                    class="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-brand-navy/20 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-1 after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-brand-leather"
+                                >
+                                </div>
+                            </label>
+                        </div>
+                    </form>
+
+                    <div class="mt-4 p-3 bg-status-info-bg rounded-lg">
+                        <p
+                            class="text-xs text-status-info flex items-center gap-2"
+                        >
+                            <svg
+                                class="w-4 h-4 shrink-0"
+                                fill="currentColor"
+                                viewBox="0 0 20 20"
+                            >
+                                <path
+                                    fill-rule="evenodd"
+                                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                                    clip-rule="evenodd"></path>
+                            </svg>
+                            Los cambios se reflejan inmediatamente en la tienda.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Store Info -->
+        <div class="bg-surface-primary rounded-2xl p-6 shadow-soft">
+            <div class="flex items-start gap-4">
+                <div class="p-3 bg-blue-100 rounded-xl">
+                    <svg
+                        class="w-6 h-6 text-blue-600"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                        ></path>
+                    </svg>
+                </div>
+                <div class="flex-1">
+                    <h2 class="text-lg font-semibold text-brand-navy mb-2">
+                        Información de la Tienda
+                    </h2>
+                    <p class="text-sm text-text-muted mb-4">
+                        Configura la información básica de tu tienda que aparece
+                        en la web.
+                    </p>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label
+                                class="block text-sm font-medium text-text-primary mb-2"
+                            >
+                                Nombre de la tienda
+                            </label>
+                            <input
+                                type="text"
+                                value="Vantage"
+                                disabled
+                                class="w-full px-4 py-3 rounded-xl border border-border-light bg-surface-secondary text-text-muted cursor-not-allowed"
+                            />
+                        </div>
+
+                        <div>
+                            <label
+                                class="block text-sm font-medium text-text-primary mb-2"
+                            >
+                                Email de contacto
+                            </label>
+                            <input
+                                type="email"
+                                value="info@vantage.com"
+                                disabled
+                                class="w-full px-4 py-3 rounded-xl border border-border-light bg-surface-secondary text-text-muted cursor-not-allowed"
+                            />
+                        </div>
+                    </div>
+
+                    <p class="text-xs text-text-muted mt-4">
+                        Para modificar estos campos, contacta con el
+                        administrador del sistema.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Supabase Connection -->
+        <div class="bg-surface-primary rounded-2xl p-6 shadow-soft">
+            <div class="flex items-start gap-4">
+                <div class="p-3 bg-green-100 rounded-xl">
+                    <svg
+                        class="w-6 h-6 text-green-600"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"
+                        ></path>
+                    </svg>
+                </div>
+                <div class="flex-1">
+                    <h2 class="text-lg font-semibold text-brand-navy mb-2">
+                        Conexión Supabase
+                    </h2>
+                    <p class="text-sm text-text-muted mb-4">
+                        Estado de la conexión con la base de datos.
+                    </p>
+
+                    <div
+                        class="flex items-center gap-3 p-4 bg-status-success-bg rounded-xl"
+                    >
+                        <div
+                            class="w-3 h-3 bg-status-success rounded-full animate-pulse"
+                        >
+                        </div>
+                        <span class="font-medium text-status-success"
+                            >Conectado</span
+                        >
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Links -->
+        <div class="bg-surface-primary rounded-2xl p-6 shadow-soft">
+            <div class="flex items-start gap-4">
+                <div class="p-3 bg-purple-100 rounded-xl">
+                    <svg
+                        class="w-6 h-6 text-purple-600"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+                        ></path>
+                    </svg>
+                </div>
+                <div class="flex-1">
+                    <h2 class="text-lg font-semibold text-brand-navy mb-2">
+                        Enlaces Rápidos
+                    </h2>
+                    <p class="text-sm text-text-muted mb-4">
+                        Accede rápidamente a recursos externos.
+                    </p>
+
+                    <div class="space-y-2">
+                        <a
+                            href="https://supabase.com/dashboard"
+                            target="_blank"
+                            class="flex items-center justify-between p-3 bg-surface-secondary rounded-xl hover:bg-surface-tertiary transition-colors"
+                        >
+                            <span class="text-sm font-medium text-text-primary"
+                                >Panel de Supabase</span
+                            >
+                            <svg
+                                class="w-4 h-4 text-text-muted"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                                ></path>
+                            </svg>
+                        </a>
+                        <a
+                            href="/"
+                            target="_blank"
+                            class="flex items-center justify-between p-3 bg-surface-secondary rounded-xl hover:bg-surface-tertiary transition-colors"
+                        >
+                            <span class="text-sm font-medium text-text-primary"
+                                >Ver Tienda</span
+                            >
+                            <svg
+                                class="w-4 h-4 text-text-muted"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                                ></path>
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</AdminLayout>

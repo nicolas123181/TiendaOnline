@@ -1,11 +1,539 @@
 ---
-import Welcome from '../components/Welcome.astro';
-import Layout from '../layouts/Layout.astro';
+import PublicLayout from "../layouts/PublicLayout.astro";
+import ProductCard from "../components/product/ProductCard.astro";
+import {
+  getProducts,
+  getFeaturedProducts,
+  getCategories,
+  isFlashOffersEnabled,
+} from "../lib/supabase";
+import { formatPrice } from "../lib/utils";
 
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
+// SSG - Generar estáticamente
+export const prerender = true;
+
+// Obtener datos
+const products = await getProducts();
+const featuredProducts = await getFeaturedProducts();
+const categories = await getCategories();
+const showFlashOffers = await isFlashOffersEnabled();
+
+// Productos en oferta
+const saleProducts = products.filter((p) => p.is_on_sale && p.sale_price);
+
+// Productos más recientes
+const latestProducts = products.slice(0, 8);
+
+// Imágenes específicas para cada categoría
+const categoryImages: Record<string, string> = {
+  camisas:
+    "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=800&q=80",
+  camisetas:
+    "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=800&q=80",
+  pantalones:
+    "https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=800&q=80",
+  trajes:
+    "https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=800&q=80",
+  chalecos:
+    "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=800&q=80",
+  abrigos:
+    "https://images.unsplash.com/photo-1544022613-e87ca75a784a?w=800&q=80",
+};
 ---
 
-<Layout>
-	<Welcome />
-</Layout>
+<PublicLayout
+  title="Moda Masculina Premium"
+  description="Vantage - Descubre nuestra colección de moda masculina premium con estilo sofisticado"
+>
+  <!-- Hero Section - Editorial Full Screen -->
+  <section
+    class="relative h-screen flex items-center justify-center overflow-hidden"
+  >
+    <!-- Background Image -->
+    <div class="absolute inset-0">
+      <img
+        src="https://images.unsplash.com/photo-1617137968427-85924c800a22?w=1920&q=80"
+        alt="Moda masculina premium"
+        class="w-full h-full object-cover"
+      />
+      <div class="absolute inset-0 bg-black/30"></div>
+    </div>
+
+    <!-- Content -->
+    <div class="relative z-10 text-center px-4 max-w-4xl mx-auto">
+      <p
+        class="text-white/80 text-sm tracking-[0.3em] uppercase mb-6 animate-fade-in"
+      >
+        Nueva Colección 2026
+      </p>
+      <h1
+        class="text-white text-5xl md:text-7xl lg:text-8xl font-serif font-light tracking-tight mb-8 animate-fade-in-up"
+      >
+        Elegancia<br />
+        <span class="italic">Atemporal</span>
+      </h1>
+      <p
+        class="text-white/70 text-lg md:text-xl font-light max-w-xl mx-auto mb-12 animate-fade-in-up"
+        style="animation-delay: 0.1s"
+      >
+        Descubre piezas diseñadas para el hombre que aprecia la calidad y el
+        estilo refinado.
+      </p>
+      <div
+        class="flex flex-col sm:flex-row gap-4 justify-center animate-fade-in-up"
+        style="animation-delay: 0.2s"
+      >
+        <a
+          href="/productos"
+          class="inline-flex items-center justify-center px-10 py-4 bg-white text-gray-900 text-sm tracking-widest uppercase font-medium hover:bg-gray-100 transition-colors"
+        >
+          Explorar Colección
+        </a>
+        <a
+          href="#categorias"
+          class="inline-flex items-center justify-center px-10 py-4 border border-white/50 text-white text-sm tracking-widest uppercase font-medium hover:bg-white hover:text-gray-900 transition-colors"
+        >
+          Ver Categorías
+        </a>
+      </div>
+    </div>
+
+    <!-- Scroll Indicator -->
+    <div class="absolute bottom-10 left-1/2 -translate-x-1/2 animate-bounce">
+      <svg
+        class="w-6 h-6 text-white/60"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="1.5"
+          d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+      </svg>
+    </div>
+  </section>
+
+  <!-- Brand Promise Bar -->
+  <section class="bg-brand-navy py-6">
+    <div class="max-w-7xl mx-auto px-4">
+      <div class="flex flex-wrap justify-center gap-8 md:gap-16 text-center">
+        <div
+          class="flex items-center gap-2 text-white/80 text-sm tracking-wide"
+        >
+          <svg
+            class="w-5 h-5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+              d="M5 13l4 4L19 7"></path>
+          </svg>
+          Envío Gratis +50€
+        </div>
+        <div
+          class="flex items-center gap-2 text-white/80 text-sm tracking-wide"
+        >
+          <svg
+            class="w-5 h-5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+            ></path>
+          </svg>
+          Devolución 30 Días
+        </div>
+        <div
+          class="flex items-center gap-2 text-white/80 text-sm tracking-wide"
+        >
+          <svg
+            class="w-5 h-5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+              d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+            ></path>
+          </svg>
+          Calidad Premium
+        </div>
+        <div
+          class="flex items-center gap-2 text-white/80 text-sm tracking-wide"
+        >
+          <svg
+            class="w-5 h-5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+              d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+            ></path>
+          </svg>
+          Pago Seguro
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Flash Offers Section -->
+  {
+    showFlashOffers && saleProducts.length > 0 && (
+      <section class="py-20 bg-gradient-to-b from-red-50 to-white">
+        <div class="max-w-7xl mx-auto px-4">
+          <div class="text-center mb-16">
+            <span class="inline-block px-4 py-2 bg-red-600 text-white text-xs tracking-widest uppercase mb-6">
+              ⚡ Ofertas Flash
+            </span>
+            <h2 class="text-4xl md:text-5xl font-serif font-light text-gray-900 mb-4">
+              Ofertas Exclusivas
+            </h2>
+            <p class="text-gray-500 max-w-lg mx-auto">
+              Aprovecha nuestras ofertas por tiempo limitado. Productos
+              seleccionados con descuentos especiales.
+            </p>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {saleProducts.slice(0, 4).map((product) => (
+              <ProductCard product={product} />
+            ))}
+          </div>
+
+          {saleProducts.length > 4 && (
+            <div class="text-center mt-12">
+              <a
+                href="/productos?ofertas=true"
+                class="inline-flex items-center gap-2 text-red-600 font-medium hover:text-red-700 transition-colors"
+              >
+                Ver todas las ofertas
+                <svg
+                  class="w-4 h-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M17 8l4 4m0 0l-4 4m4-4H3"
+                  />
+                </svg>
+              </a>
+            </div>
+          )}
+        </div>
+      </section>
+    )
+  }
+
+  <!-- Categories Section -->
+  <section id="categorias" class="py-24 bg-white">
+    <div class="max-w-7xl mx-auto px-4">
+      <div class="text-center mb-16">
+        <h2
+          class="text-4xl md:text-5xl font-serif font-light text-gray-900 mb-4"
+        >
+          Categorías
+        </h2>
+        <p class="text-gray-500 max-w-lg mx-auto">
+          Explora nuestra colección organizada por categorías
+        </p>
+      </div>
+
+      <div class="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
+        {
+          categories.slice(0, 6).map((category, index) => (
+            <a
+              href={`/categoria/${category.slug}`}
+              class={`group relative overflow-hidden ${index === 0 || index === 3 ? "md:col-span-2 aspect-[2/1]" : "aspect-square"}`}
+            >
+              <img
+                src={
+                  categoryImages[category.slug] ||
+                  "https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=800&q=80"
+                }
+                alt={category.name}
+                class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700"
+              />
+              <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+              <div class="absolute bottom-0 left-0 right-0 p-6 md:p-8">
+                <h3 class="text-white text-xl md:text-2xl font-serif font-light tracking-wide group-hover:translate-x-2 transition-transform">
+                  {category.name}
+                </h3>
+                <p class="text-white/70 text-sm mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  Explorar →
+                </p>
+              </div>
+            </a>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- Featured Products Grid -->
+  {
+    featuredProducts.length > 0 && (
+      <section class="py-24 bg-surface-secondary">
+        <div class="max-w-7xl mx-auto px-4">
+          <div class="flex flex-col md:flex-row md:items-end justify-between mb-12">
+            <div>
+              <h2 class="text-4xl md:text-5xl font-serif font-light text-gray-900 mb-4">
+                Productos Destacados
+              </h2>
+              <p class="text-gray-500 max-w-lg">
+                Piezas seleccionadas por nuestro equipo de estilistas
+              </p>
+            </div>
+            <a
+              href="/productos"
+              class="hidden md:inline-flex items-center gap-2 text-gray-900 font-medium border-b border-gray-900 pb-1 hover:text-gray-600 hover:border-gray-600 transition-colors mt-4 md:mt-0"
+            >
+              Ver todos
+              <svg
+                class="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M17 8l4 4m0 0l-4 4m4-4H3"
+                />
+              </svg>
+            </a>
+          </div>
+
+          <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+            {featuredProducts.slice(0, 8).map((product) => (
+              <ProductCard product={product} />
+            ))}
+          </div>
+
+          <div class="md:hidden text-center mt-10">
+            <a
+              href="/productos"
+              class="inline-flex items-center gap-2 px-8 py-3 bg-gray-900 text-white text-sm tracking-wider uppercase hover:bg-gray-800 transition-colors"
+            >
+              Ver todos los productos
+            </a>
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  <!-- Editorial Banner -->
+  <section class="relative h-[70vh] flex items-center overflow-hidden">
+    <div class="absolute inset-0">
+      <img
+        src="https://images.unsplash.com/photo-1490578474895-699cd4e2cf59?w=1920&q=80"
+        alt="Colección premium"
+        class="w-full h-full object-cover"
+      />
+      <div class="absolute inset-0 bg-black/40"></div>
+    </div>
+
+    <div class="relative z-10 max-w-7xl mx-auto px-4 w-full">
+      <div class="max-w-xl">
+        <p class="text-white/70 text-sm tracking-[0.25em] uppercase mb-4">
+          Colección Premium
+        </p>
+        <h2 class="text-white text-4xl md:text-6xl font-serif font-light mb-6">
+          Estilo que<br />
+          <span class="italic">define</span>
+        </h2>
+        <p class="text-white/70 text-lg mb-8">
+          Cada pieza es una declaración de intenciones. Calidad artesanal para
+          quienes entienden el valor de los detalles.
+        </p>
+        <a
+          href="/productos"
+          class="inline-flex items-center gap-3 text-white border-b border-white/50 pb-2 hover:border-white transition-colors group"
+        >
+          <span class="tracking-wider">Descubrir más</span>
+          <svg
+            class="w-5 h-5 group-hover:translate-x-1 transition-transform"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+              d="M17 8l4 4m0 0l-4 4m4-4H3"></path>
+          </svg>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- New Arrivals -->
+  <section class="py-24 bg-white">
+    <div class="max-w-7xl mx-auto px-4">
+      <div class="text-center mb-16">
+        <h2
+          class="text-4xl md:text-5xl font-serif font-light text-gray-900 mb-4"
+        >
+          Últimas Llegadas
+        </h2>
+        <p class="text-gray-500">
+          Las novedades que marcan tendencia esta temporada
+        </p>
+      </div>
+
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+        {latestProducts.map((product) => <ProductCard product={product} />)}
+      </div>
+
+      <div class="text-center mt-12">
+        <a
+          href="/productos"
+          class="inline-flex items-center gap-2 px-10 py-4 bg-gray-900 text-white text-sm tracking-wider uppercase hover:bg-gray-800 transition-colors"
+        >
+          Ver toda la colección
+          <svg
+            class="w-4 h-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M17 8l4 4m0 0l-4 4m4-4H3"></path>
+          </svg>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Values Section -->
+  <section class="py-24 bg-surface-secondary">
+    <div class="max-w-7xl mx-auto px-4">
+      <div class="grid md:grid-cols-3 gap-12 md:gap-16">
+        <div class="text-center">
+          <div class="w-16 h-16 mx-auto mb-6 flex items-center justify-center">
+            <svg
+              class="w-10 h-10 text-gray-400"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="1"
+                d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
+              ></path>
+            </svg>
+          </div>
+          <h3 class="text-xl font-serif text-gray-900 mb-3">
+            Calidad Artesanal
+          </h3>
+          <p class="text-gray-500 text-sm leading-relaxed">
+            Cada prenda está confeccionada con materiales de primera calidad y
+            atención meticulosa al detalle.
+          </p>
+        </div>
+        <div class="text-center">
+          <div class="w-16 h-16 mx-auto mb-6 flex items-center justify-center">
+            <svg
+              class="w-10 h-10 text-gray-400"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="1"
+                d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              ></path>
+            </svg>
+          </div>
+          <h3 class="text-xl font-serif text-gray-900 mb-3">Sostenibilidad</h3>
+          <p class="text-gray-500 text-sm leading-relaxed">
+            Comprometidos con prácticas responsables y materiales sostenibles
+            para un futuro mejor.
+          </p>
+        </div>
+        <div class="text-center">
+          <div class="w-16 h-16 mx-auto mb-6 flex items-center justify-center">
+            <svg
+              class="w-10 h-10 text-gray-400"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="1"
+                d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"
+              ></path>
+            </svg>
+          </div>
+          <h3 class="text-xl font-serif text-gray-900 mb-3">Envío Premium</h3>
+          <p class="text-gray-500 text-sm leading-relaxed">
+            Entrega gratuita en pedidos superiores a 50€. Empaquetado premium y
+            envío express disponible.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Newsletter Section -->
+  <section class="py-24 bg-brand-navy">
+    <div class="max-w-2xl mx-auto px-4 text-center">
+      <h2 class="text-3xl md:text-4xl font-serif font-light text-white mb-4">
+        Únete al Club
+      </h2>
+      <p class="text-white/60 mb-8">
+        Suscríbete para recibir acceso anticipado a nuevas colecciones, ofertas
+        exclusivas y contenido de estilo.
+      </p>
+      <form class="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
+        <input
+          type="email"
+          placeholder="Tu email"
+          class="flex-1 px-6 py-4 bg-white/10 border border-white/20 text-white placeholder-white/50 focus:outline-none focus:border-white/50"
+        />
+        <button
+          type="submit"
+          class="px-8 py-4 bg-white text-gray-900 text-sm tracking-wider uppercase font-medium hover:bg-gray-100 transition-colors"
+        >
+          Suscribirse
+        </button>
+      </form>
+      <p class="text-white/40 text-xs mt-4">
+        Al suscribirte, aceptas nuestra política de privacidad
+      </p>
+    </div>
+  </section>
+</PublicLayout>

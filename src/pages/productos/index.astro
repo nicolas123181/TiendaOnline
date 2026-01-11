@@ -1,0 +1,254 @@
+---
+import PublicLayout from "../../layouts/PublicLayout.astro";
+import ProductCard from "../../components/product/ProductCard.astro";
+import { getProducts, getCategories } from "../../lib/supabase";
+
+// SSG
+export const prerender = true;
+
+const products = await getProducts();
+const categories = await getCategories();
+
+// Obtener parámetros de URL para filtros (en SSG estos serían manejados con JS)
+const searchParams = Astro.url.searchParams;
+const categoryFilter = searchParams.get("categoria");
+const sortBy = searchParams.get("orden") || "recientes";
+---
+
+<PublicLayout
+    title="Todos los Productos"
+    description="Explora nuestra colección completa de moda masculina premium"
+>
+    <!-- Page Header -->
+    <section class="bg-surface-secondary py-12 lg:py-16">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div
+                class="flex flex-col lg:flex-row lg:items-end justify-between gap-6"
+            >
+                <div>
+                    <nav
+                        class="flex items-center gap-2 text-sm text-text-muted mb-4"
+                    >
+                        <a
+                            href="/"
+                            class="hover:text-brand-navy transition-colors"
+                            >Inicio</a
+                        >
+                        <span>/</span>
+                        <span class="text-text-primary">Productos</span>
+                    </nav>
+                    <h1
+                        class="text-3xl lg:text-4xl font-serif font-bold text-brand-navy"
+                    >
+                        Todos los Productos
+                    </h1>
+                    <p class="text-text-secondary mt-2">
+                        {products.length} productos disponibles
+                    </p>
+                </div>
+
+                <!-- Sort Dropdown -->
+                <div class="flex items-center gap-4">
+                    <label for="sort-select" class="text-sm text-text-secondary"
+                        >Ordenar por:</label
+                    >
+                    <select
+                        id="sort-select"
+                        class="px-4 py-2 rounded-lg border border-border-light bg-surface-primary text-sm focus:border-brand-navy focus:outline-none focus:ring-2 focus:ring-brand-navy/20"
+                    >
+                        <option value="recientes">Más recientes</option>
+                        <option value="precio-asc">Precio: menor a mayor</option
+                        >
+                        <option value="precio-desc"
+                            >Precio: mayor a menor</option
+                        >
+                        <option value="nombre">Nombre A-Z</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <section class="py-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col lg:flex-row gap-8">
+                <!-- Sidebar Filters -->
+                <aside class="lg:w-64 flex-shrink-0">
+                    <div class="sticky top-24 space-y-8">
+                        <!-- Categories Filter -->
+                        <div>
+                            <h3
+                                class="text-sm font-semibold text-brand-navy uppercase tracking-wider mb-4"
+                            >
+                                Categorías
+                            </h3>
+                            <ul class="space-y-2">
+                                <li>
+                                    <a
+                                        href="/productos"
+                                        class="flex items-center justify-between py-2 text-text-secondary hover:text-brand-navy transition-colors"
+                                    >
+                                        <span>Todas las categorías</span>
+                                        <span
+                                            class="text-xs bg-surface-tertiary px-2 py-1 rounded"
+                                            >{products.length}</span
+                                        >
+                                    </a>
+                                </li>
+                                {
+                                    categories.map((category) => {
+                                        const count = products.filter(
+                                            (p) =>
+                                                p.category_id === category.id,
+                                        ).length;
+                                        return (
+                                            <li>
+                                                <a
+                                                    href={`/categoria/${category.slug}`}
+                                                    class="flex items-center justify-between py-2 text-text-secondary hover:text-brand-navy transition-colors"
+                                                >
+                                                    <span>{category.name}</span>
+                                                    <span class="text-xs bg-surface-tertiary px-2 py-1 rounded">
+                                                        {count}
+                                                    </span>
+                                                </a>
+                                            </li>
+                                        );
+                                    })
+                                }
+                            </ul>
+                        </div>
+
+                        <!-- Price Filter -->
+                        <div>
+                            <h3
+                                class="text-sm font-semibold text-brand-navy uppercase tracking-wider mb-4"
+                            >
+                                Precio
+                            </h3>
+                            <div class="space-y-2">
+                                <label
+                                    class="flex items-center gap-3 cursor-pointer"
+                                >
+                                    <input
+                                        type="checkbox"
+                                        class="w-4 h-4 rounded border-border-medium text-brand-navy focus:ring-brand-navy"
+                                    />
+                                    <span class="text-text-secondary"
+                                        >Menos de 50€</span
+                                    >
+                                </label>
+                                <label
+                                    class="flex items-center gap-3 cursor-pointer"
+                                >
+                                    <input
+                                        type="checkbox"
+                                        class="w-4 h-4 rounded border-border-medium text-brand-navy focus:ring-brand-navy"
+                                    />
+                                    <span class="text-text-secondary"
+                                        >50€ - 100€</span
+                                    >
+                                </label>
+                                <label
+                                    class="flex items-center gap-3 cursor-pointer"
+                                >
+                                    <input
+                                        type="checkbox"
+                                        class="w-4 h-4 rounded border-border-medium text-brand-navy focus:ring-brand-navy"
+                                    />
+                                    <span class="text-text-secondary"
+                                        >100€ - 200€</span
+                                    >
+                                </label>
+                                <label
+                                    class="flex items-center gap-3 cursor-pointer"
+                                >
+                                    <input
+                                        type="checkbox"
+                                        class="w-4 h-4 rounded border-border-medium text-brand-navy focus:ring-brand-navy"
+                                    />
+                                    <span class="text-text-secondary"
+                                        >Más de 200€</span
+                                    >
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Stock Filter -->
+                        <div>
+                            <h3
+                                class="text-sm font-semibold text-brand-navy uppercase tracking-wider mb-4"
+                            >
+                                Disponibilidad
+                            </h3>
+                            <label
+                                class="flex items-center gap-3 cursor-pointer"
+                            >
+                                <input
+                                    type="checkbox"
+                                    checked
+                                    class="w-4 h-4 rounded border-border-medium text-brand-navy focus:ring-brand-navy"
+                                />
+                                <span class="text-text-secondary"
+                                    >Solo en stock</span
+                                >
+                            </label>
+                        </div>
+                    </div>
+                </aside>
+
+                <!-- Products Grid -->
+                <div class="flex-1">
+                    {
+                        products.length > 0 ? (
+                            <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 lg:gap-8">
+                                {products.map((product) => (
+                                    <ProductCard product={product} />
+                                ))}
+                            </div>
+                        ) : (
+                            <div class="text-center py-20">
+                                <div class="w-24 h-24 mx-auto mb-6 text-gray-200">
+                                    <svg
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke="currentColor"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="1"
+                                            d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                                        />
+                                    </svg>
+                                </div>
+                                <h3 class="text-xl font-semibold text-brand-navy mb-2">
+                                    No hay productos disponibles
+                                </h3>
+                                <p class="text-text-muted">
+                                    Pronto añadiremos nuevos productos a nuestra
+                                    colección.
+                                </p>
+                            </div>
+                        )
+                    }
+                </div>
+            </div>
+        </div>
+    </section>
+</PublicLayout>
+
+<script>
+    // Cliente-side sorting
+    const sortSelect = document.getElementById(
+        "sort-select",
+    ) as HTMLSelectElement;
+
+    sortSelect?.addEventListener("change", (e) => {
+        const value = (e.target as HTMLSelectElement).value;
+        const url = new URL(window.location.href);
+        url.searchParams.set("orden", value);
+        window.location.href = url.toString();
+    });
+</script>

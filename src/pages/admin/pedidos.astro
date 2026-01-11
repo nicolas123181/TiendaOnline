@@ -1,0 +1,766 @@
+---
+import AdminLayout from "../../layouts/AdminLayout.astro";
+import { supabase } from "../../lib/supabase";
+import { formatPrice } from "../../lib/utils";
+
+export const prerender = false;
+
+let success = "";
+let error = "";
+
+// Obtener pedidos pagados
+const { data: ordersRaw, error: ordersError } = await supabase
+    .from("orders")
+    .select("*, order_items(*)")
+    .in("status", ["paid", "ready_for_pickup", "shipped"])
+    .order("created_at", { ascending: true });
+
+if (ordersError) {
+    console.error("Error fetching orders:", ordersError);
+}
+
+// Obtener métodos de envío
+const { data: shippingMethods } = await supabase
+    .from("shipping_methods")
+    .select("*");
+
+// Crear mapa de métodos de envío
+const shippingMap = new Map();
+(shippingMethods || []).forEach((m) => shippingMap.set(m.id, m));
+
+// Añadir info de envío a cada pedido
+const orders = (ordersRaw || []).map((order) => ({
+    ...order,
+    shipping_method: shippingMap.get(order.shipping_method_id) || null,
+}));
+
+// Ordenar por prioridad de envío (más caro primero = más urgente)
+const sortedOrders = orders.sort((a, b) => {
+    // Primero los que tienen envío más caro (más urgente)
+    const aCost = a.shipping_method?.cost || a.shipping_cost || 0;
+    const bCost = b.shipping_method?.cost || b.shipping_cost || 0;
+    if (bCost !== aCost) return bCost - aCost;
+    // Luego por fecha (más antiguo primero)
+    return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+});
+
+// Separar por tipo (recogida en tienda vs envío)
+const pickupOrders = sortedOrders.filter(
+    (o) =>
+        o.shipping_method?.name?.toLowerCase().includes("recoger") ||
+        o.shipping_method?.name?.toLowerCase().includes("tienda") ||
+        o.shipping_method?.min_days === 0 ||
+        o.shipping_cost === 0,
+);
+const shippingOrders = sortedOrders.filter((o) => !pickupOrders.includes(o));
+
+// Obtener TODOS los pedidos para la sección de historial
+const { data: allOrdersRaw } = await supabase
+    .from("orders")
+    .select("*, order_items(*)")
+    .order("created_at", { ascending: false })
+    .limit(100);
+
+const allOrders = (allOrdersRaw || []).map((order) => ({
+    ...order,
+    shipping_method: shippingMap.get(order.shipping_method_id) || null,
+}));
+
+const statusLabels: Record<string, string> = {
+    pending: "Pendiente de Pago",
+    paid: "Pagado - Preparar",
+    ready_for_pickup: "Listo para recoger",
+    shipped: "Enviado",
+    delivered: "Entregado",
+    cancelled: "Cancelado",
+};
+
+const statusColors: Record<string, string> = {
+    pending: "bg-yellow-100 text-yellow-800",
+    paid: "bg-blue-100 text-blue-800",
+    ready_for_pickup: "bg-orange-100 text-orange-800",
+    shipped: "bg-purple-100 text-purple-800",
+    delivered: "bg-green-100 text-green-800",
+    cancelled: "bg-red-100 text-red-800",
+};
+---
+
+<AdminLayout title="Gestión de Pedidos">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-8">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Gestión de Pedidos</h1>
+            <p class="text-gray-600 mt-1">
+                Pedidos pendientes de acción ordenados por prioridad
+            </p>
+        </div>
+        <a
+            href="/admin"
+            class="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-2"
+        >
+            <svg
+                class="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+            >
+                <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+            </svg>
+            Volver al Dashboard
+        </a>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+            <p class="text-3xl font-bold text-blue-600">
+                {sortedOrders.filter((o) => o.status === "paid").length}
+            </p>
+            <p class="text-sm text-gray-600">Por Preparar</p>
+        </div>
+        <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+            <p class="text-3xl font-bold text-orange-600">
+                {
+                    pickupOrders.filter((o) => o.status === "ready_for_pickup")
+                        .length
+                }
+            </p>
+            <p class="text-sm text-gray-600">Listos para Recoger</p>
+        </div>
+        <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+            <p class="text-3xl font-bold text-purple-600">
+                {shippingOrders.filter((o) => o.status === "shipped").length}
+            </p>
+            <p class="text-sm text-gray-600">En Camino</p>
+        </div>
+        <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+            <p class="text-3xl font-bold text-gray-900">
+                {sortedOrders.length}
+            </p>
+            <p class="text-sm text-gray-600">Total Activos</p>
+        </div>
+    </div>
+
+    <!-- Mensajes -->
+    <div
+        id="success-message"
+        class="hidden mb-6 p-4 bg-green-50 border border-green-200 rounded-xl"
+    >
+        <p class="text-green-700 text-sm flex items-center gap-2">
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path
+                    fill-rule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                    clip-rule="evenodd"></path>
+            </svg>
+            <span id="success-text">Operación completada</span>
+        </p>
+    </div>
+
+    <div
+        id="error-message"
+        class="hidden mb-6 p-4 bg-red-50 border border-red-200 rounded-xl"
+    >
+        <p class="text-red-700 text-sm flex items-center gap-2">
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path
+                    fill-rule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                    clip-rule="evenodd"></path>
+            </svg>
+            <span id="error-text">Error en la operación</span>
+        </p>
+    </div>
+
+    <!-- Recogida en tienda -->
+    <section class="mb-10">
+        <h2
+            class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2"
+        >
+            <svg
+                class="w-5 h-5 text-orange-600"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+            >
+                <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                ></path>
+            </svg>
+            Recogida en Tienda
+            <span class="text-sm font-normal text-gray-500"
+                >({pickupOrders.length})</span
+            >
+        </h2>
+
+        {
+            pickupOrders.length === 0 ? (
+                <div class="bg-gray-50 rounded-xl p-8 text-center text-gray-500">
+                    No hay pedidos de recogida pendientes
+                </div>
+            ) : (
+                <div class="space-y-4">
+                    {pickupOrders.map((order) => (
+                        <div
+                            class="bg-white rounded-xl shadow-sm border border-gray-100 p-6"
+                            data-order-id={order.id}
+                        >
+                            <div class="flex items-start justify-between gap-4">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-3 mb-2">
+                                        <span class="font-mono font-bold text-lg text-blue-900">
+                                            #
+                                            {order.id
+                                                .toString()
+                                                .padStart(5, "0")}
+                                        </span>
+                                        <span
+                                            class={`px-3 py-1 text-xs font-semibold rounded-full ${statusColors[order.status]}`}
+                                        >
+                                            {statusLabels[order.status]}
+                                        </span>
+                                        <span class="text-sm text-gray-500">
+                                            {new Date(
+                                                order.created_at,
+                                            ).toLocaleDateString("es-ES", {
+                                                day: "numeric",
+                                                month: "short",
+                                                hour: "2-digit",
+                                                minute: "2-digit",
+                                            })}
+                                        </span>
+                                    </div>
+                                    <p class="text-gray-900 font-medium">
+                                        {order.customer_name}
+                                    </p>
+                                    <p class="text-sm text-gray-600">
+                                        {order.customer_email}
+                                    </p>
+                                    {order.customer_phone && (
+                                        <p class="text-sm text-gray-500">
+                                            Tel: {order.customer_phone}
+                                        </p>
+                                    )}
+
+                                    <div class="mt-3 flex flex-wrap gap-2">
+                                        {order.order_items
+                                            ?.slice(0, 3)
+                                            .map((item: any) => (
+                                                <span class="text-xs bg-gray-100 px-2 py-1 rounded">
+                                                    {item.product_name} ×{" "}
+                                                    {item.quantity}
+                                                </span>
+                                            ))}
+                                        {order.order_items?.length > 3 && (
+                                            <span class="text-xs text-gray-500">
+                                                +{order.order_items.length - 3}{" "}
+                                                más
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div class="text-right">
+                                    <p class="text-xl font-bold text-gray-900">
+                                        {formatPrice(order.total)}
+                                    </p>
+                                    <p class="text-sm text-gray-500">
+                                        {order.order_items?.length || 0}{" "}
+                                        producto(s)
+                                    </p>
+
+                                    {order.status === "paid" && (
+                                        <button
+                                            type="button"
+                                            class="mt-4 w-full px-4 py-2 bg-orange-600 text-white font-medium rounded-lg hover:bg-orange-700 transition-colors action-btn"
+                                            data-order={order.id}
+                                            data-action="ready_for_pickup"
+                                            data-email={order.customer_email}
+                                            data-name={order.customer_name}
+                                        >
+                                            📦 Listo para Recoger
+                                        </button>
+                                    )}
+                                    {order.status === "ready_for_pickup" && (
+                                        <button
+                                            type="button"
+                                            class="mt-4 w-full px-4 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors action-btn"
+                                            data-order={order.id}
+                                            data-action="delivered"
+                                            data-email={order.customer_email}
+                                            data-name={order.customer_name}
+                                        >
+                                            ✅ Entregado
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )
+        }
+    </section>
+
+    <!-- Envíos a domicilio -->
+    <section>
+        <h2
+            class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2"
+        >
+            <svg
+                class="w-5 h-5 text-purple-600"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+            >
+                <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M8 4H6a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-2m-4-1v8m0 0l3-3m-3 3L9 8m-5 5h2.586a1 1 0 01.707.293l2.414 2.414a1 1 0 00.707.293h3.172a1 1 0 00.707-.293l2.414-2.414a1 1 0 01.707-.293H20"
+                ></path>
+            </svg>
+            Envíos a Domicilio
+            <span class="text-sm font-normal text-gray-500"
+                >({shippingOrders.length})</span
+            >
+            <span class="text-xs font-normal text-amber-600 ml-2"
+                >Ordenado por prioridad</span
+            >
+        </h2>
+
+        {
+            shippingOrders.length === 0 ? (
+                <div class="bg-gray-50 rounded-xl p-8 text-center text-gray-500">
+                    No hay envíos pendientes
+                </div>
+            ) : (
+                <div class="space-y-4">
+                    {shippingOrders.map((order, index) => (
+                        <div
+                            class="bg-white rounded-xl shadow-sm border border-gray-100 p-6"
+                            data-order-id={order.id}
+                        >
+                            <div class="flex items-start justify-between gap-4">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-3 mb-2">
+                                        {index < 3 &&
+                                            order.status === "paid" && (
+                                                <span class="text-xs px-2 py-1 bg-red-100 text-red-700 rounded font-medium">
+                                                    ⚡ URGENTE
+                                                </span>
+                                            )}
+                                        <span class="font-mono font-bold text-lg text-blue-900">
+                                            #
+                                            {order.id
+                                                .toString()
+                                                .padStart(5, "0")}
+                                        </span>
+                                        <span
+                                            class={`px-3 py-1 text-xs font-semibold rounded-full ${statusColors[order.status]}`}
+                                        >
+                                            {statusLabels[order.status]}
+                                        </span>
+                                        <span class="text-sm text-gray-500">
+                                            {new Date(
+                                                order.created_at,
+                                            ).toLocaleDateString("es-ES", {
+                                                day: "numeric",
+                                                month: "short",
+                                                hour: "2-digit",
+                                                minute: "2-digit",
+                                            })}
+                                        </span>
+                                    </div>
+
+                                    <p class="text-gray-900 font-medium">
+                                        {order.customer_name}
+                                    </p>
+                                    <p class="text-sm text-gray-600">
+                                        {order.customer_email}
+                                    </p>
+
+                                    <div class="mt-2 text-sm text-gray-700 bg-gray-50 rounded-lg p-3">
+                                        <p class="font-medium">
+                                            📍 {order.customer_address}
+                                        </p>
+                                        <p>
+                                            {order.customer_postal_code}{" "}
+                                            {order.customer_city}
+                                        </p>
+                                        {order.customer_phone && (
+                                            <p>Tel: {order.customer_phone}</p>
+                                        )}
+                                    </div>
+
+                                    <div class="mt-3 flex items-center gap-4">
+                                        <span class="text-xs px-2 py-1 bg-blue-50 text-blue-700 rounded">
+                                            🚚{" "}
+                                            {order.shipping_method?.name ||
+                                                "Envío estándar"}
+                                        </span>
+                                        {(order.shipping_method?.cost ||
+                                            order.shipping_cost) > 0 && (
+                                            <span class="text-xs text-gray-500">
+                                                Envío:{" "}
+                                                {formatPrice(
+                                                    order.shipping_method
+                                                        ?.cost ||
+                                                        order.shipping_cost,
+                                                )}
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    <div class="mt-3 flex flex-wrap gap-2">
+                                        {order.order_items
+                                            ?.slice(0, 3)
+                                            .map((item: any) => (
+                                                <span class="text-xs bg-gray-100 px-2 py-1 rounded">
+                                                    {item.product_name} ×{" "}
+                                                    {item.quantity}
+                                                </span>
+                                            ))}
+                                        {order.order_items?.length > 3 && (
+                                            <span class="text-xs text-gray-500">
+                                                +{order.order_items.length - 3}{" "}
+                                                más
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div class="text-right">
+                                    <p class="text-xl font-bold text-gray-900">
+                                        {formatPrice(order.total)}
+                                    </p>
+                                    <p class="text-sm text-gray-500">
+                                        {order.order_items?.length || 0}{" "}
+                                        producto(s)
+                                    </p>
+
+                                    {order.status === "paid" && (
+                                        <button
+                                            type="button"
+                                            class="mt-4 w-full px-4 py-2 bg-purple-600 text-white font-medium rounded-lg hover:bg-purple-700 transition-colors action-btn"
+                                            data-order={order.id}
+                                            data-action="shipped"
+                                            data-email={order.customer_email}
+                                            data-name={order.customer_name}
+                                        >
+                                            📦 Paquete Enviado
+                                        </button>
+                                    )}
+                                    {order.status === "shipped" && (
+                                        <button
+                                            type="button"
+                                            class="mt-4 w-full px-4 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors action-btn"
+                                            data-order={order.id}
+                                            data-action="delivered"
+                                            data-email={order.customer_email}
+                                            data-name={order.customer_name}
+                                        >
+                                            ✅ Entregado
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )
+        }
+    </section>
+
+    <!-- Historial de Pedidos -->
+    <section class="mt-12 pt-12 border-t border-gray-200">
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-xl font-bold text-gray-900">
+                📋 Historial de Pedidos
+                <span class="text-sm font-normal text-gray-500 ml-2"
+                    >({allOrders.length} pedidos)</span
+                >
+            </h2>
+        </div>
+
+        <!-- Búsqueda y filtros -->
+        <div
+            class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6"
+        >
+            <div class="flex flex-col md:flex-row gap-4">
+                <div class="flex-1">
+                    <label class="block text-sm font-medium text-gray-700 mb-1"
+                        >Buscar por ID</label
+                    >
+                    <div class="relative">
+                        <input
+                            type="text"
+                            id="search-id"
+                            placeholder="Ej: 00001"
+                            class="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                        <svg
+                            class="w-5 h-5 text-gray-400 absolute left-3 top-2.5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                            ></path>
+                        </svg>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1"
+                        >Filtrar por estado</label
+                    >
+                    <select
+                        id="filter-status"
+                        class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                        <option value="">Todos</option>
+                        <option value="paid">Pagado</option>
+                        <option value="ready_for_pickup"
+                            >Listo para recoger</option
+                        >
+                        <option value="shipped">Enviado</option>
+                        <option value="delivered">Entregado</option>
+                        <option value="cancelled">Cancelado</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lista de pedidos -->
+        <div
+            class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"
+        >
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th
+                                class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase"
+                                >ID</th
+                            >
+                            <th
+                                class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase"
+                                >Cliente</th
+                            >
+                            <th
+                                class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase"
+                                >Estado</th
+                            >
+                            <th
+                                class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase"
+                                >Total</th
+                            >
+                            <th
+                                class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase"
+                                >Fecha</th
+                            >
+                            <th
+                                class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase"
+                                >Productos</th
+                            >
+                        </tr>
+                    </thead>
+                    <tbody
+                        id="orders-table-body"
+                        class="divide-y divide-gray-100"
+                    >
+                        {
+                            allOrders.map((order) => (
+                                <tr
+                                    class="hover:bg-gray-50 order-row"
+                                    data-id={order.id}
+                                    data-status={order.status}
+                                >
+                                    <td class="px-4 py-4">
+                                        <span class="font-mono font-bold text-blue-900">
+                                            #
+                                            {order.id
+                                                .toString()
+                                                .padStart(5, "0")}
+                                        </span>
+                                    </td>
+                                    <td class="px-4 py-4">
+                                        <p class="font-medium text-gray-900">
+                                            {order.customer_name}
+                                        </p>
+                                        <p class="text-sm text-gray-500">
+                                            {order.customer_email}
+                                        </p>
+                                    </td>
+                                    <td class="px-4 py-4">
+                                        <span
+                                            class={`px-2 py-1 text-xs font-semibold rounded-full ${statusColors[order.status] || "bg-gray-100 text-gray-800"}`}
+                                        >
+                                            {statusLabels[order.status] ||
+                                                order.status}
+                                        </span>
+                                    </td>
+                                    <td class="px-4 py-4 font-semibold">
+                                        {formatPrice(order.total)}
+                                    </td>
+                                    <td class="px-4 py-4 text-sm text-gray-500">
+                                        {new Date(
+                                            order.created_at,
+                                        ).toLocaleDateString("es-ES", {
+                                            day: "2-digit",
+                                            month: "short",
+                                            year: "numeric",
+                                        })}
+                                    </td>
+                                    <td class="px-4 py-4 text-sm text-gray-600">
+                                        {order.order_items?.length || 0} item(s)
+                                    </td>
+                                </tr>
+                            ))
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            {
+                allOrders.length === 0 && (
+                    <div class="p-8 text-center text-gray-500">
+                        No hay pedidos registrados
+                    </div>
+                )
+            }
+        </div>
+    </section>
+</AdminLayout>
+
+<script>
+    // Manejar acciones de los botones
+    document.querySelectorAll(".action-btn").forEach((btn) => {
+        btn.addEventListener("click", async (e) => {
+            const button = e.target as HTMLButtonElement;
+            const orderId = button.dataset.order;
+            const action = button.dataset.action;
+            const email = button.dataset.email;
+            const name = button.dataset.name;
+
+            if (!orderId || !action) return;
+
+            // Confirmar acción
+            const actionLabels: Record<string, string> = {
+                ready_for_pickup: "marcar como listo para recoger",
+                shipped: "marcar como enviado",
+                delivered: "marcar como entregado",
+            };
+
+            if (
+                !confirm(
+                    `¿Confirmar ${actionLabels[action] || action}?\n\nSe enviará un email a ${email}`,
+                )
+            ) {
+                return;
+            }
+
+            button.disabled = true;
+            button.textContent = "Procesando...";
+
+            try {
+                const response = await fetch("/api/admin/update-order-status", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        orderId: parseInt(orderId),
+                        status: action,
+                        customerEmail: email,
+                        customerName: name,
+                    }),
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Mostrar mensaje de éxito
+                    const successMsg =
+                        document.getElementById("success-message");
+                    const successText = document.getElementById("success-text");
+                    if (successMsg && successText) {
+                        successText.textContent =
+                            result.message ||
+                            "Pedido actualizado y email enviado";
+                        successMsg.classList.remove("hidden");
+                    }
+
+                    // Ocultar el pedido de la lista
+                    const orderCard = button.closest("[data-order-id]");
+                    if (orderCard) {
+                        orderCard.classList.add(
+                            "opacity-50",
+                            "pointer-events-none",
+                        );
+                        setTimeout(() => orderCard.remove(), 1000);
+                    }
+                } else {
+                    throw new Error(result.error || "Error al actualizar");
+                }
+            } catch (error) {
+                const errorMsg = document.getElementById("error-message");
+                const errorText = document.getElementById("error-text");
+                if (errorMsg && errorText) {
+                    errorText.textContent = (error as Error).message;
+                    errorMsg.classList.remove("hidden");
+                }
+                button.disabled = false;
+                button.textContent =
+                    button.textContent?.replace("Procesando...", "") ||
+                    "Reintentar";
+            }
+        });
+    });
+
+    // Filtrado de la tabla de pedidos
+    const searchInput = document.getElementById(
+        "search-id",
+    ) as HTMLInputElement;
+    const statusFilter = document.getElementById(
+        "filter-status",
+    ) as HTMLSelectElement;
+    const orderRows = document.querySelectorAll(".order-row");
+
+    function filterOrders() {
+        const searchValue =
+            searchInput?.value.toLowerCase().replace("#", "") || "";
+        const statusValue = statusFilter?.value || "";
+
+        orderRows.forEach((row) => {
+            const rowElement = row as HTMLElement;
+            const orderId = rowElement.dataset.id || "";
+            const orderStatus = rowElement.dataset.status || "";
+
+            const matchesId =
+                searchValue === "" ||
+                orderId.includes(searchValue) ||
+                orderId.padStart(5, "0").includes(searchValue);
+            const matchesStatus =
+                statusValue === "" || orderStatus === statusValue;
+
+            if (matchesId && matchesStatus) {
+                rowElement.style.display = "";
+            } else {
+                rowElement.style.display = "none";
+            }
+        });
+    }
+
+    searchInput?.addEventListener("input", filterOrders);
+    statusFilter?.addEventListener("change", filterOrders);
+</script>

@@ -1,0 +1,202 @@
+---
+import PublicLayout from '../../layouts/PublicLayout.astro';
+import Stripe from 'stripe';
+
+export const prerender = false;
+
+const sessionId = Astro.url.searchParams.get('session_id');
+
+let paymentStatus = 'unknown';
+let orderId = '';
+let customerEmail = '';
+let customerName = '';
+
+if (sessionId) {
+    try {
+        const stripeSecretKey = import.meta.env.STRIPE_SECRET_KEY;
+        const stripe = new Stripe(stripeSecretKey, { apiVersion: '2023-10-16' });
+        
+        const session = await stripe.checkout.sessions.retrieve(sessionId);
+        
+        if (session.payment_status === 'paid') {
+            paymentStatus = 'success';
+            customerEmail = session.customer_email || '';
+            customerName = session.metadata?.customer_name || '';
+            
+            // Obtener datos del pedido desde metadata de Stripe
+            const orderDataStr = session.metadata?.orderData;
+            
+            if (orderDataStr) {
+                try {
+                    const orderData = JSON.parse(orderDataStr);
+                    
+                    console.log(`💳 Payment confirmed, creating order...`);
+                    
+                    const confirmResponse = await fetch(`${Astro.url.origin}/api/confirm-payment`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            orderData: orderData,
+                            paymentIntentId: session.payment_intent as string,
+                        }),
+                    });
+                    
+                    const confirmResult = await confirmResponse.json();
+                    
+                    if (confirmResult.success) {
+                        orderId = confirmResult.orderId?.toString() || '';
+                        console.log(`✅ Order created: #${orderId}`);
+                    } else {
+                        console.error('❌ Error creating order:', confirmResult.error);
+                    }
+                } catch (e) {
+                    console.error('❌ Error parsing order data:', e);
+                }
+            }
+        } else {
+            paymentStatus = 'pending';
+        }
+    } catch (error) {
+        console.error('Error retrieving session:', error);
+        paymentStatus = 'error';
+    }
+}
+---
+
+<PublicLayout title="Compra Completada - Vantage" description="Gracias por tu compra en Vantage">
+    <section class="min-h-[70vh] flex items-center justify-center py-16">
+        <div class="max-w-lg mx-auto px-4">
+            
+            {paymentStatus === 'success' && (
+                <div class="bg-surface-primary rounded-2xl shadow-strong p-8 text-center">
+                    <!-- Success Icon -->
+                    <div class="w-20 h-20 mx-auto mb-6 bg-status-success-bg rounded-full flex items-center justify-center">
+                        <svg class="w-10 h-10 text-status-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                    </div>
+                    
+                    <h1 class="text-3xl font-serif font-bold text-brand-navy mb-4">
+                        ¡Gracias por tu compra!
+                    </h1>
+                    
+                    {orderId && (
+                        <div class="bg-surface-secondary rounded-xl p-4 mb-6">
+                            <p class="text-sm text-text-muted">Número de pedido</p>
+                            <p class="text-2xl font-bold text-brand-leather">#{orderId}</p>
+                        </div>
+                    )}
+                    
+                    <p class="text-text-secondary mb-2">
+                        {customerName && <span>Hola <strong>{customerName}</strong>, </span>}
+                        tu pago ha sido procesado correctamente.
+                    </p>
+                    
+                    {customerEmail && (
+                        <p class="text-text-muted text-sm mb-6">
+                            Te hemos enviado un email de confirmación a <strong class="text-brand-navy">{customerEmail}</strong>
+                        </p>
+                    )}
+                    
+                    <div class="space-y-4 pt-6 border-t border-border-light">
+                        <div class="flex items-center justify-center gap-3 text-sm text-text-muted">
+                            <svg class="w-5 h-5 text-status-success" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
+                            </svg>
+                            <span>Recibirás tu pedido en los próximos días</span>
+                        </div>
+                        
+                        <a 
+                            href="/perfil" 
+                            class="inline-flex items-center justify-center gap-2 bg-brand-navy text-white px-8 py-4 rounded-xl font-semibold hover:bg-brand-navy-light transition-colors w-full"
+                        >
+                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                            </svg>
+                            Ver Mis Pedidos
+                        </a>
+                        
+                        <a 
+                            href="/" 
+                            class="inline-flex items-center justify-center gap-2 border border-gray-300 text-text-primary px-8 py-3 rounded-xl font-medium hover:bg-surface-secondary transition-colors w-full"
+                        >
+                            Seguir Comprando
+                        </a>
+                    </div>
+                </div>
+            )}
+
+            {paymentStatus === 'pending' && (
+                <div class="bg-surface-primary rounded-2xl shadow-strong p-8 text-center">
+                    <div class="w-20 h-20 mx-auto mb-6 bg-status-info-bg rounded-full flex items-center justify-center">
+                        <div class="w-10 h-10 border-4 border-status-info border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                    
+                    <h1 class="text-3xl font-serif font-bold text-brand-navy mb-4">
+                        Procesando Pago...
+                    </h1>
+                    
+                    <p class="text-text-secondary mb-6">
+                        Tu pago está siendo procesado. Recibirás un email de confirmación pronto.
+                    </p>
+                    
+                    <a 
+                        href="/" 
+                        class="inline-flex items-center justify-center gap-2 bg-brand-navy text-white px-8 py-4 rounded-xl font-semibold hover:bg-brand-navy-light transition-colors"
+                    >
+                        Volver a la Tienda
+                    </a>
+                </div>
+            )}
+
+            {(paymentStatus === 'error' || paymentStatus === 'unknown') && (
+                <div class="bg-surface-primary rounded-2xl shadow-strong p-8 text-center">
+                    <div class="w-20 h-20 mx-auto mb-6 bg-status-error-bg rounded-full flex items-center justify-center">
+                        <svg class="w-10 h-10 text-status-error" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </div>
+                    
+                    <h1 class="text-3xl font-serif font-bold text-brand-navy mb-4">
+                        Algo salió mal
+                    </h1>
+                    
+                    <p class="text-text-secondary mb-6">
+                        No pudimos verificar tu pago. Por favor, contacta con soporte si crees que esto es un error.
+                    </p>
+                    
+                    <div class="flex flex-col sm:flex-row gap-3 justify-center">
+                        <a 
+                            href="/carrito" 
+                            class="inline-flex items-center justify-center gap-2 bg-status-error text-white px-6 py-3 rounded-xl font-semibold hover:bg-red-700 transition-colors"
+                        >
+                            Volver al Carrito
+                        </a>
+                        <a 
+                            href="/" 
+                            class="inline-flex items-center justify-center gap-2 border border-border-medium text-text-primary px-6 py-3 rounded-xl font-semibold hover:bg-surface-secondary transition-colors"
+                        >
+                            Ir al Inicio
+                        </a>
+                    </div>
+                </div>
+            )}
+            
+        </div>
+    </section>
+</PublicLayout>
+
+<script>
+    import { clearCart } from '../../stores/cart';
+    
+    // Limpiar el carrito después de un pago exitoso
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionId = urlParams.get('session_id');
+    
+    if (sessionId) {
+        clearCart();
+        localStorage.removeItem('vantage_cart');
+        localStorage.removeItem('checkout_order_data');
+        window.dispatchEvent(new Event('storage'));
+    }
+</script>

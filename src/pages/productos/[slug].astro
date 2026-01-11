@@ -1,0 +1,237 @@
+---
+import PublicLayout from "../../layouts/PublicLayout.astro";
+import ProductCard from "../../components/product/ProductCard.astro";
+import ProductGallery from "../../components/product/ProductGallery.astro";
+import AddToCartButton from "../../components/islands/AddToCartButton";
+import {
+    getProducts,
+    getProductBySlug,
+    getProductsByCategory,
+} from "../../lib/supabase";
+import { formatPrice, getSizesForCategory } from "../../lib/utils";
+
+// SSG - Generar rutas estáticas
+export const prerender = true;
+
+export async function getStaticPaths() {
+    const products = await getProducts();
+
+    return products.map((product) => ({
+        params: { slug: product.slug },
+        props: { product },
+    }));
+}
+
+interface Props {
+    product: Awaited<ReturnType<typeof getProductBySlug>>;
+}
+
+const { product } = Astro.props;
+
+if (!product) {
+    return Astro.redirect("/404");
+}
+
+// Productos relacionados (misma categoría)
+const relatedProducts = await getProductsByCategory(
+    product.category?.slug || "",
+);
+const filteredRelated = relatedProducts
+    .filter((p) => p.id !== product.id)
+    .slice(0, 4);
+
+// Tallas según categoría
+const sizes = getSizesForCategory(product.category?.slug || "");
+---
+
+<PublicLayout
+    title={product.name}
+    description={product.description?.slice(0, 160)}
+>
+    <!-- Breadcrumb -->
+    <nav class="bg-surface-secondary py-4">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <ol class="flex items-center gap-2 text-sm text-text-muted">
+                <li>
+                    <a href="/" class="hover:text-brand-navy transition-colors"
+                        >Inicio</a>
+                </li>
+                <li><span>/</span></li>
+                <li>
+                    <a
+                        href="/productos"
+                        class="hover:text-brand-navy transition-colors"
+                        >Productos</a>
+                </li>
+                {
+                    product.category && (
+                        <>
+                            <li>
+                                <span>/</span>
+                            </li>
+                            <li>
+                                <a
+                                    href={`/categoria/${product.category.slug}`}
+                                    class="hover:text-brand-navy transition-colors"
+                                >
+                                    {product.category.name}
+                                </a>
+                            </li>
+                        </>
+                    )
+                }
+                <li><span>/</span></li>
+                <li
+                    class="text-text-primary font-medium truncate max-w-[200px]"
+                >
+                    {product.name}
+                </li>
+            </ol>
+        </div>
+    </nav>
+
+    <!-- Product Detail -->
+    <section class="py-12 lg:py-16">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid lg:grid-cols-2 gap-12 lg:gap-16">
+                <!-- Product Gallery -->
+                <div>
+                    <ProductGallery
+                        images={product.images}
+                        productName={product.name}
+                    />
+                </div>
+
+                <!-- Product Info -->
+                <div class="lg:pl-8">
+                    <!-- Category Badge -->
+                    {
+                        product.category && (
+                            <a
+                                href={`/categoria/${product.category.slug}`}
+                                class="inline-block text-sm font-medium text-brand-leather uppercase tracking-wider hover:text-brand-leather-dark transition-colors mb-4"
+                            >
+                                {product.category.name}
+                            </a>
+                        )
+                    }
+
+                    <!-- Name -->
+                    <h1
+                        class="text-3xl lg:text-4xl font-serif font-bold text-brand-navy mb-4"
+                    >
+                        {product.name}
+                    </h1>
+
+                    <!-- Price -->
+                    <div class="flex items-center gap-4 mb-6">
+                        <span class="text-3xl font-bold text-brand-navy">
+                            {formatPrice(product.price)}
+                        </span>
+                        <!-- Stock Status -->
+                        {
+                            product.stock > 0 ? (
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-status-success-bg text-status-success text-sm font-medium rounded-full">
+                                    <svg
+                                        class="w-4 h-4"
+                                        fill="currentColor"
+                                        viewBox="0 0 20 20"
+                                    >
+                                        <path
+                                            fill-rule="evenodd"
+                                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                            clip-rule="evenodd"
+                                        />
+                                    </svg>
+                                    En stock ({product.stock} disponibles)
+                                </span>
+                            ) : (
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-status-error-bg text-status-error text-sm font-medium rounded-full">
+                                    <svg
+                                        class="w-4 h-4"
+                                        fill="currentColor"
+                                        viewBox="0 0 20 20"
+                                    >
+                                        <path
+                                            fill-rule="evenodd"
+                                            d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                                            clip-rule="evenodd"
+                                        />
+                                    </svg>
+                                    Agotado
+                                </span>
+                            )
+                        }
+                    </div>
+
+                    <!-- Description -->
+                    <div class="prose prose-gray max-w-none mb-8">
+                        <p class="text-text-secondary leading-relaxed">
+                            {product.description}
+                        </p>
+                    </div>
+
+                    <!-- Divider -->
+                    <hr class="border-border-light mb-8" />
+
+                    <!-- Add to Cart Component (React Island) -->
+                    <AddToCartButton
+                        client:load
+                        product={{
+                            id: product.id,
+                            name: product.name,
+                            slug: product.slug,
+                            price: product.price,
+                            stock: product.stock,
+                            images: product.images,
+                            categorySlug: product.category?.slug,
+                        }}
+                        sizes={sizes}
+                    />
+
+                    <!-- Additional Details -->
+                    <div class="mt-10 pt-8 border-t border-border-light">
+                        <h3
+                            class="text-sm font-semibold text-brand-navy uppercase tracking-wider mb-4"
+                        >
+                            Detalles del producto
+                        </h3>
+                        <dl class="space-y-3 text-sm">
+                            <div class="flex justify-between">
+                                <dt class="text-text-muted">Referencia</dt>
+                                <dd class="text-text-primary font-medium">
+                                    FS-{product.id.toString().padStart(5, "0")}
+                                </dd>
+                            </div>
+                            <div class="flex justify-between">
+                                <dt class="text-text-muted">Categoría</dt>
+                                <dd class="text-text-primary font-medium">
+                                    {product.category?.name || "Sin categoría"}
+                                </dd>
+                            </div>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Related Products -->
+    {
+        filteredRelated.length > 0 && (
+            <section class="py-16 bg-surface-secondary">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <h2 class="text-2xl lg:text-3xl font-serif font-bold text-brand-navy mb-8">
+                        Productos Relacionados
+                    </h2>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
+                        {filteredRelated.map((relatedProduct) => (
+                            <ProductCard product={relatedProduct} />
+                        ))}
+                    </div>
+                </div>
+            </section>
+        )
+    }
+</PublicLayout>
