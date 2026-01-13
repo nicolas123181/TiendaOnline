@@ -626,7 +626,7 @@ const salePriceInEuros = product.sale_price
     // Remove existing image buttons
     document.querySelectorAll(".remove-image").forEach((btn) => {
         btn.addEventListener("click", (e) => {
-            const preview = (e.target as HTMLElement).closest(".image-preview");
+            const preview = e.target.closest(".image-preview");
             const url = preview?.getAttribute("data-url");
             if (url) {
                 uploadedImages = uploadedImages.filter((u) => u !== url);
@@ -653,7 +653,7 @@ const salePriceInEuros = product.sale_price
     dropZone?.addEventListener("drop", (e) => {
         e.preventDefault();
         dropZone.classList.remove("border-brand-navy", "bg-surface-secondary");
-        const files = (e as DragEvent).dataTransfer?.files;
+        const files = e.dataTransfer?.files;
         if (files) handleFiles(files);
     });
 
@@ -661,7 +661,7 @@ const salePriceInEuros = product.sale_price
         if (fileInput.files) handleFiles(fileInput.files);
     });
 
-    async function handleFiles(files: FileList) {
+    async function handleFiles(files) {
         if (uploadedImages.length >= 5) {
             alert("Máximo 5 imágenes por producto");
             return;
@@ -690,7 +690,7 @@ const salePriceInEuros = product.sale_price
         }
     }
 
-    async function uploadToSupabase(file: File) {
+    async function uploadToSupabase(file) {
         isUploading = true;
         showUploadingIndicator();
 
@@ -742,7 +742,7 @@ const salePriceInEuros = product.sale_price
         document.getElementById("upload-indicator")?.remove();
     }
 
-    function addImagePreview(url: string, index: number) {
+    function addImagePreview(url, index) {
         if (!previewsContainer) return;
 
         const div = document.createElement("div");
@@ -798,9 +798,7 @@ const salePriceInEuros = product.sale_price
     });
 
     // Flash Sale toggle
-    const saleToggle = document.getElementById(
-        "is_on_sale",
-    ) as HTMLInputElement;
+    const saleToggle = document.getElementById("is_on_sale");
     const saleFields = document.getElementById("sale-fields");
 
     saleToggle?.addEventListener("change", () => {

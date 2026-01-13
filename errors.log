@@ -1,0 +1,62 @@
+﻿17:56:17 [@astrojs/node] Enabling sessions with filesystem storage
+17:56:17 [content] Syncing content
+17:56:17 [content] Synced content
+17:56:17 [types] Generated 83ms
+17:56:17 [check] Getting diagnostics for Astro files in C:\Users\prats\OneDrive\Escritorio\FashionShop...
+src/pages/admin/productos/[id].astro:803:10 - error ts(8016): Type assertion expressions can only be used in TypeScript files.
+
+803     ) as HTMLInputElement;
+             ~~~~~~~~~~~~~~~~
+src/pages/admin/productos/[id].astro:745:50 - error ts(8010): Type annotations can only be used in TypeScript files.
+
+745     function addImagePreview(url: string, index: number) {
+                                                     ~~~~~~
+src/pages/admin/productos/[id].astro:745:35 - error ts(8010): Type annotations can only be used in TypeScript files.
+
+745     function addImagePreview(url: string, index: number) {
+                                      ~~~~~~
+src/pages/admin/productos/[id].astro:693:43 - error ts(8010): Type annotations can only be used in TypeScript files.
+
+693     async function uploadToSupabase(file: File) {
+                                              ~~~~
+src/pages/admin/productos/[id].astro:664:39 - error ts(8010): Type annotations can only be used in TypeScript files.
+
+664     async function handleFiles(files: FileList) {
+                                          ~~~~~~~~
+src/pages/admin/productos/[id].astro:656:29 - error ts(8016): Type assertion expressions can only be used in TypeScript files.
+
+656         const files = (e as DragEvent).dataTransfer?.files;
+                                ~~~~~~~~~
+src/pages/admin/productos/[id].astro:629:42 - error ts(8016): Type assertion expressions can only be used in TypeScript files.
+
+629             const preview = (e.target as HTMLElement).closest(".image-preview");
+                                             ~~~~~~~~~~~
+
+src/pages/categoria/[slug].astro:50:17 - error ts(2322): Type '{ "60\"": boolean; "0": boolean; "60": boolean; "34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6": boolean; "34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6": boolean; "4V0H4v4H0v2h4v4h2V6h4V4H6z\"": boolean; ... 11 more ...; d: string; }' is not assignable to type 'HTMLAttributes'.
+  Property 'height' does not exist on type 'HTMLAttributes'.
+
+50                 height='\"60\"'
+                   ~~~~~~
+src/pages/categoria/[slug].astro:188:3 - error ts(17002): Expected corresponding JSX closing tag for 'Fragment'.
+
+188 </PublicLayout>
+      ~~~~~~~~~~~~
+src/pages/categoria/[slug].astro:100:7 - error ts(17002): Expected corresponding JSX closing tag for 'PublicLayout'.
+
+100     </section>
+          ~~~~~~~
+src/pages/categoria/[slug].astro:70:11 - error ts(17002): Expected corresponding JSX closing tag for 'section'.
+
+70         </div>
+             ~~~
+src/pages/categoria/[slug].astro:69:13 - error ts(1005): ',' expected.
+
+69             </div>
+               ~~
+src/pages/categoria/[slug].astro:68:14 - error ts(1002): Unterminated string literal.
+
+68             >
+                
+
+Result (59 files): 
+- 13 errors

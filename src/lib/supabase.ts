@@ -227,7 +227,6 @@ export async function isUserAdmin(email: string): Promise<boolean> {
             .from('admin_users')
             .select('role')
             .eq('email', email)
-            .eq('is_active', true)
             .single();
 
         return !error && data !== null;

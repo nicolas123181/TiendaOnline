@@ -24,7 +24,7 @@ const saleProducts = products.filter((p) => p.is_on_sale && p.sale_price);
 // Productos más recientes
 const latestProducts = products.slice(0, 8);
 
-// Imágenes específicas para cada categoría
+// Imágenes específicas para cada categoría - Moda Masculina Premium
 const categoryImages: Record<string, string> = {
   camisas:
     "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=800&q=80",
@@ -37,7 +37,7 @@ const categoryImages: Record<string, string> = {
   chalecos:
     "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=800&q=80",
   abrigos:
-    "https://images.unsplash.com/photo-1544022613-e87ca75a784a?w=800&q=80",
+    "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&q=80",
 };
 ---
 
@@ -262,10 +262,10 @@ const categoryImages: Record<string, string> = {
 
       <div class="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
         {
-          categories.slice(0, 6).map((category, index) => (
+          categories.slice(0, 6).map((category) => (
             <a
               href={`/categoria/${category.slug}`}
-              class={`group relative overflow-hidden ${index === 0 || index === 3 ? "md:col-span-2 aspect-[2/1]" : "aspect-square"}`}
+              class="group relative overflow-hidden aspect-square"
             >
               <img
                 src={

@@ -18,12 +18,12 @@ export async function getServerSession(request: Request): Promise<Session | null
         if (!cookieHeader) return null;
 
         const supabase = getServiceSupabase();
-        
+
         // Parsear cookie para obtener el token
         const cookies = Object.fromEntries(
             cookieHeader.split('; ').map(c => c.split('='))
         );
-        
+
         // Nota: En Supabase, la sesión se almacena de forma diferente
         // Este es un enfoque simplificado
         return null;
@@ -45,7 +45,6 @@ export async function verifyAdminAccess(email: string | undefined): Promise<bool
             .from('admin_users')
             .select('role')
             .eq('email', email)
-            .eq('is_active', true)
             .single();
 
         return !!data;
@@ -61,7 +60,7 @@ export async function verifyAdminAccess(email: string | undefined): Promise<bool
 export async function registerAdminUser(email: string, password: string): Promise<{ success: boolean; message: string }> {
     try {
         const supabase = getServiceSupabase();
-        
+
         // Crear usuario en auth
         const { data: authData, error: authError } = await supabase.auth.admin.createUser({
             email,
@@ -79,7 +78,6 @@ export async function registerAdminUser(email: string, password: string): Promis
             .insert({
                 email,
                 role: 'editor',
-                is_active: true,
             });
 
         if (dbError) {

@@ -1,0 +1,299 @@
+---
+import PublicLayout from "../layouts/PublicLayout.astro";
+
+export const prerender = true;
+---
+
+<PublicLayout
+    title="Sobre Nosotros"
+    description="Conoce la historia de Vantage, nuestra filosofía y compromiso con la moda masculina premium."
+>
+    <!-- Hero Section -->
+    <section
+        class="relative py-24 lg:py-32 bg-gradient-to-br from-brand-navy via-brand-navy-light to-brand-charcoal overflow-hidden"
+    >
+        <div class="absolute inset-0 opacity-10">
+            <div class="absolute inset-0 bg-white/5"></div>
+        </div>
+
+        <div
+            class="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center"
+        >
+            <p
+                class="text-white/60 text-sm tracking-[0.3em] uppercase mb-4 animate-fade-in"
+            >
+                Nuestra Historia
+            </p>
+            <h1
+                class="text-4xl md:text-5xl lg:text-6xl font-serif font-light text-white mb-6"
+            >
+                Sobre <span class="italic">Vantage</span>
+            </h1>
+            <p class="text-lg text-gray-300 max-w-2xl mx-auto">
+                Más que una marca, somos una filosofía de vida. Creemos que la
+                elegancia no es un lujo, sino una forma de respeto hacia uno
+                mismo.
+            </p>
+        </div>
+    </section>
+
+    <!-- Story Section -->
+    <section class="py-20 bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid lg:grid-cols-2 gap-16 items-center">
+                <div>
+                    <h2
+                        class="text-3xl md:text-4xl font-serif font-light text-gray-900 mb-6"
+                    >
+                        Nuestra <span class="italic">Historia</span>
+                    </h2>
+                    <div class="space-y-4 text-gray-600 leading-relaxed">
+                        <p>
+                            Vantage nació en 2024 de una idea sencilla pero
+                            poderosa: crear moda masculina que combine la
+                            elegancia atemporal con la comodidad del día a día.
+                        </p>
+                        <p>
+                            Fundada por un equipo apasionado por la moda y el
+                            diseño, nuestra marca se ha convertido en sinónimo
+                            de calidad y sofisticación. Cada prenda que creamos
+                            cuenta una historia de dedicación artesanal y
+                            atención al detalle.
+                        </p>
+                        <p>
+                            Desde nuestros inicios, hemos mantenido un
+                            compromiso inquebrantable con la excelencia.
+                            Trabajamos exclusivamente con los mejores
+                            materiales, seleccionados cuidadosamente de
+                            proveedores europeos que comparten nuestra visión de
+                            calidad y sostenibilidad.
+                        </p>
+                    </div>
+                </div>
+                <div class="relative">
+                    <img
+                        src="https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=800&q=80"
+                        alt="Elegancia Vantage"
+                        class="w-full h-[500px] object-cover rounded-sm shadow-2xl"
+                    />
+                    <div
+                        class="absolute -bottom-6 -left-6 bg-brand-navy text-white p-8 max-w-xs"
+                    >
+                        <p class="text-3xl font-serif font-light mb-2">2024</p>
+                        <p class="text-sm text-gray-300">
+                            Año de fundación de Vantage
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Values Section -->
+    <section class="py-20 bg-surface-secondary">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <h2
+                    class="text-3xl md:text-4xl font-serif font-light text-gray-900 mb-4"
+                >
+                    Nuestros <span class="italic">Valores</span>
+                </h2>
+                <p class="text-gray-500 max-w-2xl mx-auto">
+                    Los principios que guían cada decisión que tomamos
+                </p>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-12">
+                <div class="text-center">
+                    <div
+                        class="w-20 h-20 mx-auto mb-6 flex items-center justify-center bg-white rounded-full shadow-soft"
+                    >
+                        <svg
+                            class="w-10 h-10 text-brand-navy"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="1.5"
+                                d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
+                            ></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-serif text-gray-900 mb-3">
+                        Calidad Artesanal
+                    </h3>
+                    <p class="text-gray-500 text-sm leading-relaxed">
+                        Cada prenda es confeccionada con materiales de primera
+                        calidad y atención meticulosa al detalle. No hacemos
+                        concesiones en la excelencia.
+                    </p>
+                </div>
+
+                <div class="text-center">
+                    <div
+                        class="w-20 h-20 mx-auto mb-6 flex items-center justify-center bg-white rounded-full shadow-soft"
+                    >
+                        <svg
+                            class="w-10 h-10 text-brand-navy"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="1.5"
+                                d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                            ></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-serif text-gray-900 mb-3">
+                        Sostenibilidad
+                    </h3>
+                    <p class="text-gray-500 text-sm leading-relaxed">
+                        Comprometidos con prácticas responsables y materiales
+                        sostenibles. Trabajamos para minimizar nuestro impacto
+                        ambiental en cada paso.
+                    </p>
+                </div>
+
+                <div class="text-center">
+                    <div
+                        class="w-20 h-20 mx-auto mb-6 flex items-center justify-center bg-white rounded-full shadow-soft"
+                    >
+                        <svg
+                            class="w-10 h-10 text-brand-navy"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="1.5"
+                                d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                            ></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-serif text-gray-900 mb-3">
+                        Pasión por el Detalle
+                    </h3>
+                    <p class="text-gray-500 text-sm leading-relaxed">
+                        Desde la selección de telas hasta el último acabado,
+                        cada elemento está pensado para ofrecer una experiencia
+                        excepcional.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Philosophy Section -->
+    <section class="py-20 bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid lg:grid-cols-2 gap-16 items-center">
+                <div class="order-2 lg:order-1">
+                    <img
+                        src="https://images.unsplash.com/photo-1617137968427-85924c800a22?w=800&q=80"
+                        alt="Filosofía Vantage"
+                        class="w-full h-[450px] object-cover rounded-sm shadow-xl"
+                    />
+                </div>
+                <div class="order-1 lg:order-2">
+                    <h2
+                        class="text-3xl md:text-4xl font-serif font-light text-gray-900 mb-6"
+                    >
+                        Nuestra <span class="italic">Filosofía</span>
+                    </h2>
+                    <div class="space-y-4 text-gray-600 leading-relaxed">
+                        <p>
+                            Creemos que la verdadera elegancia radica en la
+                            simplicidad. Por eso diseñamos prendas que destacan
+                            por su corte impecable, sus materiales nobles y su
+                            versatilidad.
+                        </p>
+                        <p>
+                            Cada pieza de Vantage está pensada para convertirse
+                            en un básico atemporal de tu armario. No seguimos
+                            tendencias efímeras; creamos clásicos que perduran
+                            temporada tras temporada.
+                        </p>
+                        <p>
+                            Nuestro objetivo es que te sientas seguro y
+                            distinguido en cada ocasión, desde una reunión de
+                            negocios hasta una cena especial. Porque la
+                            confianza viene de saber que vistes lo mejor.
+                        </p>
+                    </div>
+
+                    <div class="mt-8">
+                        <a
+                            href="/productos"
+                            class="inline-flex items-center gap-2 px-8 py-4 bg-brand-navy text-white text-sm tracking-wider uppercase hover:bg-brand-navy-light transition-colors"
+                        >
+                            Explorar Colección
+                            <svg
+                                class="w-4 h-4"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M17 8l4 4m0 0l-4 4m4-4H3"></path>
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Promise Section -->
+    <section class="py-24 bg-brand-navy text-white">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <h2 class="text-3xl md:text-4xl font-serif font-light mb-6">
+                Nuestro <span class="italic">Compromiso</span>
+            </h2>
+            <p class="text-xl text-gray-300 leading-relaxed mb-12">
+                "En Vantage, cada prenda es una promesa de calidad, elegancia y
+                durabilidad. Nos comprometemos a ofrecerte lo mejor porque tú
+                mereces lo mejor."
+            </p>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-8">
+                <div>
+                    <p class="text-4xl font-serif font-light text-brand-cream">
+                        100%
+                    </p>
+                    <p class="text-sm text-gray-400 mt-2">Materiales Premium</p>
+                </div>
+                <div>
+                    <p class="text-4xl font-serif font-light text-brand-cream">
+                        30
+                    </p>
+                    <p class="text-sm text-gray-400 mt-2">Días de Devolución</p>
+                </div>
+                <div>
+                    <p class="text-4xl font-serif font-light text-brand-cream">
+                        24h
+                    </p>
+                    <p class="text-sm text-gray-400 mt-2">Envío Express</p>
+                </div>
+                <div>
+                    <p class="text-4xl font-serif font-light text-brand-cream">
+                        ∞
+                    </p>
+                    <p class="text-sm text-gray-400 mt-2">
+                        Atención al Cliente
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+</PublicLayout>
