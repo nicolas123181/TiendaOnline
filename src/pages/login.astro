@@ -124,7 +124,7 @@ const message = Astro.url.searchParams.get("message");
                     </button>
                 </form>
 
-                <div class="mt-6 text-center">
+                <div class="mt-6 text-center space-y-2">
                     <p class="text-text-muted text-sm">
                         ¿No tienes cuenta?
                         <a
@@ -132,6 +132,14 @@ const message = Astro.url.searchParams.get("message");
                             class="text-brand-leather font-semibold hover:underline"
                         >
                             Regístrate aquí
+                        </a>
+                    </p>
+                    <p class="text-text-muted text-sm">
+                        <a
+                            href="/recuperar-contrasena"
+                            class="text-gray-500 hover:text-brand-navy transition-colors"
+                        >
+                            ¿Olvidaste tu contraseña?
                         </a>
                     </p>
                 </div>
@@ -205,36 +213,23 @@ const message = Astro.url.searchParams.get("message");
         "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtnZ2pxYmhjdnZheXF3a2Jwd3ZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzYyNDI2NDQsImV4cCI6MjA1MTgxODY0NH0.P9eqbIFVBt2IuHnzTcCDbGb6w72xR-AQ60aKEkqJnYY";
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-    // Verificar si ya está logueado
+    // NO AUTO-REDIRECT - Dejar que el usuario controle el login manualmente
+    // Comentado para evitar bucles infinitos
+    /*
     async function checkExistingSession() {
-        const {
-            data: { session },
-        } = await supabase.auth.getSession();
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('error')) {
+            return;
+        }
+        
+        const { data: { session } } = await supabase.auth.getSession();
         if (session) {
-            console.log("Already logged in, redirecting to profile...");
-            const returnTo =
-                new URLSearchParams(window.location.search).get("returnTo") ||
-                "/perfil";
+            const returnTo = urlParams.get("redirect") || "/perfil";
             window.location.href = returnTo;
         }
     }
     checkExistingSession();
-
-    // Google Login
-    const googleBtn = document.getElementById("google-login-btn");
-    googleBtn?.addEventListener("click", async () => {
-        const { data, error } = await supabase.auth.signInWithOAuth({
-            provider: "google",
-            options: {
-                redirectTo: `${window.location.origin}/auth/callback`,
-            },
-        });
-
-        if (error) {
-            console.error("Google login error:", error);
-            alert("Error al iniciar sesión con Google");
-        }
-    });
+    */
 
     // Email/Password Login
     const loginForm = document.getElementById("login-form") as HTMLFormElement;
@@ -273,36 +268,29 @@ const message = Astro.url.searchParams.get("message");
         submitBtn.textContent = "Iniciando sesión...";
 
         try {
-            const { data, error } = await supabase.auth.signInWithPassword({
-                email,
-                password,
-            });
-
-            if (error) {
-                // Traducir errores comunes
-                let errorMessage = error.message;
-                if (error.message.includes("Invalid login credentials")) {
-                    errorMessage = "Email o contraseña incorrectos";
-                } else if (error.message.includes("Email not confirmed")) {
-                    errorMessage =
-                        "Por favor confirma tu email antes de iniciar sesión";
-                }
-                throw new Error(errorMessage);
-            }
-
-            if (!data.session) {
-                throw new Error(
-                    "No se pudo crear la sesión. Intenta de nuevo.",
-                );
-            }
-
-            console.log("Login successful, redirecting...");
-
-            // Redirigir a perfil o página anterior
+            // Usar el API endpoint para login (setea cookies)
             const returnTo =
+                new URLSearchParams(window.location.search).get("redirect") ||
                 new URLSearchParams(window.location.search).get("returnTo") ||
                 "/perfil";
-            window.location.href = returnTo;
+
+            const response = await fetch("/api/auth/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, password, returnTo }),
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || "Error al iniciar sesión");
+            }
+
+            // También hacer login en el cliente para que Supabase tenga la sesión
+            await supabase.auth.signInWithPassword({ email, password });
+
+            console.log("Login successful, redirecting...");
+            window.location.href = result.redirectTo || returnTo;
         } catch (error: any) {
             console.error("Login error:", error);
             showError(error.message || "Error al iniciar sesión");

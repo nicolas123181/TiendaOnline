@@ -59,6 +59,26 @@ export const POST: APIRoute = async ({ request }) => {
             });
         }
 
+        // Crear cupón de Stripe si hay descuento
+        let stripeCouponId: string | undefined;
+        if (discount && discount > 0) {
+            try {
+                // Crear un cupón temporal en Stripe
+                const coupon = await stripe.coupons.create({
+                    amount_off: discount, // en céntimos
+                    currency: 'eur',
+                    duration: 'once',
+                    name: 'Descuento aplicado',
+                    max_redemptions: 1,
+                });
+                stripeCouponId = coupon.id;
+                console.log(`✅ Stripe coupon created: ${coupon.id} for ${discount} cents`);
+            } catch (couponError) {
+                console.error('Error creating Stripe coupon:', couponError);
+                // Continuar sin el cupón si falla
+            }
+        }
+
         // Preparar datos del pedido para guardar en metadata
         // Stripe metadata tiene límite de 500 caracteres por valor
         // Así que simplificamos los items
@@ -68,6 +88,7 @@ export const POST: APIRoute = async ({ request }) => {
             price: item.price,
             quantity: item.quantity,
             size: item.size || null,
+            image: item.image || null,
         }));
 
         const orderData = {
@@ -86,8 +107,8 @@ export const POST: APIRoute = async ({ request }) => {
         };
 
         // Crear Checkout Session
-        const session = await stripe.checkout.sessions.create({
-            payment_method_types: ['card', 'paypal'],
+        const sessionConfig: Stripe.Checkout.SessionCreateParams = {
+            payment_method_types: ['card'],
             line_items: lineItems,
             mode: 'payment',
             success_url: successUrl || `${new URL(request.url).origin}/checkout/exito?session_id={CHECKOUT_SESSION_ID}`,
@@ -102,7 +123,14 @@ export const POST: APIRoute = async ({ request }) => {
             phone_number_collection: {
                 enabled: true,
             },
-        });
+        };
+
+        // Añadir descuento si existe cupón
+        if (stripeCouponId) {
+            sessionConfig.discounts = [{ coupon: stripeCouponId }];
+        }
+
+        const session = await stripe.checkout.sessions.create(sessionConfig);
 
         return new Response(
             JSON.stringify({

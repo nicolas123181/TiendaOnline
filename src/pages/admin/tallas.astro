@@ -1,0 +1,490 @@
+---
+import AdminLayout from "../../layouts/AdminLayout.astro";
+import { supabase, isSupabaseConfigured } from "../../lib/supabase";
+
+// Verificar si Supabase está configurado
+if (!isSupabaseConfigured) {
+    return Astro.redirect("/admin/login?error=config");
+}
+
+// Definir las tallas estándar por tipo de categoría
+const sizeSystems = {
+    camisas: {
+        name: "Camisas",
+        sizes: ["XS", "S", "M", "L", "XL", "XXL"],
+        description: "Sistema estándar de letras",
+    },
+    camisetas: {
+        name: "Camisetas",
+        sizes: ["XS", "S", "M", "L", "XL", "XXL"],
+        description: "Sistema estándar de letras",
+    },
+    pantalones: {
+        name: "Pantalones",
+        sizes: ["28", "30", "32", "34", "36", "38", "40", "42"],
+        description: "Sistema numérico (cintura en pulgadas)",
+    },
+    trajes: {
+        name: "Trajes",
+        sizes: ["44", "46", "48", "50", "52", "54", "56"],
+        description: "Sistema europeo de tallas",
+    },
+    chalecos: {
+        name: "Chalecos",
+        sizes: ["XS", "S", "M", "L", "XL", "XXL"],
+        description: "Sistema estándar de letras",
+    },
+    abrigos: {
+        name: "Abrigos",
+        sizes: ["XS", "S", "M", "L", "XL", "XXL"],
+        description: "Sistema estándar de letras",
+    },
+};
+
+// Obtener categorías con sus productos
+const { data: categories } = await supabase
+    .from("categories")
+    .select("*")
+    .order("name");
+
+// Obtener productos con stock bajo por talla (menos de 5 unidades)
+const { data: lowStockSizes } = await supabase
+    .from("product_sizes")
+    .select(
+        `
+    *,
+    product:products(id, name, images)
+  `,
+    )
+    .lt("stock", 5)
+    .order("stock", { ascending: true });
+---
+
+<AdminLayout title="Gestión de Tallas">
+    <div class="page-header">
+        <h1>📏 Gestión de Tallas</h1>
+        <p>Visualiza los sistemas de tallas y controla el stock por talla</p>
+    </div>
+
+    <!-- Sistemas de tallas por categoría -->
+    <div class="card">
+        <h2>📐 Sistemas de Tallas por Categoría</h2>
+        <p class="section-description">
+            Cada categoría tiene un sistema de tallas predefinido. Estas tallas
+            se muestran automáticamente al editar los productos.
+        </p>
+
+        <div class="size-systems-grid">
+            {
+                Object.entries(sizeSystems).map(([slug, system]) => (
+                    <div class="size-system-card">
+                        <div class="system-header">
+                            <h3>{system.name}</h3>
+                            <span class="system-type">
+                                {system.description}
+                            </span>
+                        </div>
+                        <div class="size-bubbles">
+                            {system.sizes.map((size) => (
+                                <span class="size-bubble">{size}</span>
+                            ))}
+                        </div>
+                    </div>
+                ))
+            }
+        </div>
+    </div>
+
+    <!-- Alertas de stock bajo por talla -->
+    <div class="card">
+        <h2>⚠️ Stock Bajo por Talla</h2>
+        <p class="section-description">
+            Tallas con menos de 5 unidades disponibles. Considera reabastecer
+            estos productos.
+        </p>
+
+        {
+            lowStockSizes && lowStockSizes.length > 0 ? (
+                <div class="low-stock-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Producto</th>
+                                <th>Talla</th>
+                                <th>Stock</th>
+                                <th>Estado</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {lowStockSizes.map((item) => (
+                                <tr
+                                    class={
+                                        item.stock === 0
+                                            ? "critical"
+                                            : "warning"
+                                    }
+                                >
+                                    <td class="product-cell">
+                                        {item.product?.images?.[0] && (
+                                            <img
+                                                src={item.product.images[0]}
+                                                alt=""
+                                                class="product-thumb"
+                                            />
+                                        )}
+                                        <span>
+                                            {item.product?.name ||
+                                                "Producto desconocido"}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="size-badge">
+                                            {item.size}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span
+                                            class={`stock-badge ${item.stock === 0 ? "out" : "low"}`}
+                                        >
+                                            {item.stock}{" "}
+                                            {item.stock === 0
+                                                ? "(Agotado)"
+                                                : "uds"}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {item.stock === 0 ? (
+                                            <span class="status-critical">
+                                                🚨 Crítico
+                                            </span>
+                                        ) : (
+                                            <span class="status-warning">
+                                                ⚠️ Bajo
+                                            </span>
+                                        )}
+                                    </td>
+                                    <td>
+                                        <a
+                                            href={`/admin/productos/${item.product?.id}`}
+                                            class="btn btn-sm btn-primary"
+                                        >
+                                            Gestionar
+                                        </a>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            ) : (
+                <div class="empty-state success">
+                    <span class="empty-icon">✅</span>
+                    <p>¡Excelente! Todas las tallas tienen stock suficiente</p>
+                </div>
+            )
+        }
+    </div>
+
+    <!-- Información de tallas -->
+    <div class="card info-card">
+        <h2>ℹ️ Guía de Tallas</h2>
+        <div class="info-grid">
+            <div class="info-item">
+                <h4>Camisas y Camisetas</h4>
+                <p>
+                    Las tallas XS-XXL son estándar. XS suele corresponder a
+                    pecho ~86cm, XXL a ~122cm.
+                </p>
+            </div>
+            <div class="info-item">
+                <h4>Pantalones</h4>
+                <p>
+                    Las tallas numéricas representan la cintura en pulgadas (28"
+                    = ~71cm, 40" = ~102cm).
+                </p>
+            </div>
+            <div class="info-item">
+                <h4>Trajes</h4>
+                <p>
+                    Sistema europeo de tallas. 48 corresponde a M, 52 a L, etc.
+                </p>
+            </div>
+            <div class="info-item">
+                <h4>Editar Tallas</h4>
+                <p>
+                    Las tallas de cada producto se configuran desde la <a
+                        href="/admin/productos">página de productos</a
+                    >.
+                </p>
+            </div>
+        </div>
+    </div>
+</AdminLayout>
+
+<style>
+    .page-header {
+        margin-bottom: 2rem;
+    }
+
+    .page-header h1 {
+        font-size: 2rem;
+        color: var(--navy);
+        margin: 0 0 0.5rem 0;
+    }
+
+    .page-header p {
+        color: #6b7280;
+        margin: 0;
+    }
+
+    .card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .card h2 {
+        font-size: 1.25rem;
+        color: var(--navy);
+        margin: 0 0 0.5rem 0;
+    }
+
+    .section-description {
+        color: #6b7280;
+        margin: 0 0 1.5rem 0;
+        font-size: 0.95rem;
+    }
+
+    .size-systems-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 1.25rem;
+    }
+
+    .size-system-card {
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 1.25rem;
+        transition: all 0.2s;
+    }
+
+    .size-system-card:hover {
+        border-color: var(--navy);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    .system-header {
+        margin-bottom: 1rem;
+    }
+
+    .system-header h3 {
+        font-size: 1.1rem;
+        color: var(--navy);
+        margin: 0 0 0.25rem 0;
+    }
+
+    .system-type {
+        color: #9ca3af;
+        font-size: 0.85rem;
+    }
+
+    .size-bubbles {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .size-bubble {
+        background: var(--navy);
+        color: white;
+        padding: 0.5rem 0.75rem;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        min-width: 40px;
+        text-align: center;
+    }
+
+    /* Low stock table */
+    .low-stock-table {
+        overflow-x: auto;
+    }
+
+    .low-stock-table table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .low-stock-table th {
+        background: #f3f4f6;
+        padding: 1rem;
+        text-align: left;
+        font-weight: 600;
+        color: #374151;
+        font-size: 0.9rem;
+    }
+
+    .low-stock-table td {
+        padding: 1rem;
+        border-bottom: 1px solid #e5e7eb;
+        vertical-align: middle;
+    }
+
+    .low-stock-table tr.critical {
+        background: #fef2f2;
+    }
+
+    .low-stock-table tr.warning {
+        background: #fffbeb;
+    }
+
+    .product-cell {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .product-thumb {
+        width: 40px;
+        height: 50px;
+        object-fit: cover;
+        border-radius: 6px;
+    }
+
+    .size-badge {
+        background: var(--navy);
+        color: white;
+        padding: 0.35rem 0.75rem;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+
+    .stock-badge {
+        padding: 0.35rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+
+    .stock-badge.low {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    .stock-badge.out {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .status-critical {
+        color: #dc2626;
+        font-weight: 600;
+    }
+
+    .status-warning {
+        color: #d97706;
+        font-weight: 600;
+    }
+
+    .btn {
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        font-weight: 600;
+        cursor: pointer;
+        border: none;
+        font-size: 0.85rem;
+        text-decoration: none;
+        transition: all 0.2s;
+    }
+
+    .btn-primary {
+        background: var(--navy);
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #2d4a6f;
+    }
+
+    .btn-sm {
+        padding: 0.4rem 0.75rem;
+        font-size: 0.8rem;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 3rem;
+        border-radius: 12px;
+    }
+
+    .empty-state.success {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    .empty-icon {
+        font-size: 2.5rem;
+        display: block;
+        margin-bottom: 0.5rem;
+    }
+
+    .empty-state p {
+        margin: 0;
+        font-weight: 500;
+    }
+
+    /* Info card */
+    .info-card {
+        background: linear-gradient(135deg, #f8f5f0 0%, #fff 100%);
+        border: 1px solid #e5e7eb;
+    }
+
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 1.25rem;
+    }
+
+    .info-item {
+        background: white;
+        padding: 1rem;
+        border-radius: 8px;
+        border: 1px solid #e5e7eb;
+    }
+
+    .info-item h4 {
+        color: var(--navy);
+        margin: 0 0 0.5rem 0;
+        font-size: 0.95rem;
+    }
+
+    .info-item p {
+        color: #6b7280;
+        font-size: 0.85rem;
+        margin: 0;
+        line-height: 1.5;
+    }
+
+    .info-item a {
+        color: var(--navy);
+        font-weight: 600;
+    }
+
+    @media (max-width: 768px) {
+        .size-systems-grid,
+        .info-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .low-stock-table th,
+        .low-stock-table td {
+            padding: 0.75rem;
+            font-size: 0.85rem;
+        }
+    }
+</style>

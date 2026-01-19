@@ -1,0 +1,561 @@
+---
+import AdminLayout from "../../layouts/AdminLayout.astro";
+import { supabase, isSupabaseConfigured } from "../../lib/supabase";
+
+// Verificar configuración
+if (!isSupabaseConfigured) {
+    return Astro.redirect("/admin/login?error=config");
+}
+
+// Parámetros de búsqueda
+const searchQuery = Astro.url.searchParams.get("q") || "";
+const statusFilter = Astro.url.searchParams.get("status") || "";
+const page = parseInt(Astro.url.searchParams.get("page") || "1");
+const perPage = 20;
+
+// Construir query
+let query = supabase
+    .from("invoices")
+    .select("*, orders(id, status)", { count: "exact" })
+    .order("issue_date", { ascending: false });
+
+// Aplicar filtros
+if (searchQuery) {
+    query = query.or(
+        `invoice_number.ilike.%${searchQuery}%,customer_name.ilike.%${searchQuery}%,customer_email.ilike.%${searchQuery}%`
+    );
+}
+
+if (statusFilter) {
+    query = query.eq("status", statusFilter);
+}
+
+// Paginación
+query = query.range((page - 1) * perPage, page * perPage - 1);
+
+const { data: invoices, count, error } = await query;
+
+const totalPages = Math.ceil((count || 0) / perPage);
+
+// Estadísticas
+const { data: statsData } = await supabase.from("invoices").select("total, status");
+
+const stats = {
+    total: statsData?.length || 0,
+    totalAmount: statsData?.reduce((sum, inv) => sum + inv.total, 0) || 0,
+    issued: statsData?.filter((i) => i.status === "issued").length || 0,
+    sent: statsData?.filter((i) => i.status === "sent").length || 0,
+};
+
+// Formatear precio
+function formatPrice(cents: number): string {
+    return new Intl.NumberFormat("es-ES", {
+        style: "currency",
+        currency: "EUR",
+    }).format(cents / 100);
+}
+
+function formatDate(dateStr: string): string {
+    return new Date(dateStr).toLocaleDateString("es-ES", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+    });
+}
+
+function getStatusBadge(status: string): { text: string; class: string } {
+    const statuses: Record<string, { text: string; class: string }> = {
+        draft: { text: "Borrador", class: "bg-gray-100 text-gray-700" },
+        issued: { text: "Emitida", class: "bg-blue-100 text-blue-700" },
+        sent: { text: "Enviada", class: "bg-green-100 text-green-700" },
+        paid: { text: "Pagada", class: "bg-emerald-100 text-emerald-700" },
+        cancelled: { text: "Anulada", class: "bg-red-100 text-red-700" },
+    };
+    return statuses[status] || { text: status, class: "bg-gray-100 text-gray-700" };
+}
+---
+
+<AdminLayout title="Gestión de Facturas">
+    <div class="page-header">
+        <div class="header-content">
+            <div>
+                <h1>🧾 Facturas</h1>
+                <p>Gestiona y consulta todas las facturas emitidas</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estadísticas -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon blue">📄</div>
+            <div class="stat-content">
+                <p class="stat-value">{stats.total}</p>
+                <p class="stat-label">Total Facturas</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon green">💰</div>
+            <div class="stat-content">
+                <p class="stat-value">{formatPrice(stats.totalAmount)}</p>
+                <p class="stat-label">Facturado Total</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon purple">✉️</div>
+            <div class="stat-content">
+                <p class="stat-value">{stats.sent}</p>
+                <p class="stat-label">Enviadas</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon amber">📋</div>
+            <div class="stat-content">
+                <p class="stat-value">{stats.issued}</p>
+                <p class="stat-label">Pendientes de envío</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Búsqueda y Filtros -->
+    <div class="card search-section">
+        <form method="GET" class="search-form">
+            <div class="search-input-wrapper">
+                <svg class="search-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+                <input
+                    type="text"
+                    name="q"
+                    placeholder="Buscar por nº factura, cliente o email..."
+                    value={searchQuery}
+                    class="search-input"
+                />
+            </div>
+            <select name="status" class="filter-select">
+                <option value="">Todos los estados</option>
+                <option value="issued" selected={statusFilter === "issued"}>Emitidas</option>
+                <option value="sent" selected={statusFilter === "sent"}>Enviadas</option>
+                <option value="paid" selected={statusFilter === "paid"}>Pagadas</option>
+                <option value="cancelled" selected={statusFilter === "cancelled"}>Anuladas</option>
+            </select>
+            <button type="submit" class="btn btn-primary">Buscar</button>
+            {(searchQuery || statusFilter) && (
+                <a href="/admin/facturas" class="btn btn-secondary">Limpiar</a>
+            )}
+        </form>
+    </div>
+
+    <!-- Tabla de Facturas -->
+    <div class="card">
+        {!invoices || invoices.length === 0 ? (
+            <div class="empty-state">
+                <div class="empty-icon">🧾</div>
+                <h3>No hay facturas</h3>
+                <p>
+                    {searchQuery || statusFilter
+                        ? "No se encontraron facturas con los filtros aplicados"
+                        : "Las facturas se generarán automáticamente con cada pedido confirmado"}
+                </p>
+            </div>
+        ) : (
+            <>
+                <div class="table-wrapper">
+                    <table class="invoices-table">
+                        <thead>
+                            <tr>
+                                <th>Nº Factura</th>
+                                <th>Cliente</th>
+                                <th>Fecha</th>
+                                <th>Pedido</th>
+                                <th>Total</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {invoices.map((invoice) => {
+                                const status = getStatusBadge(invoice.status);
+                                return (
+                                    <tr>
+                                        <td>
+                                            <span class="invoice-number">{invoice.invoice_number}</span>
+                                        </td>
+                                        <td>
+                                            <div class="customer-info">
+                                                <span class="customer-name">{invoice.customer_name}</span>
+                                                <span class="customer-email">{invoice.customer_email}</span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="date">{formatDate(invoice.issue_date)}</span>
+                                        </td>
+                                        <td>
+                                            <a href={`/admin/pedidos/${invoice.order_id}`} class="order-link">
+                                                #{invoice.order_id}
+                                            </a>
+                                        </td>
+                                        <td>
+                                            <span class="total-amount">{formatPrice(invoice.total)}</span>
+                                        </td>
+                                        <td>
+                                            <span class={`status-badge ${status.class}`}>{status.text}</span>
+                                        </td>
+                                        <td>
+                                            <div class="actions">
+                                                <a
+                                                    href={`/admin/facturas/${invoice.id}`}
+                                                    class="btn btn-sm btn-secondary"
+                                                    title="Ver factura"
+                                                >
+                                                    👁️ Ver
+                                                </a>
+                                                <a
+                                                    href={`/api/invoice/${invoice.id}/pdf`}
+                                                    class="btn btn-sm btn-primary"
+                                                    title="Descargar PDF"
+                                                    target="_blank"
+                                                >
+                                                    📥 PDF
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Paginación -->
+                {totalPages > 1 && (
+                    <div class="pagination">
+                        <span class="pagination-info">
+                            Mostrando {(page - 1) * perPage + 1} - {Math.min(page * perPage, count || 0)} de {count} facturas
+                        </span>
+                        <div class="pagination-buttons">
+                            {page > 1 && (
+                                <a
+                                    href={`/admin/facturas?page=${page - 1}${searchQuery ? `&q=${searchQuery}` : ""}${statusFilter ? `&status=${statusFilter}` : ""}`}
+                                    class="btn btn-sm btn-secondary"
+                                >
+                                    ← Anterior
+                                </a>
+                            )}
+                            {page < totalPages && (
+                                <a
+                                    href={`/admin/facturas?page=${page + 1}${searchQuery ? `&q=${searchQuery}` : ""}${statusFilter ? `&status=${statusFilter}` : ""}`}
+                                    class="btn btn-sm btn-secondary"
+                                >
+                                    Siguiente →
+                                </a>
+                            )}
+                        </div>
+                    </div>
+                )}
+            </>
+        )}
+    </div>
+</AdminLayout>
+
+<style>
+    .page-header {
+        margin-bottom: 2rem;
+    }
+
+    .page-header h1 {
+        font-size: 2rem;
+        color: var(--navy);
+        margin: 0 0 0.5rem 0;
+    }
+
+    .page-header p {
+        color: #6b7280;
+        margin: 0;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.25rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .stat-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+    }
+
+    .stat-icon.blue { background: #dbeafe; }
+    .stat-icon.green { background: #d1fae5; }
+    .stat-icon.purple { background: #ede9fe; }
+    .stat-icon.amber { background: #fef3c7; }
+
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--navy);
+        margin: 0;
+    }
+
+    .stat-label {
+        font-size: 0.85rem;
+        color: #6b7280;
+        margin: 0;
+    }
+
+    .card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .search-section {
+        padding: 1rem 1.5rem;
+    }
+
+    .search-form {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        align-items: center;
+    }
+
+    .search-input-wrapper {
+        flex: 1;
+        min-width: 250px;
+        position: relative;
+    }
+
+    .search-icon {
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 20px;
+        height: 20px;
+        color: #9ca3af;
+    }
+
+    .search-input {
+        width: 100%;
+        padding: 0.75rem 1rem 0.75rem 2.75rem;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 0.95rem;
+    }
+
+    .search-input:focus {
+        outline: none;
+        border-color: var(--navy);
+        box-shadow: 0 0 0 3px rgba(26, 39, 68, 0.1);
+    }
+
+    .filter-select {
+        padding: 0.75rem 1rem;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 0.95rem;
+        min-width: 180px;
+    }
+
+    .btn {
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        border: none;
+        font-size: 0.95rem;
+        transition: all 0.2s;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .btn-primary {
+        background: #1a2744;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #2d4a6f;
+    }
+
+    .btn-secondary {
+        background: #f3f4f6;
+        color: #374151;
+    }
+
+    .btn-secondary:hover {
+        background: #e5e7eb;
+    }
+
+    .btn-sm {
+        padding: 0.4rem 0.75rem;
+        font-size: 0.8rem;
+    }
+
+    .table-wrapper {
+        overflow-x: auto;
+    }
+
+    .invoices-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .invoices-table th {
+        background: #f9fafb;
+        padding: 1rem;
+        text-align: left;
+        font-weight: 600;
+        color: #374151;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .invoices-table td {
+        padding: 1rem;
+        border-bottom: 1px solid #e5e7eb;
+        vertical-align: middle;
+    }
+
+    .invoices-table tr:hover {
+        background: #f9fafb;
+    }
+
+    .invoice-number {
+        font-family: monospace;
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: var(--navy);
+        background: #f0f4f8;
+        padding: 0.25rem 0.75rem;
+        border-radius: 6px;
+    }
+
+    .customer-info {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .customer-name {
+        font-weight: 500;
+        color: #1f2937;
+    }
+
+    .customer-email {
+        font-size: 0.8rem;
+        color: #6b7280;
+    }
+
+    .date {
+        color: #4b5563;
+    }
+
+    .order-link {
+        color: var(--navy);
+        font-weight: 500;
+        text-decoration: none;
+    }
+
+    .order-link:hover {
+        text-decoration: underline;
+    }
+
+    .total-amount {
+        font-weight: 700;
+        color: #059669;
+        font-size: 1rem;
+    }
+
+    .status-badge {
+        display: inline-block;
+        padding: 0.35rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        color: #6b7280;
+    }
+
+    .empty-icon {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+    }
+
+    .empty-state h3 {
+        font-size: 1.25rem;
+        color: #374151;
+        margin-bottom: 0.5rem;
+    }
+
+    .pagination {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-top: 1rem;
+        border-top: 1px solid #e5e7eb;
+        margin-top: 1rem;
+    }
+
+    .pagination-info {
+        font-size: 0.9rem;
+        color: #6b7280;
+    }
+
+    .pagination-buttons {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    @media (max-width: 768px) {
+        .search-form {
+            flex-direction: column;
+        }
+
+        .search-input-wrapper,
+        .filter-select {
+            width: 100%;
+        }
+
+        .actions {
+            flex-direction: column;
+        }
+
+        .pagination {
+            flex-direction: column;
+            gap: 1rem;
+        }
+    }
+</style>

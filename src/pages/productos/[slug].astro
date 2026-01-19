@@ -7,6 +7,8 @@ import {
     getProducts,
     getProductBySlug,
     getProductsByCategory,
+    getProductSizes,
+    type SizeStock,
 } from "../../lib/supabase";
 import { formatPrice, getSizesForCategory } from "../../lib/utils";
 
@@ -16,17 +18,32 @@ export const prerender = true;
 export async function getStaticPaths() {
     const products = await getProducts();
 
-    return products.map((product) => ({
-        params: { slug: product.slug },
-        props: { product },
-    }));
+    // Para cada producto, obtener también su stock por tallas
+    const paths = await Promise.all(
+        products.map(async (product) => {
+            const productSizes = await getProductSizes(product.id);
+            return {
+                params: { slug: product.slug },
+                props: {
+                    product,
+                    productSizes: productSizes.map((ps) => ({
+                        size: ps.size,
+                        stock: ps.stock,
+                    })),
+                },
+            };
+        }),
+    );
+
+    return paths;
 }
 
 interface Props {
     product: Awaited<ReturnType<typeof getProductBySlug>>;
+    productSizes: SizeStock[];
 }
 
-const { product } = Astro.props;
+const { product, productSizes } = Astro.props;
 
 if (!product) {
     return Astro.redirect("/404");
@@ -42,6 +59,12 @@ const filteredRelated = relatedProducts
 
 // Tallas según categoría
 const sizes = getSizesForCategory(product.category?.slug || "");
+
+// Crear mapa de stock por talla desde los datos
+const sizeStocks: SizeStock[] = sizes.map((size) => {
+    const found = productSizes.find((ps) => ps.size === size);
+    return { size, stock: found?.stock || 0 };
+});
 ---
 
 <PublicLayout
@@ -54,14 +77,16 @@ const sizes = getSizesForCategory(product.category?.slug || "");
             <ol class="flex items-center gap-2 text-sm text-text-muted">
                 <li>
                     <a href="/" class="hover:text-brand-navy transition-colors"
-                        >Inicio</a>
+                        >Inicio</a
+                    >
                 </li>
                 <li><span>/</span></li>
                 <li>
                     <a
                         href="/productos"
                         class="hover:text-brand-navy transition-colors"
-                        >Productos</a>
+                        >Productos</a
+                    >
                 </li>
                 {
                     product.category && (
@@ -187,6 +212,7 @@ const sizes = getSizesForCategory(product.category?.slug || "");
                             categorySlug: product.category?.slug,
                         }}
                         sizes={sizes}
+                        sizeStocks={sizeStocks}
                     />
 
                     <!-- Additional Details -->

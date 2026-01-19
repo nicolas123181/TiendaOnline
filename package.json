@@ -19,12 +19,19 @@
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "astro": "^5.16.7",
+    "bwip-js": "^4.8.0",
+    "chart.js": "^4.5.1",
+    "cloudinary": "^2.8.0",
     "nanostores": "^1.1.0",
+    "pdfkit": "^0.17.2",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "resend": "^6.7.0",
     "stripe": "^14.10.0",
     "tailwindcss": "^4.1.18",
     "typescript": "^5.9.3"
+  },
+  "devDependencies": {
+    "@types/pdfkit": "^0.17.4"
   }
 }

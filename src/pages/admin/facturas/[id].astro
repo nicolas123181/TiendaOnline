@@ -1,0 +1,871 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import { supabase, isSupabaseConfigured } from "../../../lib/supabase";
+import { COMPANY_INFO } from "../../../lib/invoice";
+
+// Verificar configuración
+if (!isSupabaseConfigured) {
+    return Astro.redirect("/admin/login?error=config");
+}
+
+const { id } = Astro.params;
+const invoiceId = parseInt(id || "0");
+
+if (!invoiceId) {
+    return Astro.redirect("/admin/facturas?error=invalid");
+}
+
+// Manejar actualización de factura
+let updateMessage = "";
+let updateError = "";
+
+if (Astro.request.method === "POST") {
+    const formData = await Astro.request.formData();
+    const action = formData.get("action");
+
+    if (action === "update") {
+        const notes = formData.get("notes") as string;
+        const status = formData.get("status") as string;
+        const companyName = formData.get("company_name") as string;
+        const companyAddress = formData.get("company_address") as string;
+        const companyNif = formData.get("company_nif") as string;
+        const companyEmail = formData.get("company_email") as string;
+        const companyPhone = formData.get("company_phone") as string;
+
+        const { error } = await supabase
+            .from("invoices")
+            .update({
+                notes,
+                status,
+                company_name: companyName,
+                company_address: companyAddress,
+                company_nif: companyNif,
+                company_email: companyEmail,
+                company_phone: companyPhone,
+            })
+            .eq("id", invoiceId);
+
+        if (error) {
+            updateError = "Error al actualizar la factura: " + error.message;
+        } else {
+            updateMessage = "Factura actualizada correctamente";
+        }
+    }
+}
+
+// Obtener factura
+const { data: invoice, error: invoiceError } = await supabase
+    .from("invoices")
+    .select("*")
+    .eq("id", invoiceId)
+    .single();
+
+if (invoiceError || !invoice) {
+    return Astro.redirect("/admin/facturas?error=notfound");
+}
+
+// Obtener items de la factura
+const { data: items } = await supabase
+    .from("invoice_items")
+    .select("*")
+    .eq("invoice_id", invoiceId);
+
+// Formatear precio
+function formatPrice(cents: number): string {
+    return new Intl.NumberFormat("es-ES", {
+        style: "currency",
+        currency: "EUR",
+    }).format(cents / 100);
+}
+
+function formatDate(dateStr: string): string {
+    return new Date(dateStr).toLocaleDateString("es-ES", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+    });
+}
+
+function getStatusBadge(status: string): { text: string; class: string } {
+    const statuses: Record<string, { text: string; class: string }> = {
+        draft: { text: "Borrador", class: "bg-gray-100 text-gray-700" },
+        issued: { text: "Emitida", class: "bg-blue-100 text-blue-700" },
+        sent: { text: "Enviada", class: "bg-green-100 text-green-700" },
+        paid: { text: "Pagada", class: "bg-emerald-100 text-emerald-700" },
+        cancelled: { text: "Anulada", class: "bg-red-100 text-red-700" },
+    };
+    return (
+        statuses[status] || { text: status, class: "bg-gray-100 text-gray-700" }
+    );
+}
+
+const status = getStatusBadge(invoice.status);
+---
+
+<AdminLayout title={`Factura ${invoice.invoice_number}`}>
+    <div class="page-header">
+        <div class="header-content">
+            <div class="header-left">
+                <a href="/admin/facturas" class="back-link">
+                    ← Volver a facturas
+                </a>
+                <h1>🧾 Factura {invoice.invoice_number}</h1>
+                <div class="header-meta">
+                    <span class={`status-badge ${status.class}`}
+                        >{status.text}</span
+                    >
+                    <span class="date"
+                        >Emitida el {formatDate(invoice.issue_date)}</span
+                    >
+                    <a
+                        href={`/admin/pedidos/${invoice.order_id}`}
+                        class="order-link"
+                    >
+                        📦 Ver Pedido #{invoice.order_id}
+                    </a>
+                </div>
+            </div>
+            <div class="header-actions">
+                <a
+                    href={`/api/invoice/${invoice.id}/pdf`}
+                    target="_blank"
+                    class="btn btn-primary"
+                >
+                    📥 Descargar PDF
+                </a>
+            </div>
+        </div>
+    </div>
+
+    {updateMessage && <div class="alert alert-success">✅ {updateMessage}</div>}
+
+    {updateError && <div class="alert alert-error">❌ {updateError}</div>}
+
+    <div class="content-grid">
+        <!-- Vista Previa de la Factura -->
+        <div class="invoice-preview-container">
+            <h2 class="section-title">Vista Previa</h2>
+            <div class="invoice-preview">
+                <!-- Header -->
+                <div class="invoice-header">
+                    <div class="logo">VANTAGE</div>
+                    <div class="invoice-title">
+                        <h3>FACTURA</h3>
+                        <span class="invoice-number"
+                            >{invoice.invoice_number}</span
+                        >
+                    </div>
+                </div>
+
+                <!-- Info Section -->
+                <div class="invoice-info">
+                    <div class="info-block">
+                        <h4>Facturar a</h4>
+                        <p>
+                            <strong>{invoice.customer_name}</strong><br />
+                            {invoice.customer_address}<br />
+                            {invoice.customer_postal_code}
+                            {invoice.customer_city}<br />
+                            {invoice.customer_email}<br />
+                            {invoice.customer_phone}
+                        </p>
+                    </div>
+                    <div class="info-block right">
+                        <h4>Datos de la Empresa</h4>
+                        <p>
+                            <strong>{invoice.company_name}</strong><br />
+                            {invoice.company_address}<br />
+                            NIF: {invoice.company_nif}<br />
+                            {invoice.company_email}<br />
+                            {invoice.company_phone}
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Dates -->
+                <div class="invoice-dates">
+                    <div class="date-item">
+                        <span class="label">Fecha:</span>
+                        <span class="value"
+                            >{formatDate(invoice.issue_date)}</span
+                        >
+                    </div>
+                    <div class="date-item">
+                        <span class="label">Pedido:</span>
+                        <span class="value">#{invoice.order_id}</span>
+                    </div>
+                    <div class="date-item">
+                        <span class="label">Pago:</span>
+                        <span class="value paid">PAGADO</span>
+                    </div>
+                </div>
+
+                <!-- Items Table -->
+                <table class="items-table">
+                    <thead>
+                        <tr>
+                            <th>Descripción</th>
+                            <th class="center">Cantidad</th>
+                            <th class="right">Precio Unit.</th>
+                            <th class="right">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {
+                            items &&
+                                items.map((item) => (
+                                    <tr>
+                                        <td>
+                                            <strong>{item.product_name}</strong>
+                                            {item.product_size && (
+                                                <span class="size">
+                                                    Talla: {item.product_size}
+                                                </span>
+                                            )}
+                                        </td>
+                                        <td class="center">{item.quantity}</td>
+                                        <td class="right">
+                                            {formatPrice(item.unit_price)}
+                                        </td>
+                                        <td class="right total">
+                                            {formatPrice(item.line_total)}
+                                        </td>
+                                    </tr>
+                                ))
+                        }
+                    </tbody>
+                </table>
+
+                <!-- Totals -->
+                <div class="invoice-totals">
+                    <table>
+                        <tr>
+                            <td>Base imponible</td>
+                            <td
+                                >{
+                                    formatPrice(
+                                        invoice.subtotal - invoice.tax_amount,
+                                    )
+                                }</td
+                            >
+                        </tr>
+                        <tr>
+                            <td>IVA incluido ({invoice.tax_rate}%)</td>
+                            <td>{formatPrice(invoice.tax_amount)}</td>
+                        </tr>
+                        <tr style="border-top: 1px solid #e5e7eb;">
+                            <td>Subtotal productos</td>
+                            <td>{formatPrice(invoice.subtotal)}</td>
+                        </tr>
+                        {
+                            invoice.shipping_cost > 0 && (
+                                <tr>
+                                    <td>Envío</td>
+                                    <td>
+                                        {formatPrice(invoice.shipping_cost)}
+                                    </td>
+                                </tr>
+                            )
+                        }
+                        {
+                            invoice.discount > 0 && (
+                                <tr class="discount">
+                                    <td>Descuento</td>
+                                    <td>-{formatPrice(invoice.discount)}</td>
+                                </tr>
+                            )
+                        }
+                        <tr class="total-row">
+                            <td>TOTAL</td>
+                            <td>{formatPrice(invoice.total)}</td>
+                        </tr>
+                    </table>
+                </div>
+
+                <!-- Footer -->
+                <div class="invoice-footer">
+                    <p class="thanks">¡Gracias por confiar en Vantage!</p>
+                    <p>
+                        Esta factura ha sido generada electrónicamente y es
+                        válida sin firma.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel de Edición -->
+        <div class="edit-panel">
+            <h2 class="section-title">Editar Factura</h2>
+
+            <form method="POST" class="edit-form">
+                <input type="hidden" name="action" value="update" />
+
+                <!-- Estado -->
+                <div class="form-group">
+                    <label for="status">Estado de la Factura</label>
+                    <select name="status" id="status">
+                        <option
+                            value="draft"
+                            selected={invoice.status === "draft"}
+                            >Borrador</option
+                        >
+                        <option
+                            value="issued"
+                            selected={invoice.status === "issued"}
+                            >Emitida</option
+                        >
+                        <option
+                            value="sent"
+                            selected={invoice.status === "sent"}>Enviada</option
+                        >
+                        <option
+                            value="paid"
+                            selected={invoice.status === "paid"}>Pagada</option
+                        >
+                        <option
+                            value="cancelled"
+                            selected={invoice.status === "cancelled"}
+                            >Anulada</option
+                        >
+                    </select>
+                </div>
+
+                <!-- Datos de la Empresa -->
+                <div class="form-section">
+                    <h3>Datos de la Empresa</h3>
+
+                    <div class="form-group">
+                        <label for="company_name">Nombre de la Empresa</label>
+                        <input
+                            type="text"
+                            name="company_name"
+                            id="company_name"
+                            value={invoice.company_name}
+                        />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="company_address">Dirección</label>
+                        <input
+                            type="text"
+                            name="company_address"
+                            id="company_address"
+                            value={invoice.company_address}
+                        />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="company_nif">NIF/CIF</label>
+                        <input
+                            type="text"
+                            name="company_nif"
+                            id="company_nif"
+                            value={invoice.company_nif}
+                        />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="company_email">Email</label>
+                        <input
+                            type="email"
+                            name="company_email"
+                            id="company_email"
+                            value={invoice.company_email}
+                        />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="company_phone">Teléfono</label>
+                        <input
+                            type="text"
+                            name="company_phone"
+                            id="company_phone"
+                            value={invoice.company_phone}
+                        />
+                    </div>
+                </div>
+
+                <!-- Notas -->
+                <div class="form-group">
+                    <label for="notes">Notas Internas</label>
+                    <textarea
+                        name="notes"
+                        id="notes"
+                        rows="4"
+                        placeholder="Notas que solo verás tú (no aparecen en la factura)"
+                        >{invoice.notes}</textarea
+                    >
+                </div>
+
+                <!-- Información de solo lectura -->
+                <div class="form-section readonly-info">
+                    <h3>Información del Pedido</h3>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <span class="label">Cliente:</span>
+                            <span class="value">{invoice.customer_name}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="label">Email:</span>
+                            <span class="value">{invoice.customer_email}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="label">Total:</span>
+                            <span class="value total"
+                                >{formatPrice(invoice.total)}</span
+                            >
+                        </div>
+                        <div class="info-item">
+                            <span class="label">Método de pago:</span>
+                            <span class="value">{invoice.payment_method}</span>
+                        </div>
+                    </div>
+                    <p class="readonly-note">
+                        ℹ️ Los datos del cliente y los importes no son editables
+                        para mantener la integridad de la factura.
+                    </p>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">
+                        💾 Guardar Cambios
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</AdminLayout>
+
+<style>
+    .page-header {
+        margin-bottom: 1.5rem;
+    }
+
+    .header-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .back-link {
+        color: #6b7280;
+        text-decoration: none;
+        font-size: 0.9rem;
+        margin-bottom: 0.5rem;
+        display: inline-block;
+    }
+
+    .back-link:hover {
+        color: var(--navy);
+    }
+
+    .page-header h1 {
+        font-size: 1.75rem;
+        color: var(--navy);
+        margin: 0 0 0.5rem 0;
+    }
+
+    .header-meta {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .status-badge {
+        padding: 0.35rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .date {
+        color: #6b7280;
+        font-size: 0.9rem;
+    }
+
+    .order-link {
+        color: var(--navy);
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+    .order-link:hover {
+        text-decoration: underline;
+    }
+
+    .btn {
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        border: none;
+        font-size: 0.95rem;
+        transition: all 0.2s;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .btn-primary {
+        background: #1a2744;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #2d4a6f;
+    }
+
+    .alert {
+        padding: 1rem 1.5rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+    }
+
+    .alert-success {
+        background: #d1fae5;
+        color: #065f46;
+        border: 1px solid #a7f3d0;
+    }
+
+    .alert-error {
+        background: #fee2e2;
+        color: #991b1b;
+        border: 1px solid #fecaca;
+    }
+
+    .content-grid {
+        display: grid;
+        grid-template-columns: 1fr 400px;
+        gap: 2rem;
+    }
+
+    @media (max-width: 1200px) {
+        .content-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .section-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--navy);
+        margin: 0 0 1rem 0;
+        padding-bottom: 0.75rem;
+        border-bottom: 2px solid #e5e7eb;
+    }
+
+    /* Invoice Preview */
+    .invoice-preview-container {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .invoice-preview {
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        overflow: hidden;
+        font-size: 0.85rem;
+    }
+
+    .invoice-header {
+        background: linear-gradient(135deg, #1a2744 0%, #2d3f5f 100%);
+        color: white;
+        padding: 1.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .logo {
+        font-size: 1.5rem;
+        font-weight: 300;
+        letter-spacing: 0.3em;
+        color: #b8860b;
+    }
+
+    .invoice-title h3 {
+        font-size: 1.25rem;
+        font-weight: 300;
+        margin: 0 0 0.25rem 0;
+        text-align: right;
+    }
+
+    .invoice-title .invoice-number {
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 0.85rem;
+    }
+
+    .invoice-info {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        padding: 1.5rem;
+        background: #faf8f5;
+        gap: 1rem;
+    }
+
+    .info-block h4 {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: #6b7280;
+        margin: 0 0 0.5rem 0;
+    }
+
+    .info-block p {
+        margin: 0;
+        line-height: 1.6;
+        color: #1a2744;
+    }
+
+    .info-block.right {
+        text-align: right;
+    }
+
+    .invoice-dates {
+        display: flex;
+        gap: 2rem;
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .date-item {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .date-item .label {
+        color: #6b7280;
+    }
+
+    .date-item .value {
+        font-weight: 500;
+        color: #1a2744;
+    }
+
+    .date-item .value.paid {
+        background: #10b981;
+        color: white;
+        padding: 0.15rem 0.5rem;
+        border-radius: 10px;
+        font-size: 0.7rem;
+    }
+
+    .items-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .items-table th {
+        background: #1a2744;
+        color: white;
+        padding: 0.75rem 1rem;
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        text-align: left;
+    }
+
+    .items-table th.center {
+        text-align: center;
+    }
+    .items-table th.right {
+        text-align: right;
+    }
+
+    .items-table td {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .items-table td.center {
+        text-align: center;
+    }
+    .items-table td.right {
+        text-align: right;
+    }
+    .items-table td.total {
+        font-weight: 600;
+        color: #1a2744;
+    }
+
+    .items-table .size {
+        display: block;
+        font-size: 0.75rem;
+        color: #6b7280;
+    }
+
+    .invoice-totals {
+        padding: 1rem 1.5rem;
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    .invoice-totals table {
+        width: 220px;
+    }
+
+    .invoice-totals td {
+        padding: 0.5rem 0;
+    }
+
+    .invoice-totals td:first-child {
+        color: #6b7280;
+    }
+
+    .invoice-totals td:last-child {
+        text-align: right;
+        font-weight: 500;
+    }
+
+    .invoice-totals .discount td {
+        color: #059669;
+    }
+
+    .invoice-totals .total-row {
+        border-top: 2px solid #1a2744;
+    }
+
+    .invoice-totals .total-row td {
+        padding-top: 0.75rem;
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #1a2744;
+    }
+
+    .invoice-footer {
+        background: #1a2744;
+        color: white;
+        padding: 1rem 1.5rem;
+        text-align: center;
+    }
+
+    .invoice-footer .thanks {
+        color: #b8860b;
+        margin: 0 0 0.5rem 0;
+    }
+
+    .invoice-footer p {
+        margin: 0;
+        font-size: 0.75rem;
+        color: rgba(255, 255, 255, 0.6);
+    }
+
+    /* Edit Panel */
+    .edit-panel {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        height: fit-content;
+    }
+
+    .edit-form {
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+    }
+
+    .form-section {
+        background: #f9fafb;
+        padding: 1rem;
+        border-radius: 8px;
+        border: 1px solid #e5e7eb;
+    }
+
+    .form-section h3 {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #374151;
+        margin: 0 0 1rem 0;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .form-group label {
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: #374151;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        padding: 0.75rem 1rem;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 0.95rem;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+        outline: none;
+        border-color: var(--navy);
+        box-shadow: 0 0 0 3px rgba(26, 39, 68, 0.1);
+    }
+
+    .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+
+    .readonly-info {
+        background: #f0f4f8;
+    }
+
+    .info-grid {
+        display: grid;
+        gap: 0.75rem;
+    }
+
+    .info-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .info-item .label {
+        color: #6b7280;
+        font-size: 0.85rem;
+    }
+
+    .info-item .value {
+        font-weight: 500;
+        color: #1f2937;
+    }
+
+    .info-item .value.total {
+        color: #059669;
+        font-size: 1.1rem;
+    }
+
+    .readonly-note {
+        margin: 1rem 0 0 0;
+        padding: 0.75rem;
+        background: #dbeafe;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        color: #1e40af;
+    }
+
+    .form-actions {
+        padding-top: 0.5rem;
+    }
+
+    .form-actions .btn {
+        width: 100%;
+        justify-content: center;
+    }
+</style>

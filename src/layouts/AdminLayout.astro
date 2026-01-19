@@ -12,7 +12,13 @@ const currentPath = Astro.url.pathname;
 const navItems = [
     { href: "/admin", label: "Dashboard", icon: "home" },
     { href: "/admin/productos", label: "Productos", icon: "package" },
+    { href: "/admin/categorias", label: "Categorías", icon: "folder" },
+    { href: "/admin/tallas", label: "Tallas", icon: "ruler" },
     { href: "/admin/pedidos", label: "Pedidos", icon: "shopping-bag" },
+    { href: "/admin/devoluciones", label: "Devoluciones", icon: "return" },
+    { href: "/admin/facturas", label: "Facturas", icon: "receipt" },
+    { href: "/admin/usuarios", label: "Usuarios", icon: "users" },
+    { href: "/admin/cupones", label: "Cupones", icon: "tag" },
     { href: "/admin/newsletter", label: "Newsletter", icon: "mail" },
     { href: "/admin/configuracion", label: "Configuración", icon: "settings" },
 ];
@@ -37,7 +43,7 @@ function isActive(href: string): boolean {
                     href="/admin"
                     class="text-xl font-serif font-bold text-white"
                 >
-                    Fashion<span class="text-brand-leather">Store</span>
+                    VANTAGE
                 </a>
                 <span
                     class="ml-2 px-2 py-0.5 text-xs font-medium bg-brand-leather/20 text-brand-leather rounded"
@@ -138,6 +144,96 @@ function isActive(href: string): boolean {
                                     />
                                 </svg>
                             )}
+                            {item.icon === "folder" && (
+                                <svg
+                                    class="w-5 h-5"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+                                    />
+                                </svg>
+                            )}
+                            {item.icon === "ruler" && (
+                                <svg
+                                    class="w-5 h-5"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M6 6L3 9m0 0l3 3m-3-3h18M18 18l3-3m0 0l-3-3m3 3H3"
+                                    />
+                                </svg>
+                            )}
+                            {item.icon === "users" && (
+                                <svg
+                                    class="w-5 h-5"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+                                    />
+                                </svg>
+                            )}
+                            {item.icon === "tag" && (
+                                <svg
+                                    class="w-5 h-5"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
+                                    />
+                                </svg>
+                            )}
+                            {item.icon === "receipt" && (
+                                <svg
+                                    class="w-5 h-5"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                    />
+                                </svg>
+                            )}
+                            {item.icon === "return" && (
+                                <svg
+                                    class="w-5 h-5"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"
+                                    />
+                                </svg>
+                            )}
                             {item.label}
                         </a>
                     ))
@@ -190,7 +286,7 @@ function isActive(href: string): boolean {
                     </svg>
                 </button>
                 <span class="ml-4 text-lg font-serif font-bold text-white">
-                    Fashion<span class="text-brand-leather">Store</span>
+                    VANTAGE
                 </span>
             </header>
 

@@ -1,0 +1,111 @@
+---
+export const prerender = false;
+---
+
+<!doctype html>
+<html lang="es">
+    <head>
+        <meta charset="UTF-8" />
+        <title>Preview Emails - Vantage</title>
+        <style>
+            body {
+                font-family: system-ui;
+                background: #1a1a2e;
+                color: #fff;
+                margin: 0;
+                padding: 20px;
+            }
+            h1 {
+                text-align: center;
+                margin-bottom: 30px;
+            }
+            .nav {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 10px;
+                justify-content: center;
+                margin-bottom: 30px;
+            }
+            .nav button {
+                padding: 10px 20px;
+                border: none;
+                border-radius: 8px;
+                cursor: pointer;
+                font-weight: 600;
+            }
+            .nav button.active {
+                background: #b8860b;
+                color: #fff;
+            }
+            .nav button:not(.active) {
+                background: #333;
+                color: #fff;
+            }
+            .preview-frame {
+                width: 100%;
+                max-width: 700px;
+                margin: 0 auto;
+                background: #fff;
+                border-radius: 12px;
+                overflow: hidden;
+            }
+            iframe {
+                width: 100%;
+                height: 900px;
+                border: none;
+            }
+            .email-title {
+                text-align: center;
+                padding: 15px;
+                background: #1a2744;
+                color: #b8860b;
+                font-size: 14px;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>📧 Preview de Emails - Vantage</h1>
+        <div class="nav">
+            <button class="active" data-email="order-confirmation"
+                >1. Confirmación Pedido</button
+            >
+            <button data-email="shipping">2. Pedido Enviado</button>
+            <button data-email="pickup">3. Listo Recoger</button>
+            <button data-email="delivered">4. Entregado</button>
+            <button data-email="return-created">5. Devolución Creada</button>
+            <button data-email="return-received">6. Paquete Recibido</button>
+            <button data-email="refund">7. Reembolso</button>
+            <button data-email="return-rejected">8. Dev. Rechazada</button>
+            <button data-email="admin-order">9. Admin: Nuevo Pedido</button>
+            <button data-email="admin-return">10. Admin: Devolución</button>
+            <button data-email="stock-low">11. Stock Bajo</button>
+            <button data-email="stock-out">12. Sin Stock</button>
+            <button data-email="wishlist-low">13. Wishlist Agotando</button>
+            <button data-email="wishlist-sale">14. Wishlist Oferta</button>
+            <button data-email="newsletter">15. Newsletter</button>
+        </div>
+        <div class="preview-frame">
+            <div class="email-title" id="emailTitle">
+                Email: Confirmación de Pedido
+            </div>
+            <iframe
+                id="emailFrame"
+                src="/api/email-preview?type=order-confirmation"></iframe>
+        </div>
+        <script>
+            document.querySelectorAll(".nav button").forEach((btn) => {
+                btn.addEventListener("click", () => {
+                    document
+                        .querySelectorAll(".nav button")
+                        .forEach((b) => b.classList.remove("active"));
+                    btn.classList.add("active");
+                    const type = btn.dataset.email;
+                    document.getElementById("emailFrame").src =
+                        "/api/email-preview?type=" + type;
+                    document.getElementById("emailTitle").textContent =
+                        "Email: " + btn.textContent;
+                });
+            });
+        </script>
+    </body>
+</html>

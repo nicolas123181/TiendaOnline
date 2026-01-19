@@ -28,42 +28,147 @@ function getStockBadgeClass(stock: number): string {
 ---
 
 <AdminLayout title="Dashboard">
-    <!-- Stats Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <!-- Total Products -->
-        <div class="bg-surface-primary rounded-2xl p-6 shadow-soft">
-            <div class="flex items-center justify-between mb-4">
-                <div class="p-3 bg-blue-100 rounded-xl">
-                    <svg
-                        class="w-6 h-6 text-blue-600"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                        ></path>
-                    </svg>
-                </div>
-                <span
-                    class="text-xs font-medium text-status-success bg-status-success-bg px-2 py-1 rounded-full"
+    <!-- ========================================== -->
+    <!-- DASHBOARD EJECUTIVO - ANALYTICS -->
+    <!-- ========================================== -->
+    <section class="mb-10">
+        <div class="flex items-center justify-between mb-6">
+            <div>
+                <h2
+                    class="text-xl font-bold text-brand-navy flex items-center gap-2"
                 >
-                    Activo
-                </span>
+                    <span
+                        class="w-8 h-8 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-lg flex items-center justify-center"
+                    >
+                        <svg
+                            class="w-5 h-5 text-white"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                            ></path>
+                        </svg>
+                    </span>
+                    Dashboard Ejecutivo
+                </h2>
+                <p class="text-sm text-text-muted mt-1">
+                    Métricas clave para tomar decisiones rápidas
+                </p>
             </div>
-            <h3 class="text-3xl font-bold text-brand-navy">{totalProducts}</h3>
-            <p class="text-sm text-text-muted mt-1">Total de productos</p>
+            <span
+                class="text-xs text-text-muted bg-surface-tertiary px-3 py-1 rounded-full"
+            >
+                Actualizado ahora
+            </span>
         </div>
 
-        <!-- Total Stock -->
+        <!-- KPIs de Negocio -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <!-- Ventas del Mes -->
+            <div
+                class="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl p-6 text-white shadow-lg"
+            >
+                <div class="flex items-center justify-between mb-4">
+                    <div class="p-2 bg-white/20 rounded-lg">
+                        <svg
+                            class="w-6 h-6"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                            ></path>
+                        </svg>
+                    </div>
+                    <span class="text-xs bg-white/20 px-2 py-1 rounded-full"
+                        >Este mes</span
+                    >
+                </div>
+                <h3 id="kpi-monthly-sales" class="text-3xl font-bold">--</h3>
+                <p class="text-emerald-100 text-sm mt-1">Ventas Totales</p>
+            </div>
+
+            <!-- Pedidos Pendientes -->
+            <div
+                class="bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl p-6 text-white shadow-lg"
+            >
+                <div class="flex items-center justify-between mb-4">
+                    <div class="p-2 bg-white/20 rounded-lg">
+                        <svg
+                            class="w-6 h-6"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+                            ></path>
+                        </svg>
+                    </div>
+                    <span class="text-xs bg-white/20 px-2 py-1 rounded-full"
+                        >Por enviar</span
+                    >
+                </div>
+                <h3 id="kpi-pending-orders" class="text-3xl font-bold">--</h3>
+                <p class="text-amber-100 text-sm mt-1">Pedidos Pendientes</p>
+            </div>
+
+            <!-- Producto Más Vendido -->
+            <div
+                class="bg-gradient-to-br from-purple-500 to-indigo-600 rounded-2xl p-6 text-white shadow-lg"
+            >
+                <div class="flex items-center justify-between mb-4">
+                    <div class="p-2 bg-white/20 rounded-lg">
+                        <svg
+                            class="w-6 h-6"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
+                            ></path>
+                        </svg>
+                    </div>
+                    <span class="text-xs bg-white/20 px-2 py-1 rounded-full"
+                        >⭐ Top</span
+                    >
+                </div>
+                <h3 id="kpi-top-product" class="text-xl font-bold truncate">
+                    Cargando...
+                </h3>
+                <p
+                    id="kpi-top-product-sold"
+                    class="text-purple-100 text-sm mt-1"
+                >
+                    Producto Más Vendido
+                </p>
+            </div>
+        </div>
+
+        <!-- Gráfico de Ventas -->
         <div class="bg-surface-primary rounded-2xl p-6 shadow-soft">
-            <div class="flex items-center justify-between mb-4">
-                <div class="p-3 bg-green-100 rounded-xl">
+            <div class="flex items-center justify-between mb-6">
+                <h3
+                    class="font-semibold text-brand-navy flex items-center gap-2"
+                >
                     <svg
-                        class="w-6 h-6 text-green-600"
+                        class="w-5 h-5 text-brand-leather"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
@@ -72,72 +177,158 @@ function getStockBadgeClass(stock: number): string {
                             stroke-linecap="round"
                             stroke-linejoin="round"
                             stroke-width="2"
-                            d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
+                            d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"
                         ></path>
                     </svg>
-                </div>
+                    Ventas Últimos 7 Días
+                </h3>
+                <span
+                    id="chart-total"
+                    class="text-sm font-medium text-text-muted">--</span
+                >
             </div>
-            <h3 class="text-3xl font-bold text-brand-navy">{totalStock}</h3>
-            <p class="text-sm text-text-muted mt-1">Unidades en stock</p>
+            <div class="h-64">
+                <canvas id="salesChart"></canvas>
+            </div>
         </div>
+    </section>
 
-        <!-- Low Stock Alert -->
-        <div class="bg-surface-primary rounded-2xl p-6 shadow-soft">
-            <div class="flex items-center justify-between mb-4">
-                <div class="p-3 bg-amber-100 rounded-xl">
-                    <svg
-                        class="w-6 h-6 text-amber-600"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
+    <!-- ========================================== -->
+    <!-- INVENTARIO - Stats Grid Original -->
+    <!-- ========================================== -->
+    <section class="mb-8">
+        <h2
+            class="text-lg font-semibold text-brand-navy mb-4 flex items-center gap-2"
+        >
+            <svg
+                class="w-5 h-5 text-text-muted"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+            >
+                <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                ></path>
+            </svg>
+            Estado del Inventario
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <!-- Total Products -->
+            <div class="bg-surface-primary rounded-2xl p-6 shadow-soft">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="p-3 bg-blue-100 rounded-xl">
+                        <svg
+                            class="w-6 h-6 text-blue-600"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                            ></path>
+                        </svg>
+                    </div>
+                    <span
+                        class="text-xs font-medium text-status-success bg-status-success-bg px-2 py-1 rounded-full"
                     >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                        ></path>
-                    </svg>
+                        Activo
+                    </span>
                 </div>
-                {
-                    lowStockProducts.length > 0 && (
-                        <span class="text-xs font-medium text-status-warning bg-status-warning-bg px-2 py-1 rounded-full">
-                            Atención
-                        </span>
-                    )
-                }
+                <h3 class="text-3xl font-bold text-brand-navy">
+                    {totalProducts}
+                </h3>
+                <p class="text-sm text-text-muted mt-1">Total de productos</p>
             </div>
-            <h3 class="text-3xl font-bold text-brand-navy">
-                {lowStockProducts.length}
-            </h3>
-            <p class="text-sm text-text-muted mt-1">Productos con bajo stock</p>
-        </div>
 
-        <!-- Inventory Value -->
-        <div class="bg-surface-primary rounded-2xl p-6 shadow-soft">
-            <div class="flex items-center justify-between mb-4">
-                <div class="p-3 bg-purple-100 rounded-xl">
-                    <svg
-                        class="w-6 h-6 text-purple-600"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                        ></path>
-                    </svg>
+            <!-- Total Stock -->
+            <div class="bg-surface-primary rounded-2xl p-6 shadow-soft">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="p-3 bg-green-100 rounded-xl">
+                        <svg
+                            class="w-6 h-6 text-green-600"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
+                            ></path>
+                        </svg>
+                    </div>
                 </div>
+                <h3 class="text-3xl font-bold text-brand-navy">{totalStock}</h3>
+                <p class="text-sm text-text-muted mt-1">Unidades en stock</p>
             </div>
-            <h3 class="text-3xl font-bold text-brand-navy">
-                {formatPrice(inventoryValue)}
-            </h3>
-            <p class="text-sm text-text-muted mt-1">Valor del inventario</p>
+
+            <!-- Low Stock Alert -->
+            <div class="bg-surface-primary rounded-2xl p-6 shadow-soft">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="p-3 bg-amber-100 rounded-xl">
+                        <svg
+                            class="w-6 h-6 text-amber-600"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                            ></path>
+                        </svg>
+                    </div>
+                    {
+                        lowStockProducts.length > 0 && (
+                            <span class="text-xs font-medium text-status-warning bg-status-warning-bg px-2 py-1 rounded-full">
+                                Atención
+                            </span>
+                        )
+                    }
+                </div>
+                <h3 class="text-3xl font-bold text-brand-navy">
+                    {lowStockProducts.length}
+                </h3>
+                <p class="text-sm text-text-muted mt-1">
+                    Productos con bajo stock
+                </p>
+            </div>
+
+            <!-- Inventory Value -->
+            <div class="bg-surface-primary rounded-2xl p-6 shadow-soft">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="p-3 bg-purple-100 rounded-xl">
+                        <svg
+                            class="w-6 h-6 text-purple-600"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                            ></path>
+                        </svg>
+                    </div>
+                </div>
+                <h3 class="text-3xl font-bold text-brand-navy">
+                    {formatPrice(inventoryValue)}
+                </h3>
+                <p class="text-sm text-text-muted mt-1">Valor del inventario</p>
+            </div>
         </div>
-    </div>
+    </section>
 
     <!-- Quick Actions & Alerts -->
     <div class="grid lg:grid-cols-2 gap-6 mb-8">
@@ -146,7 +337,7 @@ function getStockBadgeClass(stock: number): string {
             <h2 class="text-lg font-semibold text-brand-navy mb-4">
                 Acciones Rápidas
             </h2>
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-2 lg:grid-cols-3 gap-3">
                 <a
                     href="/admin/productos/nuevo"
                     class="flex items-center gap-3 p-4 bg-brand-navy text-white rounded-xl hover:bg-brand-navy-light transition-colors"
@@ -163,7 +354,7 @@ function getStockBadgeClass(stock: number): string {
                             stroke-width="2"
                             d="M12 4v16m8-8H4"></path>
                     </svg>
-                    <span class="font-medium">Nuevo Producto</span>
+                    <span class="font-medium text-sm">Nuevo Producto</span>
                 </a>
                 <a
                     href="/admin/productos"
@@ -179,9 +370,10 @@ function getStockBadgeClass(stock: number): string {
                             stroke-linecap="round"
                             stroke-linejoin="round"
                             stroke-width="2"
-                            d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>
+                            d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                        ></path>
                     </svg>
-                    <span class="font-medium">Ver Productos</span>
+                    <span class="font-medium text-sm">Productos</span>
                 </a>
                 <a
                     href="/admin/pedidos"
@@ -197,13 +389,13 @@ function getStockBadgeClass(stock: number): string {
                             stroke-linecap="round"
                             stroke-linejoin="round"
                             stroke-width="2"
-                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                            d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
                         ></path>
                     </svg>
-                    <span class="font-medium">Ver Pedidos</span>
+                    <span class="font-medium text-sm">Pedidos</span>
                 </a>
                 <a
-                    href="/admin/configuracion"
+                    href="/admin/categorias"
                     class="flex items-center gap-3 p-4 bg-surface-tertiary text-brand-navy rounded-xl hover:bg-brand-cream transition-colors"
                 >
                     <svg
@@ -216,15 +408,48 @@ function getStockBadgeClass(stock: number): string {
                             stroke-linecap="round"
                             stroke-linejoin="round"
                             stroke-width="2"
-                            d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                            d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
                         ></path>
+                    </svg>
+                    <span class="font-medium text-sm">Categorías</span>
+                </a>
+                <a
+                    href="/admin/tallas"
+                    class="flex items-center gap-3 p-4 bg-surface-tertiary text-brand-navy rounded-xl hover:bg-brand-cream transition-colors"
+                >
+                    <svg
+                        class="w-5 h-5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
                         <path
                             stroke-linecap="round"
                             stroke-linejoin="round"
                             stroke-width="2"
-                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            d="M6 6L3 9m0 0l3 3m-3-3h18M18 18l3-3m0 0l-3-3m3 3H3"
+                        ></path>
                     </svg>
-                    <span class="font-medium">Configuración</span>
+                    <span class="font-medium text-sm">Tallas</span>
+                </a>
+                <a
+                    href="/admin/newsletter"
+                    class="flex items-center gap-3 p-4 bg-surface-tertiary text-brand-navy rounded-xl hover:bg-brand-cream transition-colors"
+                >
+                    <svg
+                        class="w-5 h-5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                        ></path>
+                    </svg>
+                    <span class="font-medium text-sm">Newsletter</span>
                 </a>
             </div>
         </div>
@@ -526,4 +751,150 @@ function getStockBadgeClass(stock: number): string {
             btn.innerHTML = originalContent;
         }
     });
+</script>
+
+<!-- Script Dashboard Ejecutivo con Chart.js -->
+<script>
+    import Chart from "chart.js/auto";
+
+    // Formatear precio
+    function formatPrice(cents: number): string {
+        return (cents / 100).toLocaleString("es-ES", {
+            style: "currency",
+            currency: "EUR",
+        });
+    }
+
+    // Cargar analytics
+    async function loadAnalytics() {
+        try {
+            const response = await fetch("/api/admin/analytics");
+            const data = await response.json();
+
+            if (!data.success) {
+                console.error("Error loading analytics:", data.error);
+                return;
+            }
+
+            // Actualizar KPIs
+            const monthlySalesEl = document.getElementById("kpi-monthly-sales");
+            const pendingOrdersEl =
+                document.getElementById("kpi-pending-orders");
+            const topProductEl = document.getElementById("kpi-top-product");
+            const topProductSoldEl = document.getElementById(
+                "kpi-top-product-sold",
+            );
+            const chartTotalEl = document.getElementById("chart-total");
+
+            if (monthlySalesEl) {
+                monthlySalesEl.textContent = formatPrice(
+                    data.kpis.monthlySales,
+                );
+            }
+
+            if (pendingOrdersEl) {
+                pendingOrdersEl.textContent =
+                    data.kpis.pendingOrders.toString();
+            }
+
+            if (topProductEl && data.kpis.topProduct) {
+                topProductEl.textContent = data.kpis.topProduct.name;
+                if (topProductSoldEl) {
+                    topProductSoldEl.textContent = `${data.kpis.topProduct.sold} vendidos este mes`;
+                }
+            } else if (topProductEl) {
+                topProductEl.textContent = "Sin ventas";
+                if (topProductSoldEl) {
+                    topProductSoldEl.textContent = "Aún no hay ventas este mes";
+                }
+            }
+
+            // Total de los últimos 7 días
+            const weekTotal = data.salesChart.data.reduce(
+                (sum: number, val: number) => sum + val,
+                0,
+            );
+            if (chartTotalEl) {
+                chartTotalEl.textContent = `Total: ${formatPrice(weekTotal)}`;
+            }
+
+            // Renderizar gráfico
+            const canvas = document.getElementById(
+                "salesChart",
+            ) as HTMLCanvasElement;
+            if (canvas) {
+                const ctx = canvas.getContext("2d");
+                if (ctx) {
+                    new Chart(ctx, {
+                        type: "bar",
+                        data: {
+                            labels: data.salesChart.labels,
+                            datasets: [
+                                {
+                                    label: "Ventas (€)",
+                                    data: data.salesChart.data.map(
+                                        (v: number) => v / 100,
+                                    ),
+                                    backgroundColor: "rgba(124, 58, 237, 0.8)",
+                                    borderColor: "rgba(124, 58, 237, 1)",
+                                    borderWidth: 2,
+                                    borderRadius: 8,
+                                    borderSkipped: false,
+                                },
+                            ],
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    display: false,
+                                },
+                                tooltip: {
+                                    backgroundColor: "#1a2744",
+                                    titleColor: "#fff",
+                                    bodyColor: "#fff",
+                                    padding: 12,
+                                    cornerRadius: 8,
+                                    displayColors: false,
+                                    callbacks: {
+                                        label: function (context) {
+                                            return formatPrice(
+                                                (context.raw as number) * 100,
+                                            );
+                                        },
+                                    },
+                                },
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    grid: {
+                                        color: "rgba(0, 0, 0, 0.05)",
+                                    },
+                                    ticks: {
+                                        callback: function (value) {
+                                            return formatPrice(
+                                                (value as number) * 100,
+                                            );
+                                        },
+                                    },
+                                },
+                                x: {
+                                    grid: {
+                                        display: false,
+                                    },
+                                },
+                            },
+                        },
+                    });
+                }
+            }
+        } catch (error) {
+            console.error("Error loading analytics:", error);
+        }
+    }
+
+    // Cargar al inicializar
+    loadAnalytics();
 </script>

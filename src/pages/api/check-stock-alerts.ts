@@ -12,71 +12,135 @@ import {
  * API para verificar el inventario y enviar alertas de stock
  * POST /api/check-stock-alerts
  * 
- * Escanea todos los productos y envía:
- * - Email de productos agotados (stock = 0)
- * - Email de productos con stock bajo (stock ≤ 5)
+ * Escanea todos los productos Y TALLAS y envía:
+ * - Email de productos/tallas agotados (stock = 0)
+ * - Email de productos/tallas con stock bajo (stock ≤ 5)
  */
 export const POST: APIRoute = async ({ request }) => {
-    console.log('🔍 Manual stock check triggered');
+    console.log('🔍 Manual stock check triggered (including sizes)');
 
     try {
-        // Obtener todos los productos con stock bajo o agotados
-        const { data: products, error } = await supabase
-            .from('products')
-            .select('id, name, stock, slug')
+        const outOfStockItems: OutOfStockProduct[] = [];
+        const lowStockItems: LowStockProduct[] = [];
+
+        // 1. Verificar stock por TALLA (product_sizes)
+        const { data: sizesWithLowStock, error: sizesError } = await supabase
+            .from('product_sizes')
+            .select(`
+                id,
+                size,
+                stock,
+                product_id,
+                products:product_id (
+                    id,
+                    name,
+                    slug,
+                    images
+                )
+            `)
             .lte('stock', LOW_STOCK_THRESHOLD)
             .order('stock', { ascending: true });
 
-        if (error) {
-            console.error('❌ Error fetching products:', error);
-            return new Response(JSON.stringify({
-                success: false,
-                error: 'Error al obtener productos'
-            }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+        if (sizesError) {
+            console.error('❌ Error fetching product sizes:', sizesError);
+        } else if (sizesWithLowStock && sizesWithLowStock.length > 0) {
+            console.log(`📏 Found ${sizesWithLowStock.length} sizes with low stock`);
+
+            for (const sizeItem of sizesWithLowStock) {
+                const product = sizeItem.products as any;
+                if (!product) continue;
+
+                const imageUrl = product.images?.[0] || null;
+
+                if (sizeItem.stock === 0) {
+                    outOfStockItems.push({
+                        id: product.id,
+                        name: product.name,
+                        slug: product.slug,
+                        image: imageUrl,
+                        size: sizeItem.size
+                    });
+                } else {
+                    lowStockItems.push({
+                        id: product.id,
+                        name: product.name,
+                        stock: sizeItem.stock,
+                        slug: product.slug,
+                        image: imageUrl,
+                        size: sizeItem.size
+                    });
+                }
+            }
         }
 
-        if (!products || products.length === 0) {
-            console.log('✅ No products with low stock found');
+        // 2. También verificar productos sin tallas (stock global)
+        const { data: productsWithLowStock, error: productsError } = await supabase
+            .from('products')
+            .select('id, name, stock, slug, images')
+            .lte('stock', LOW_STOCK_THRESHOLD)
+            .order('stock', { ascending: true });
+
+        if (productsError) {
+            console.error('❌ Error fetching products:', productsError);
+        } else if (productsWithLowStock) {
+            // Verificar si este producto ya fue añadido por las tallas
+            const existingProductIds = new Set([
+                ...outOfStockItems.map(p => `${p.id}`),
+                ...lowStockItems.map(p => `${p.id}`)
+            ]);
+
+            for (const product of productsWithLowStock) {
+                // Si no tiene tallas configuradas, usar el stock global
+                const { count } = await supabase
+                    .from('product_sizes')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('product_id', product.id);
+
+                // Solo añadir si no tiene tallas (count = 0) y no existe ya
+                if (count === 0 && !existingProductIds.has(`${product.id}`)) {
+                    const imageUrl = product.images?.[0] || null;
+
+                    if (product.stock === 0) {
+                        outOfStockItems.push({
+                            id: product.id,
+                            name: product.name,
+                            slug: product.slug,
+                            image: imageUrl
+                        });
+                    } else {
+                        lowStockItems.push({
+                            id: product.id,
+                            name: product.name,
+                            stock: product.stock,
+                            slug: product.slug,
+                            image: imageUrl
+                        });
+                    }
+                }
+            }
+        }
+
+        console.log(`📊 Stock check results: ${outOfStockItems.length} agotados, ${lowStockItems.length} stock bajo`);
+
+        if (outOfStockItems.length === 0 && lowStockItems.length === 0) {
+            console.log('✅ No products/sizes with low stock found');
             return new Response(JSON.stringify({
                 success: true,
-                message: 'No hay productos con stock bajo ni agotados',
+                message: 'No hay productos ni tallas con stock bajo ni agotados',
                 outOfStock: 0,
                 lowStock: 0,
                 emailsSent: false
             }), { status: 200, headers: { 'Content-Type': 'application/json' } });
         }
 
-        // Separar productos agotados y con stock bajo
-        const outOfStockProducts: OutOfStockProduct[] = [];
-        const lowStockProducts: LowStockProduct[] = [];
-
-        for (const product of products) {
-            if (product.stock === 0) {
-                outOfStockProducts.push({
-                    id: product.id,
-                    name: product.name,
-                    slug: product.slug
-                });
-            } else {
-                lowStockProducts.push({
-                    id: product.id,
-                    name: product.name,
-                    stock: product.stock,
-                    slug: product.slug
-                });
-            }
-        }
-
-        console.log(`📊 Stock check results: ${outOfStockProducts.length} agotados, ${lowStockProducts.length} stock bajo`);
-
         let outOfStockEmailSent = false;
         let lowStockEmailSent = false;
 
         // Enviar email de productos agotados
-        if (outOfStockProducts.length > 0) {
+        if (outOfStockItems.length > 0) {
             console.log('🚨 Sending out of stock alert...');
             try {
-                outOfStockEmailSent = await sendOutOfStockAlert(outOfStockProducts);
+                outOfStockEmailSent = await sendOutOfStockAlert(outOfStockItems);
                 console.log('✅ Out of stock email sent:', outOfStockEmailSent);
             } catch (e) {
                 console.error('❌ Error sending out of stock email:', e);
@@ -84,10 +148,10 @@ export const POST: APIRoute = async ({ request }) => {
         }
 
         // Enviar email de stock bajo
-        if (lowStockProducts.length > 0) {
+        if (lowStockItems.length > 0) {
             console.log('⚠️ Sending low stock alert...');
             try {
-                lowStockEmailSent = await sendLowStockAlert(lowStockProducts);
+                lowStockEmailSent = await sendLowStockAlert(lowStockItems);
                 console.log('✅ Low stock email sent:', lowStockEmailSent);
             } catch (e) {
                 console.error('❌ Error sending low stock email:', e);
@@ -97,10 +161,17 @@ export const POST: APIRoute = async ({ request }) => {
         return new Response(JSON.stringify({
             success: true,
             message: `Verificación completada`,
-            outOfStock: outOfStockProducts.length,
-            lowStock: lowStockProducts.length,
-            outOfStockProducts: outOfStockProducts.map(p => p.name),
-            lowStockProducts: lowStockProducts.map(p => ({ name: p.name, stock: p.stock })),
+            outOfStock: outOfStockItems.length,
+            lowStock: lowStockItems.length,
+            outOfStockItems: outOfStockItems.map(p => ({
+                name: p.name,
+                size: p.size || 'Sin talla'
+            })),
+            lowStockItems: lowStockItems.map(p => ({
+                name: p.name,
+                size: p.size || 'Sin talla',
+                stock: p.stock
+            })),
             emailsSent: {
                 outOfStock: outOfStockEmailSent,
                 lowStock: lowStockEmailSent

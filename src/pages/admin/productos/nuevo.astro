@@ -380,7 +380,7 @@ if (Astro.request.method === "POST") {
 </AdminLayout>
 
 <script>
-    // File upload handling - Subida a Supabase Storage
+    // File upload handling - Subida a Cloudinary
     const dropZone = document.getElementById("drop-zone");
     const fileInput = document.getElementById("file-input") as HTMLInputElement;
     const browseBtn = document.getElementById("browse-btn");
@@ -444,12 +444,12 @@ if (Astro.request.method === "POST") {
                 continue;
             }
 
-            // Subir a Supabase Storage
-            await uploadToSupabase(file);
+            // Subir a Cloudinary
+            await uploadToCloudinary(file);
         }
     }
 
-    async function uploadToSupabase(file: File) {
+    async function uploadToCloudinary(file: File) {
         isUploading = true;
 
         // Mostrar indicador de carga

@@ -51,7 +51,7 @@ export const prerender = false;
                     </p>
                     <a
                         href="/login?returnTo=/perfil"
-                        class="block w-full py-4 bg-blue-900 text-white font-semibold rounded-xl hover:bg-blue-800 transition-colors"
+                        class="block w-full py-4 bg-brand-navy text-white font-semibold rounded-xl hover:bg-brand-navy-light transition-colors"
                     >
                         Iniciar Sesión
                     </a>
@@ -119,6 +119,48 @@ export const prerender = false;
                     </div>
                 </div>
 
+                <!-- Shipping Address Section -->
+                <div
+                    class="bg-surface-primary rounded-2xl shadow-soft overflow-hidden mt-8"
+                >
+                    <div class="p-6 border-b border-border-light">
+                        <h2
+                            class="text-xl font-serif font-bold text-brand-navy flex items-center gap-2"
+                        >
+                            <svg
+                                class="w-5 h-5 text-brand-navy"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                                ></path>
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            </svg>
+                            Dirección de Envío
+                        </h2>
+                        <p class="text-text-muted text-sm mt-1">
+                            Guarda tu dirección para compras más rápidas
+                        </p>
+                    </div>
+                    <div class="p-6" id="shipping-address-container">
+                        <div class="text-center py-6">
+                            <div
+                                class="w-12 h-12 border-4 border-gray-200 border-t-brand-navy rounded-full animate-spin mx-auto"
+                            >
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Newsletter Section -->
                 <div
                     class="bg-surface-primary rounded-2xl shadow-soft overflow-hidden mt-8"
@@ -180,126 +222,459 @@ export const prerender = false;
                         >
                         </p>
                     </div>
-                </div>
 
-                <!-- Continue Shopping -->
-                <div class="mt-8 text-center">
-                    <a
-                        href="/"
-                        class="inline-flex items-center gap-2 text-brand-leather font-medium hover:underline"
+                    <!-- Security Section -->
+                    <div
+                        class="bg-surface-primary rounded-2xl shadow-soft overflow-hidden mt-8"
                     >
-                        <svg
-                            class="w-4 h-4"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
+                        <div class="p-6 border-b border-border-light">
+                            <h2
+                                class="text-xl font-serif font-bold text-brand-navy flex items-center gap-2"
+                            >
+                                <svg
+                                    class="w-5 h-5 text-green-600"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                                    ></path>
+                                </svg>
+                                Seguridad
+                            </h2>
+                            <p class="text-text-muted text-sm mt-1">
+                                Gestiona la seguridad de tu cuenta
+                            </p>
+                        </div>
+                        <div class="p-6">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="font-medium text-gray-900">
+                                        Contraseña
+                                    </p>
+                                    <p class="text-sm text-gray-500">
+                                        Última actualización: nunca
+                                    </p>
+                                </div>
+                                <button
+                                    id="change-password-btn"
+                                    class="px-4 py-2 bg-brand-navy text-white font-medium rounded-xl hover:bg-brand-navy-light transition-colors"
+                                >
+                                    Cambiar Contraseña
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Continue Shopping -->
+                    <div class="mt-8 text-center">
+                        <a
+                            href="/"
+                            class="inline-flex items-center gap-2 text-brand-leather font-medium hover:underline"
                         >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-                        </svg>
-                        Seguir comprando
-                    </a>
+                            <svg
+                                class="w-4 h-4"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                            </svg>
+                            Seguir comprando
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
+
+        <!-- Modal de Devolución (Mejorado) -->
+        <div
+            id="return-modal"
+            class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden"
+        >
+            <div
+                class="bg-white rounded-2xl p-8 max-w-lg w-full mx-4 shadow-2xl max-h-[90vh] overflow-y-auto"
+            >
+                <h3
+                    class="text-xl font-bold text-gray-900 mb-2 flex items-center gap-2"
+                >
+                    📦 Solicitar Devolución
+                </h3>
+                <p class="text-gray-600 text-sm mb-6">
+                    Selecciona los productos que deseas devolver
+                </p>
+
+                <form id="return-form">
+                    <input type="hidden" id="return-order-id" />
+
+                    <!-- Productos -->
+                    <div
+                        id="return-items-container"
+                        class="space-y-3 mb-6 max-h-48 overflow-y-auto"
+                    >
+                        <!-- Se llenan dinámicamente -->
+                    </div>
+
+                    <!-- Motivo -->
+                    <div class="mb-4">
+                        <label
+                            class="block text-sm font-medium text-gray-700 mb-2"
+                            >Motivo de la devolución *</label
+                        >
+                        <select
+                            id="return-reason"
+                            required
+                            class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                        >
+                            <option value="">Selecciona un motivo</option>
+                            <option value="wrong_size">Talla incorrecta</option>
+                            <option value="not_as_expected"
+                                >No es lo que esperaba</option
+                            >
+                            <option value="defective"
+                                >Producto defectuoso</option
+                            >
+                            <option value="changed_mind"
+                                >He cambiado de opinión</option
+                            >
+                            <option value="other">Otro motivo</option>
+                        </select>
+                    </div>
+
+                    <!-- Detalles adicionales -->
+                    <div class="mb-6">
+                        <label
+                            class="block text-sm font-medium text-gray-700 mb-2"
+                            >Detalles adicionales (opcional)</label
+                        >
+                        <textarea
+                            id="return-details"
+                            rows="2"
+                            placeholder="Cuéntanos más sobre el problema..."
+                            class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                        ></textarea>
+                    </div>
+
+                    <!-- Instrucciones de Envío -->
+                    <div
+                        class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4"
+                    >
+                        <h4
+                            class="font-semibold text-blue-900 mb-2 flex items-center gap-2"
+                        >
+                            <svg
+                                class="w-5 h-5"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                                ></path>
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            </svg>
+                            Instrucciones de Envío
+                        </h4>
+                        <p class="text-blue-800 text-sm">
+                            Debes enviar los artículos en su embalaje original
+                            a:
+                            <strong class="block mt-1"
+                                >Calle de la Moda 123, Polígono Industrial,
+                                28001 Madrid</strong
+                            >
+                        </p>
+                    </div>
+
+                    <!-- Confirmación Email -->
+                    <div
+                        class="bg-green-50 border border-green-200 rounded-xl p-4 mb-4"
+                    >
+                        <h4
+                            class="font-semibold text-green-900 mb-2 flex items-center gap-2"
+                        >
+                            <svg
+                                class="w-5 h-5"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                                ></path>
+                            </svg>
+                            Confirmación
+                        </h4>
+                        <p class="text-green-800 text-sm">
+                            Recibirás un correo con la etiqueta de devolución y
+                            los pasos a seguir.
+                        </p>
+                    </div>
+
+                    <!-- Disclaimer Financiero -->
+                    <div
+                        class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6"
+                    >
+                        <h4
+                            class="font-semibold text-amber-900 mb-2 flex items-center gap-2"
+                        >
+                            <svg
+                                class="w-5 h-5"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                ></path>
+                            </svg>
+                            Información del Reembolso
+                        </h4>
+                        <p class="text-amber-800 text-sm">
+                            Una vez recibido y validado el paquete, el reembolso
+                            se procesará en tu método de pago original en un
+                            plazo de <strong>5 a 7 días hábiles</strong>.
+                        </p>
+                    </div>
+
+                    <div class="flex gap-3">
+                        <button
+                            type="button"
+                            id="cancel-return"
+                            class="flex-1 px-4 py-3 border border-gray-300 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition-colors"
+                        >
+                            Cancelar
+                        </button>
+                        <button
+                            type="submit"
+                            id="submit-return"
+                            class="flex-1 px-4 py-3 bg-orange-600 text-white font-medium rounded-xl hover:bg-orange-700 transition-colors"
+                        >
+                            Solicitar Devolución
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Modal de Cambio de Contraseña -->
+        <div
+            id="password-modal"
+            class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden"
+        >
+            <div
+                class="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl"
+            >
+                <h3
+                    class="text-xl font-bold text-gray-900 mb-2 flex items-center gap-2"
+                >
+                    <svg
+                        class="w-6 h-6 text-green-600"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                        ></path>
+                    </svg>
+                    Cambiar Contraseña
+                </h3>
+                <p class="text-gray-600 text-sm mb-6">
+                    Introduce tu nueva contraseña
+                </p>
+
+                <form id="password-form">
+                    <div class="space-y-4">
+                        <div>
+                            <label
+                                class="block text-sm font-medium text-gray-700 mb-2"
+                            >
+                                Nueva Contraseña *
+                            </label>
+                            <input
+                                type="password"
+                                id="new-password"
+                                required
+                                minlength="6"
+                                placeholder="Mínimo 6 caracteres"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-navy focus:border-brand-navy"
+                            />
+                        </div>
+
+                        <div>
+                            <label
+                                class="block text-sm font-medium text-gray-700 mb-2"
+                            >
+                                Confirmar Contraseña *
+                            </label>
+                            <input
+                                type="password"
+                                id="confirm-password"
+                                required
+                                minlength="6"
+                                placeholder="Repite la contraseña"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-navy focus:border-brand-navy"
+                            />
+                        </div>
+                    </div>
+
+                    <p
+                        id="password-error"
+                        class="hidden mt-3 text-sm text-red-600 p-3 bg-red-50 rounded-lg"
+                    >
+                    </p>
+                    <p
+                        id="password-success"
+                        class="hidden mt-3 text-sm text-green-600 p-3 bg-green-50 rounded-lg"
+                    >
+                    </p>
+
+                    <div class="flex gap-3 mt-6">
+                        <button
+                            type="button"
+                            id="cancel-password"
+                            class="flex-1 px-4 py-3 border border-gray-300 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition-colors"
+                        >
+                            Cancelar
+                        </button>
+                        <button
+                            type="submit"
+                            id="submit-password"
+                            class="flex-1 px-4 py-3 bg-brand-navy text-white font-medium rounded-xl hover:bg-brand-navy-light transition-colors"
+                        >
+                            Guardar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </section>
-</PublicLayout>
 
-<script>
-    import { createClient } from "@supabase/supabase-js";
+    <script>
+        import { createClient } from "@supabase/supabase-js";
 
-    const supabaseUrl =
-        import.meta.env.PUBLIC_SUPABASE_URL ||
-        "https://kggjqbhcvvayqwkbpwvp.supabase.co";
-    const supabaseAnonKey =
-        import.meta.env.PUBLIC_SUPABASE_ANON_KEY ||
-        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtnZ2pxYmhjdnZheXF3a2Jwd3ZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzYyNDI2NDQsImV4cCI6MjA1MTgxODY0NH0.P9eqbIFVBt2IuHnzTcCDbGb6w72xR-AQ60aKEkqJnYY";
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+        const supabaseUrl =
+            import.meta.env.PUBLIC_SUPABASE_URL ||
+            "https://kggjqbhcvvayqwkbpwvp.supabase.co";
+        const supabaseAnonKey =
+            import.meta.env.PUBLIC_SUPABASE_ANON_KEY ||
+            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtnZ2pxYmhjdnZheXF3a2Jwd3ZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzYyNDI2NDQsImV4cCI6MjA1MTgxODY0NH0.P9eqbIFVBt2IuHnzTcCDbGb6w72xR-AQ60aKEkqJnYY";
+        const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-    const loadingState = document.getElementById("loading-state");
-    const notLoggedState = document.getElementById("not-logged-state");
-    const profileContent = document.getElementById("profile-content");
+        const loadingState = document.getElementById("loading-state");
+        const notLoggedState = document.getElementById("not-logged-state");
+        const profileContent = document.getElementById("profile-content");
 
-    function formatPrice(cents: number): string {
-        return new Intl.NumberFormat("es-ES", {
-            style: "currency",
-            currency: "EUR",
-        }).format(cents / 100);
-    }
+        function formatPrice(cents: number): string {
+            return new Intl.NumberFormat("es-ES", {
+                style: "currency",
+                currency: "EUR",
+            }).format(cents / 100);
+        }
 
-    async function loadProfile() {
-        try {
-            const {
-                data: { session },
-                error,
-            } = await supabase.auth.getSession();
+        function isWithinReturnPeriod(dateStr: string): boolean {
+            const date = new Date(dateStr);
+            const now = new Date();
+            const daysDiff = Math.floor(
+                (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24),
+            );
+            return daysDiff <= 30;
+        }
 
-            console.log("Session check:", session ? "Found" : "Not found");
+        async function loadProfile() {
+            try {
+                const {
+                    data: { session },
+                    error,
+                } = await supabase.auth.getSession();
 
-            if (!session) {
+                console.log("Session check:", session ? "Found" : "Not found");
+
+                if (!session) {
+                    loadingState?.classList.add("hidden");
+                    notLoggedState?.classList.remove("hidden");
+                    return;
+                }
+
+                const user = session.user;
+                const userName =
+                    user.user_metadata?.full_name ||
+                    user.email?.split("@")[0] ||
+                    "Usuario";
+                const userEmail = user.email || "";
+                const userAvatar = user.user_metadata?.avatar_url;
+
+                // Update UI
+                document.getElementById("user-name")!.textContent = userName;
+                document.getElementById("user-email")!.textContent = userEmail;
+
+                const avatarEl = document.getElementById("user-avatar")!;
+                if (userAvatar) {
+                    avatarEl.innerHTML = `<img src="${userAvatar}" alt="${userName}" class="w-20 h-20 rounded-full object-cover border-4 border-amber-700">`;
+                } else {
+                    avatarEl.textContent = userName.charAt(0).toUpperCase();
+                }
+
+                // Show profile
+                loadingState?.classList.add("hidden");
+                profileContent?.classList.remove("hidden");
+
+                // Load orders
+                await loadOrders(userEmail);
+            } catch (error) {
+                console.error("Error loading profile:", error);
                 loadingState?.classList.add("hidden");
                 notLoggedState?.classList.remove("hidden");
-                return;
             }
-
-            const user = session.user;
-            const userName =
-                user.user_metadata?.full_name ||
-                user.email?.split("@")[0] ||
-                "Usuario";
-            const userEmail = user.email || "";
-            const userAvatar = user.user_metadata?.avatar_url;
-
-            // Update UI
-            document.getElementById("user-name")!.textContent = userName;
-            document.getElementById("user-email")!.textContent = userEmail;
-
-            const avatarEl = document.getElementById("user-avatar")!;
-            if (userAvatar) {
-                avatarEl.innerHTML = `<img src="${userAvatar}" alt="${userName}" class="w-20 h-20 rounded-full object-cover border-4 border-amber-700">`;
-            } else {
-                avatarEl.textContent = userName.charAt(0).toUpperCase();
-            }
-
-            // Show profile
-            loadingState?.classList.add("hidden");
-            profileContent?.classList.remove("hidden");
-
-            // Load orders
-            await loadOrders(userEmail);
-        } catch (error) {
-            console.error("Error loading profile:", error);
-            loadingState?.classList.add("hidden");
-            notLoggedState?.classList.remove("hidden");
         }
-    }
 
-    async function loadOrders(email: string) {
-        try {
-            const { data: orders, error } = await supabase
-                .from("orders")
-                .select("*, order_items(*)")
-                .eq("customer_email", email)
-                .order("created_at", { ascending: false });
+        async function loadOrders(email: string) {
+            try {
+                const { data: orders, error } = await supabase
+                    .from("orders")
+                    .select("*, order_items(*)")
+                    .eq("customer_email", email)
+                    .order("created_at", { ascending: false });
 
-            const ordersContainer =
-                document.getElementById("orders-container")!;
-            const ordersSummary = document.getElementById("orders-summary")!;
+                const ordersContainer =
+                    document.getElementById("orders-container")!;
+                const ordersSummary =
+                    document.getElementById("orders-summary")!;
 
-            if (error) {
-                console.error("Error loading orders:", error);
-                ordersContainer.innerHTML =
-                    '<div class="p-6 text-center text-red-600">Error al cargar pedidos</div>';
-                return;
-            }
+                if (error) {
+                    console.error("Error loading orders:", error);
+                    ordersContainer.innerHTML =
+                        '<div class="p-6 text-center text-red-600">Error al cargar pedidos</div>';
+                    return;
+                }
 
-            if (!orders || orders.length === 0) {
-                ordersSummary.textContent =
-                    "Aún no has realizado ningún pedido";
-                ordersContainer.innerHTML = `
+                if (!orders || orders.length === 0) {
+                    ordersSummary.textContent =
+                        "Aún no has realizado ningún pedido";
+                    ordersContainer.innerHTML = `
                     <div class="p-12 text-center">
                         <div class="w-20 h-20 mx-auto mb-6 bg-gray-100 rounded-full flex items-center justify-center">
                             <svg class="w-10 h-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -308,47 +683,79 @@ export const prerender = false;
                         </div>
                         <h3 class="text-lg font-semibold text-gray-900 mb-2">No tienes pedidos aún</h3>
                         <p class="text-gray-600 mb-6">¡Explora nuestra tienda y encuentra algo que te encante!</p>
-                        <a href="/" class="inline-flex items-center gap-2 px-6 py-3 bg-blue-900 text-white font-semibold rounded-xl hover:bg-blue-800 transition-colors">
+                        <a href="/" class="inline-flex items-center gap-2 px-6 py-3 bg-brand-navy text-white font-semibold rounded-xl hover:bg-brand-navy-light transition-colors">
                             Ir a la Tienda
                         </a>
                     </div>
                 `;
-                return;
-            }
+                    return;
+                }
 
-            ordersSummary.textContent = `Tienes ${orders.length} pedido${orders.length > 1 ? "s" : ""}`;
+                ordersSummary.textContent = `Tienes ${orders.length} pedido${orders.length > 1 ? "s" : ""}`;
 
-            const statusLabels: Record<string, string> = {
-                pending: "Pendiente de Pago",
-                paid: "Pagado",
-                ready_for_pickup: "Listo para Recoger",
-                shipped: "Enviado",
-                delivered: "Entregado",
-                cancelled: "Cancelado",
-            };
+                const statusLabels: Record<string, string> = {
+                    pending: "Pendiente de Pago",
+                    paid: "Pagado",
+                    ready_for_pickup: "Listo para Recoger",
+                    shipped: "Enviado",
+                    delivered: "Entregado",
+                    cancelled: "Cancelado",
+                };
 
-            const statusColors: Record<string, string> = {
-                pending: "bg-yellow-100 text-yellow-800",
-                paid: "bg-blue-100 text-blue-800",
-                ready_for_pickup: "bg-orange-100 text-orange-800",
-                shipped: "bg-purple-100 text-purple-800",
-                delivered: "bg-green-100 text-green-800",
-                cancelled: "bg-red-100 text-red-800",
-            };
+                const statusColors: Record<string, string> = {
+                    pending: "bg-yellow-100 text-yellow-800",
+                    paid: "bg-blue-100 text-blue-800",
+                    ready_for_pickup: "bg-orange-100 text-orange-800",
+                    shipped: "bg-purple-100 text-purple-800",
+                    delivered: "bg-green-100 text-green-800",
+                    cancelled: "bg-red-100 text-red-800",
+                };
 
-            ordersContainer.innerHTML = orders
-                .map(
-                    (order) => `
+                // Obtener devoluciones activas para estos pedidos
+                const orderIds = orders.map((o) => o.id);
+                const { data: activeReturns } = await supabase
+                    .from("returns")
+                    .select("order_id")
+                    .in("order_id", orderIds)
+                    .not("status", "eq", "rejected");
+
+                const ordersWithActiveReturn = new Set(
+                    (activeReturns || []).map((r) => r.order_id),
+                );
+
+                ordersContainer.innerHTML = orders
+                    .map((order) => {
+                        // Calcular si puede devolver (entregado, dentro de 30 días, y sin devolución activa)
+                        const canReturn =
+                            order.status === "delivered" &&
+                            isWithinReturnPeriod(order.updated_at) &&
+                            !ordersWithActiveReturn.has(order.id);
+
+                        // Mostrar estado de devolución si existe
+                        const hasActiveReturn = ordersWithActiveReturn.has(
+                            order.id,
+                        );
+
+                        return `
                 <div class="p-6 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0">
                     <div class="flex items-start justify-between gap-4 mb-4">
                         <div>
-                            <div class="flex items-center gap-3 mb-1">
-                                <span class="font-mono font-bold text-amber-700">
+                            <div class="flex items-center gap-3 mb-1 flex-wrap">
+                                <span class="font-mono font-bold text-brand-navy">
                                     #${order.id.toString().padStart(5, "0")}
                                 </span>
                                 <span class="px-3 py-1 text-xs font-semibold rounded-full ${statusColors[order.status] || "bg-gray-100 text-gray-800"}">
                                     ${statusLabels[order.status] || order.status}
                                 </span>
+                                ${
+                                    hasActiveReturn
+                                        ? `
+                                    <span class="px-3 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-700">
+                                        🔄 Devolución en proceso
+                                    </span>
+                                `
+                                        : ""
+                                }
                             </div>
                             <p class="text-sm text-gray-500">
                                 ${new Date(order.created_at).toLocaleDateString(
@@ -397,160 +804,680 @@ export const prerender = false;
                         }
                     </div>
 
-                    <div class="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
+                    <div class="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between gap-2 flex-wrap">
                         <p class="text-sm text-gray-500">
                             <span class="font-medium text-gray-600">Envío a:</span> ${order.customer_address}, ${order.customer_postal_code} ${order.customer_city}
                         </p>
-                        <a 
-                            href="/pedido/${order.id}" 
-                            class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-amber-700 bg-amber-50 rounded-lg hover:bg-amber-100 transition-colors"
-                        >
-                            Ver detalles
-                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                            </svg>
-                        </a>
+                        <div class="flex items-center gap-2">
+                            ${
+                                canReturn
+                                    ? `
+                                <button 
+                                    type="button"
+                                    class="return-btn inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-orange-700 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors"
+                                    data-order-id="${order.id}"
+                                    data-order-items='${JSON.stringify(order.order_items).replace(/'/g, "&#39;")}'
+                                >
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                                    </svg>
+                                    Solicitar Devolución
+                                </button>
+                            `
+                                    : ""
+                            }
+                            <a 
+                                href="/pedido/${order.id}" 
+                                class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-brand-navy bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                            >
+                                Ver detalles
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                </svg>
+                            </a>
+                        </div>
                     </div>
                 </div>
-            `,
-                )
-                .join("");
-        } catch (error) {
-            console.error("Error loading orders:", error);
+            `;
+                    })
+                    .join("");
+            } catch (error) {
+                console.error("Error loading orders:", error);
+            }
         }
-    }
 
-    // Logout handler
-    document
-        .getElementById("logout-btn")
-        ?.addEventListener("click", async () => {
-            const btn = document.getElementById(
-                "logout-btn",
-            ) as HTMLButtonElement;
-            btn.disabled = true;
-            btn.textContent = "Cerrando sesión...";
+        // Logout handler
+        document
+            .getElementById("logout-btn")
+            ?.addEventListener("click", async () => {
+                const btn = document.getElementById(
+                    "logout-btn",
+                ) as HTMLButtonElement;
+                btn.disabled = true;
+                btn.textContent = "Cerrando sesión...";
 
-            await supabase.auth.signOut();
-            window.location.href = "/";
-        });
+                await supabase.auth.signOut();
+                window.location.href = "/";
+            });
 
-    // Newsletter management
-    let userEmail = "";
-    let userName = "";
+        // Newsletter management
+        let userEmail = "";
+        let userName = "";
+        let userId = "";
 
-    async function loadNewsletterStatus() {
-        const toggle = document.getElementById(
-            "newsletter-toggle",
-        ) as HTMLInputElement;
-        const statusText = document.getElementById("newsletter-status");
+        // Shipping Address Management
+        async function loadShippingAddress() {
+            const container = document.getElementById(
+                "shipping-address-container",
+            );
+            if (!container || !userId) return;
 
-        if (!userEmail) return;
+            try {
+                const { data: addresses, error } = await supabase
+                    .from("user_shipping_addresses")
+                    .select("*")
+                    .eq("user_id", userId)
+                    .eq("is_default", true)
+                    .single();
 
-        try {
-            const { data } = await supabase
-                .from("newsletter_subscribers")
-                .select("is_active")
-                .eq("email", userEmail)
-                .single();
+                if (error && error.code !== "PGRST116") {
+                    throw error;
+                }
 
-            if (data) {
-                toggle.checked = data.is_active;
-                statusText!.textContent = data.is_active
-                    ? "Estás suscrito al newsletter"
-                    : "No estás suscrito";
-            } else {
+                const hasAddress = addresses !== null;
+
+                container.innerHTML = hasAddress
+                    ? `
+                <div class="space-y-4">
+                    <div class="p-4 bg-gray-50 rounded-xl">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <p class="font-medium text-gray-900">${addresses.full_name}</p>
+                                <p class="text-sm text-gray-600 mt-1">${addresses.address}</p>
+                                <p class="text-sm text-gray-600">${addresses.postal_code} ${addresses.city}</p>
+                                <p class="text-sm text-gray-500 mt-1">Tel: ${addresses.phone}</p>
+                            </div>
+                            <button
+                                id="edit-address-btn"
+                                class="p-2 text-brand-navy hover:bg-brand-navy/10 rounded-lg transition-colors"
+                                title="Editar dirección"
+                            >
+                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-500">✓ Esta dirección se usará automáticamente en el checkout</p>
+                </div>
+            `
+                    : `
+                <div class="text-center py-6">
+                    <div class="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+                        <svg class="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                    </div>
+                    <p class="text-gray-600 mb-4">No tienes una dirección de envío guardada</p>
+                    <button
+                        id="add-address-btn"
+                        class="px-6 py-2.5 bg-brand-navy text-white font-medium rounded-xl hover:bg-brand-navy-light transition-colors"
+                    >
+                        Agregar Dirección
+                    </button>
+                </div>
+            `;
+
+                // Agregar event listeners
+                if (hasAddress) {
+                    document
+                        .getElementById("edit-address-btn")
+                        ?.addEventListener("click", () =>
+                            showAddressForm(addresses),
+                        );
+                } else {
+                    document
+                        .getElementById("add-address-btn")
+                        ?.addEventListener("click", () =>
+                            showAddressForm(null),
+                        );
+                }
+            } catch (error) {
+                console.error("Error loading shipping address:", error);
+                container.innerHTML = `
+                <div class="text-center py-6 text-red-600">
+                    <p>Error al cargar la dirección de envío</p>
+                </div>
+            `;
+            }
+        }
+
+        function showAddressForm(existingAddress: any = null) {
+            const container = document.getElementById(
+                "shipping-address-container",
+            );
+            if (!container) return;
+
+            container.innerHTML = `
+            <form id="address-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Nombre completo</label>
+                    <input
+                        type="text"
+                        id="input-full-name"
+                        value="${existingAddress?.full_name || ""}"
+                        required
+                        class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-brand-navy focus:outline-none focus:ring-2 focus:ring-brand-navy/20"
+                    />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Dirección</label>
+                    <input
+                        type="text"
+                        id="input-address"
+                        value="${existingAddress?.address || ""}"
+                        required
+                        class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-brand-navy focus:outline-none focus:ring-2 focus:ring-brand-navy/20"
+                    />
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Código Postal</label>
+                        <input
+                            type="text"
+                            id="input-postal-code"
+                            value="${existingAddress?.postal_code || ""}"
+                            required
+                            class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-brand-navy focus:outline-none focus:ring-2 focus:ring-brand-navy/20"
+                        />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Ciudad</label>
+                        <input
+                            type="text"
+                            id="input-city"
+                            value="${existingAddress?.city || ""}"
+                            required
+                            class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-brand-navy focus:outline-none focus:ring-2 focus:ring-brand-navy/20"
+                        />
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
+                    <input
+                        type="tel"
+                        id="input-phone"
+                        value="${existingAddress?.phone || ""}"
+                        required
+                        class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-brand-navy focus:outline-none focus:ring-2 focus:ring-brand-navy/20"
+                    />
+                </div>
+                <div class="flex gap-3 pt-2">
+                    <button
+                        type="submit"
+                        class="flex-1 px-6 py-2.5 bg-brand-navy text-white font-medium rounded-xl hover:bg-brand-navy-light transition-colors"
+                    >
+                        Guardar Dirección
+                    </button>
+                    <button
+                        type="button"
+                        id="cancel-address-btn"
+                        class="px-6 py-2.5 border border-gray-300 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition-colors"
+                    >
+                        Cancelar
+                    </button>
+                </div>
+            </form>
+        `;
+
+            // Event listeners del formulario
+            document
+                .getElementById("address-form")
+                ?.addEventListener("submit", async (e) => {
+                    e.preventDefault();
+                    await saveShippingAddress(existingAddress?.id);
+                });
+
+            document
+                .getElementById("cancel-address-btn")
+                ?.addEventListener("click", () => {
+                    loadShippingAddress();
+                });
+        }
+
+        async function saveShippingAddress(existingId: number | null = null) {
+            const fullName = (
+                document.getElementById("input-full-name") as HTMLInputElement
+            ).value;
+            const address = (
+                document.getElementById("input-address") as HTMLInputElement
+            ).value;
+            const postalCode = (
+                document.getElementById("input-postal-code") as HTMLInputElement
+            ).value;
+            const city = (
+                document.getElementById("input-city") as HTMLInputElement
+            ).value;
+            const phone = (
+                document.getElementById("input-phone") as HTMLInputElement
+            ).value;
+
+            try {
+                const addressData = {
+                    user_id: userId,
+                    full_name: fullName,
+                    address: address,
+                    postal_code: postalCode,
+                    city: city,
+                    phone: phone,
+                    is_default: true,
+                };
+
+                let error;
+                if (existingId) {
+                    ({ error } = await supabase
+                        .from("user_shipping_addresses")
+                        .update(addressData)
+                        .eq("id", existingId));
+                } else {
+                    ({ error } = await supabase
+                        .from("user_shipping_addresses")
+                        .insert(addressData));
+                }
+
+                if (error) throw error;
+
+                await loadShippingAddress();
+            } catch (error) {
+                console.error("Error saving shipping address:", error);
+                alert(
+                    "Error al guardar la dirección. Por favor, intenta de nuevo.",
+                );
+            }
+        }
+
+        async function loadNewsletterStatus() {
+            const toggle = document.getElementById(
+                "newsletter-toggle",
+            ) as HTMLInputElement;
+            const statusText = document.getElementById("newsletter-status");
+
+            if (!userEmail) return;
+
+            try {
+                const { data } = await supabase
+                    .from("newsletter_subscribers")
+                    .select("is_active")
+                    .eq("email", userEmail)
+                    .single();
+
+                if (data) {
+                    toggle.checked = data.is_active;
+                    statusText!.textContent = data.is_active
+                        ? "Estás suscrito al newsletter"
+                        : "No estás suscrito";
+                } else {
+                    toggle.checked = false;
+                    statusText!.textContent = "No estás suscrito";
+                }
+                toggle.disabled = false;
+            } catch {
+                toggle.disabled = false;
                 toggle.checked = false;
                 statusText!.textContent = "No estás suscrito";
             }
-            toggle.disabled = false;
-        } catch {
-            toggle.disabled = false;
-            toggle.checked = false;
-            statusText!.textContent = "No estás suscrito";
         }
-    }
 
-    // Toggle newsletter subscription
-    document
-        .getElementById("newsletter-toggle")
-        ?.addEventListener("change", async (e) => {
-            const toggle = e.target as HTMLInputElement;
-            const statusText = document.getElementById("newsletter-status");
-            const messageEl = document.getElementById("newsletter-message");
+        // Toggle newsletter subscription
+        document
+            .getElementById("newsletter-toggle")
+            ?.addEventListener("change", async (e) => {
+                const toggle = e.target as HTMLInputElement;
+                const statusText = document.getElementById("newsletter-status");
+                const messageEl = document.getElementById("newsletter-message");
 
-            toggle.disabled = true;
+                toggle.disabled = true;
+
+                try {
+                    if (toggle.checked) {
+                        // Suscribir
+                        const { error } = await supabase
+                            .from("newsletter_subscribers")
+                            .upsert(
+                                {
+                                    email: userEmail,
+                                    name: userName,
+                                    is_active: true,
+                                    unsubscribed_at: null,
+                                },
+                                { onConflict: "email" },
+                            );
+
+                        if (error) throw error;
+
+                        statusText!.textContent =
+                            "Estás suscrito al newsletter";
+                        messageEl!.textContent =
+                            "✅ ¡Te has suscrito al newsletter! Recibirás noticias y ofertas exclusivas.";
+                        messageEl!.className =
+                            "mt-3 text-sm p-3 rounded-lg bg-green-50 text-green-700";
+                    } else {
+                        // Desuscribir
+                        const { error } = await supabase
+                            .from("newsletter_subscribers")
+                            .update({
+                                is_active: false,
+                                unsubscribed_at: new Date().toISOString(),
+                            })
+                            .eq("email", userEmail);
+
+                        if (error) throw error;
+
+                        statusText!.textContent = "No estás suscrito";
+                        messageEl!.textContent =
+                            "Has cancelado tu suscripción al newsletter.";
+                        messageEl!.className =
+                            "mt-3 text-sm p-3 rounded-lg bg-gray-50 text-gray-700";
+                    }
+                    messageEl!.classList.remove("hidden");
+                    setTimeout(() => messageEl!.classList.add("hidden"), 5000);
+                } catch (error) {
+                    console.error("Newsletter error:", error);
+                    toggle.checked = !toggle.checked;
+                    messageEl!.textContent =
+                        "Error al actualizar la suscripción";
+                    messageEl!.className =
+                        "mt-3 text-sm p-3 rounded-lg bg-red-50 text-red-700";
+                    messageEl!.classList.remove("hidden");
+                } finally {
+                    toggle.disabled = false;
+                }
+            });
+
+        // Modified loadProfile to also load newsletter and shipping address
+        const originalLoadProfile = loadProfile;
+        async function loadProfileWithAll() {
+            const {
+                data: { session },
+            } = await supabase.auth.getSession();
+            if (session) {
+                userEmail = session.user.email || "";
+                userId = session.user.id || "";
+                userName =
+                    session.user.user_metadata?.name ||
+                    session.user.email?.split("@")[0] ||
+                    "";
+            }
+            await originalLoadProfile();
+            await loadNewsletterStatus();
+            await loadShippingAddress();
+        }
+
+        // Load profile on page load
+        loadProfileWithAll();
+
+        // =====================================================
+        // RETURN MODAL HANDLERS
+        // =====================================================
+        const returnModal = document.getElementById("return-modal");
+        const returnForm = document.getElementById("return-form");
+        const cancelReturn = document.getElementById("cancel-return");
+        const returnItemsContainer = document.getElementById(
+            "return-items-container",
+        );
+
+        function setupReturnButtons() {
+            document.querySelectorAll(".return-btn").forEach((btn) => {
+                btn.addEventListener("click", (e) => {
+                    const button = e.currentTarget as HTMLButtonElement;
+                    const orderId = button.dataset.orderId;
+                    const orderItems = JSON.parse(
+                        button.dataset.orderItems || "[]",
+                    );
+
+                    openReturnModal(orderId!, orderItems);
+                });
+            });
+        }
+
+        function openReturnModal(orderId: string, items: any[]) {
+            (
+                document.getElementById("return-order-id") as HTMLInputElement
+            ).value = orderId;
+
+            // Generar checkboxes de productos
+            if (returnItemsContainer) {
+                returnItemsContainer.innerHTML = items
+                    .map(
+                        (item: any) => `
+                <label class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors">
+                    <input 
+                        type="checkbox" 
+                        name="return-item" 
+                        value="${item.id}"
+                        data-quantity="${item.quantity}"
+                        checked
+                        class="w-5 h-5 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
+                    />
+                    <div class="flex-1">
+                        <p class="font-medium text-gray-900">${item.product_name}</p>
+                        <p class="text-sm text-gray-500">Talla: ${item.size || "Única"} · Cantidad: ${item.quantity}</p>
+                    </div>
+                </label>
+            `,
+                    )
+                    .join("");
+            }
+
+            // Reset form
+            (
+                document.getElementById("return-reason") as HTMLSelectElement
+            ).value = "";
+            (
+                document.getElementById("return-details") as HTMLTextAreaElement
+            ).value = "";
+
+            returnModal?.classList.remove("hidden");
+        }
+
+        cancelReturn?.addEventListener("click", () =>
+            returnModal?.classList.add("hidden"),
+        );
+        returnModal?.addEventListener("click", (e) => {
+            if (e.target === returnModal) returnModal.classList.add("hidden");
+        });
+
+        returnForm?.addEventListener("submit", async (e) => {
+            e.preventDefault();
+
+            const orderId = (
+                document.getElementById("return-order-id") as HTMLInputElement
+            ).value;
+            const reason = (
+                document.getElementById("return-reason") as HTMLSelectElement
+            ).value;
+            const details = (
+                document.getElementById("return-details") as HTMLTextAreaElement
+            ).value;
+            const submitBtn = document.getElementById(
+                "submit-return",
+            ) as HTMLButtonElement;
+
+            // Recoger items seleccionados
+            const selectedItems: any[] = [];
+            document
+                .querySelectorAll('input[name="return-item"]:checked')
+                .forEach((cb: any) => {
+                    selectedItems.push({
+                        order_item_id: parseInt(cb.value),
+                        quantity: parseInt(cb.dataset.quantity),
+                    });
+                });
+
+            if (selectedItems.length === 0) {
+                alert("Selecciona al menos un producto para devolver");
+                return;
+            }
+
+            if (!reason) {
+                alert("Selecciona un motivo para la devolución");
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = "Procesando...";
 
             try {
-                if (toggle.checked) {
-                    // Suscribir
-                    const { error } = await supabase
-                        .from("newsletter_subscribers")
-                        .upsert(
-                            {
-                                email: userEmail,
-                                name: userName,
-                                is_active: true,
-                                unsubscribed_at: null,
-                            },
-                            { onConflict: "email" },
-                        );
+                const response = await fetch("/api/returns/create-return", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        orderId: parseInt(orderId),
+                        items: selectedItems,
+                        reason,
+                        reasonDetails: details || null,
+                    }),
+                });
 
-                    if (error) throw error;
+                const result = await response.json();
 
-                    statusText!.textContent = "Estás suscrito al newsletter";
-                    messageEl!.textContent =
-                        "✅ ¡Te has suscrito al newsletter! Recibirás noticias y ofertas exclusivas.";
-                    messageEl!.className =
-                        "mt-3 text-sm p-3 rounded-lg bg-green-50 text-green-700";
+                if (result.success) {
+                    returnModal?.classList.add("hidden");
+                    alert(
+                        `✅ ${result.message}\n\nNúmero de devolución: ${result.returnNumber}`,
+                    );
+                    window.location.reload();
                 } else {
-                    // Desuscribir
-                    const { error } = await supabase
-                        .from("newsletter_subscribers")
-                        .update({
-                            is_active: false,
-                            unsubscribed_at: new Date().toISOString(),
-                        })
-                        .eq("email", userEmail);
-
-                    if (error) throw error;
-
-                    statusText!.textContent = "No estás suscrito";
-                    messageEl!.textContent =
-                        "Has cancelado tu suscripción al newsletter.";
-                    messageEl!.className =
-                        "mt-3 text-sm p-3 rounded-lg bg-gray-50 text-gray-700";
+                    throw new Error(result.error);
                 }
-                messageEl!.classList.remove("hidden");
-                setTimeout(() => messageEl!.classList.add("hidden"), 5000);
             } catch (error) {
-                console.error("Newsletter error:", error);
-                toggle.checked = !toggle.checked;
-                messageEl!.textContent = "Error al actualizar la suscripción";
-                messageEl!.className =
-                    "mt-3 text-sm p-3 rounded-lg bg-red-50 text-red-700";
-                messageEl!.classList.remove("hidden");
+                alert("Error: " + (error as Error).message);
             } finally {
-                toggle.disabled = false;
+                submitBtn.disabled = false;
+                submitBtn.textContent = "Solicitar Devolución";
             }
         });
 
-    // Modified loadProfile to also load newsletter
-    const originalLoadProfile = loadProfile;
-    async function loadProfileWithNewsletter() {
-        const {
-            data: { session },
-        } = await supabase.auth.getSession();
-        if (session) {
-            userEmail = session.user.email || "";
-            userName =
-                session.user.user_metadata?.name ||
-                session.user.email?.split("@")[0] ||
-                "";
+        // Observer para añadir handlers cuando se carguen los pedidos
+        const ordersContainer = document.getElementById("orders-container");
+        if (ordersContainer) {
+            const observer = new MutationObserver(() => {
+                setupReturnButtons();
+            });
+            observer.observe(ordersContainer, { childList: true });
         }
-        await originalLoadProfile();
-        await loadNewsletterStatus();
-    }
 
-    // Load profile on page load
-    loadProfileWithNewsletter();
-</script>
+        // =====================================================
+        // PASSWORD CHANGE MODAL HANDLERS
+        // =====================================================
+        const passwordModal = document.getElementById("password-modal");
+        const passwordForm = document.getElementById("password-form");
+        const changePasswordBtn = document.getElementById(
+            "change-password-btn",
+        );
+        const cancelPasswordBtn = document.getElementById("cancel-password");
+        const passwordError = document.getElementById("password-error");
+        const passwordSuccess = document.getElementById("password-success");
+
+        changePasswordBtn?.addEventListener("click", () => {
+            // Reset form
+            (
+                document.getElementById("new-password") as HTMLInputElement
+            ).value = "";
+            (
+                document.getElementById("confirm-password") as HTMLInputElement
+            ).value = "";
+            passwordError?.classList.add("hidden");
+            passwordSuccess?.classList.add("hidden");
+            passwordModal?.classList.remove("hidden");
+        });
+
+        cancelPasswordBtn?.addEventListener("click", () => {
+            passwordModal?.classList.add("hidden");
+        });
+
+        passwordModal?.addEventListener("click", (e) => {
+            if (e.target === passwordModal) {
+                passwordModal.classList.add("hidden");
+            }
+        });
+
+        passwordForm?.addEventListener("submit", async (e) => {
+            e.preventDefault();
+
+            const newPassword = (
+                document.getElementById("new-password") as HTMLInputElement
+            ).value;
+            const confirmPassword = (
+                document.getElementById("confirm-password") as HTMLInputElement
+            ).value;
+            const submitBtn = document.getElementById(
+                "submit-password",
+            ) as HTMLButtonElement;
+
+            passwordError?.classList.add("hidden");
+            passwordSuccess?.classList.add("hidden");
+
+            // Validación cliente
+            if (newPassword !== confirmPassword) {
+                if (passwordError) {
+                    passwordError.textContent = "Las contraseñas no coinciden";
+                    passwordError.classList.remove("hidden");
+                }
+                return;
+            }
+
+            if (newPassword.length < 6) {
+                if (passwordError) {
+                    passwordError.textContent =
+                        "La contraseña debe tener al menos 6 caracteres";
+                    passwordError.classList.remove("hidden");
+                }
+                return;
+            }
+
+            // Enviar a API
+            submitBtn.disabled = true;
+            submitBtn.textContent = "Guardando...";
+
+            try {
+                const response = await fetch("/api/auth/change-password", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ newPassword, confirmPassword }),
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    if (passwordSuccess) {
+                        passwordSuccess.textContent =
+                            "✅ Contraseña actualizada correctamente";
+                        passwordSuccess.classList.remove("hidden");
+                    }
+
+                    // Cerrar modal después de 2 segundos
+                    setTimeout(() => {
+                        passwordModal?.classList.add("hidden");
+                    }, 2000);
+                } else {
+                    if (passwordError) {
+                        passwordError.textContent =
+                            result.error || "Error al cambiar la contraseña";
+                        passwordError.classList.remove("hidden");
+                    }
+                }
+            } catch (error) {
+                if (passwordError) {
+                    passwordError.textContent =
+                        "Error de conexión. Inténtalo de nuevo.";
+                    passwordError.classList.remove("hidden");
+                }
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = "Guardar";
+            }
+        });
+    </script>
+</PublicLayout>

@@ -1,0 +1,668 @@
+---
+import AdminLayout from "../../layouts/AdminLayout.astro";
+import { supabase, isSupabaseConfigured } from "../../lib/supabase";
+
+// Verificar si Supabase está configurado
+if (!isSupabaseConfigured) {
+    return Astro.redirect("/admin/login?error=config");
+}
+
+// Obtener usuarios desde auth.users (requiere service_role key)
+// Como alternativa, obtenemos los emails únicos de los pedidos
+const { data: ordersData } = await supabase
+    .from("orders")
+    .select("customer_email, customer_name, customer_phone, created_at")
+    .order("created_at", { ascending: false });
+
+// Agrupar por email para obtener usuarios únicos con estadísticas
+const usersMap = new Map<
+    string,
+    {
+        email: string;
+        name: string;
+        phone: string | null;
+        ordersCount: number;
+        lastOrder: string;
+        firstOrder: string;
+    }
+>();
+
+if (ordersData) {
+    for (const order of ordersData) {
+        const existing = usersMap.get(order.customer_email);
+        if (existing) {
+            existing.ordersCount++;
+            // El primer pedido en la iteración es el más reciente (ordenado desc)
+            if (!existing.lastOrder) {
+                existing.lastOrder = order.created_at;
+            }
+            existing.firstOrder = order.created_at;
+        } else {
+            usersMap.set(order.customer_email, {
+                email: order.customer_email,
+                name: order.customer_name,
+                phone: order.customer_phone,
+                ordersCount: 1,
+                lastOrder: order.created_at,
+                firstOrder: order.created_at,
+            });
+        }
+    }
+}
+
+const users = Array.from(usersMap.values()).sort(
+    (a, b) => new Date(b.lastOrder).getTime() - new Date(a.lastOrder).getTime(),
+);
+
+// Obtener suscriptores de newsletter
+const { data: subscribers } = await supabase
+    .from("newsletter_subscribers")
+    .select("email, subscribed_at")
+    .order("subscribed_at", { ascending: false });
+
+const subscriberEmails = new Set(subscribers?.map((s) => s.email) || []);
+
+// Función para formatear fecha
+function formatDate(dateStr: string): string {
+    return new Date(dateStr).toLocaleDateString("es-ES", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+    });
+}
+---
+
+<AdminLayout title="Gestión de Usuarios">
+    <div class="page-header">
+        <h1>👥 Gestión de Usuarios</h1>
+        <p>Clientes que han realizado pedidos en la tienda</p>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon blue">👥</div>
+            <div class="stat-content">
+                <span class="stat-number">{users.length}</span>
+                <span class="stat-label">Clientes Únicos</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon green">📦</div>
+            <div class="stat-content">
+                <span class="stat-number">{ordersData?.length || 0}</span>
+                <span class="stat-label">Pedidos Totales</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon purple">✉️</div>
+            <div class="stat-content">
+                <span class="stat-number">{subscribers?.length || 0}</span>
+                <span class="stat-label">Suscriptores Newsletter</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon gold">⭐</div>
+            <div class="stat-content">
+                <span class="stat-number"
+                    >{users.filter((u) => u.ordersCount >= 2).length}</span
+                >
+                <span class="stat-label">Clientes Recurrentes</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card filters-card">
+        <div class="filters">
+            <div class="search-box">
+                <input
+                    type="text"
+                    id="search-input"
+                    placeholder="Buscar por nombre o email..."
+                />
+            </div>
+            <div class="filter-buttons">
+                <button class="filter-btn active" data-filter="all"
+                    >Todos</button
+                >
+                <button class="filter-btn" data-filter="recurring"
+                    >Recurrentes (2+)</button
+                >
+                <button class="filter-btn" data-filter="newsletter"
+                    >Suscriptores</button
+                >
+            </div>
+        </div>
+    </div>
+
+    <!-- Lista de usuarios -->
+    <div class="card">
+        <h2>📋 Lista de Clientes ({users.length})</h2>
+
+        {
+            users.length === 0 ? (
+                <div class="empty-state">
+                    <p>No hay clientes registrados aún</p>
+                </div>
+            ) : (
+                <div class="users-table-wrapper">
+                    <table class="users-table" id="users-table">
+                        <thead>
+                            <tr>
+                                <th>Cliente</th>
+                                <th>Email</th>
+                                <th>Teléfono</th>
+                                <th>Pedidos</th>
+                                <th>Último Pedido</th>
+                                <th>Newsletter</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {users.map((user) => (
+                                <tr
+                                    data-email={user.email.toLowerCase()}
+                                    data-name={user.name.toLowerCase()}
+                                    data-recurring={
+                                        user.ordersCount >= 2 ? "true" : "false"
+                                    }
+                                    data-newsletter={
+                                        subscriberEmails.has(user.email)
+                                            ? "true"
+                                            : "false"
+                                    }
+                                >
+                                    <td class="user-cell">
+                                        <div class="user-avatar">
+                                            {user.name.charAt(0).toUpperCase()}
+                                        </div>
+                                        <div class="user-info">
+                                            <span class="user-name">
+                                                {user.name}
+                                            </span>
+                                            {user.ordersCount >= 3 && (
+                                                <span class="vip-badge">
+                                                    ⭐ VIP
+                                                </span>
+                                            )}
+                                        </div>
+                                    </td>
+                                    <td class="email-cell">{user.email}</td>
+                                    <td>{user.phone || "—"}</td>
+                                    <td>
+                                        <span
+                                            class={`orders-badge ${user.ordersCount >= 2 ? "recurring" : ""}`}
+                                        >
+                                            {user.ordersCount}{" "}
+                                            {user.ordersCount === 1
+                                                ? "pedido"
+                                                : "pedidos"}
+                                        </span>
+                                    </td>
+                                    <td>{formatDate(user.lastOrder)}</td>
+                                    <td>
+                                        {subscriberEmails.has(user.email) ? (
+                                            <span class="status-badge subscribed">
+                                                ✓ Suscrito
+                                            </span>
+                                        ) : (
+                                            <span class="status-badge not-subscribed">
+                                                No suscrito
+                                            </span>
+                                        )}
+                                    </td>
+                                    <td class="actions-cell">
+                                        <a
+                                            href={`/admin/pedidos?email=${encodeURIComponent(user.email)}`}
+                                            class="btn btn-sm btn-secondary"
+                                        >
+                                            Ver Pedidos
+                                        </a>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )
+        }
+    </div>
+
+    <!-- Suscriptores sin compras -->
+    {
+        subscribers && subscribers.length > 0 && (
+            <div class="card">
+                <h2>📧 Suscriptores sin Compras</h2>
+                <p class="section-description">
+                    Personas suscritas al newsletter que aún no han realizado
+                    ninguna compra.
+                </p>
+
+                <div class="subscribers-grid">
+                    {subscribers
+                        .filter((s) => !usersMap.has(s.email))
+                        .slice(0, 20)
+                        .map((subscriber) => (
+                            <div class="subscriber-card">
+                                <span class="subscriber-email">
+                                    {subscriber.email}
+                                </span>
+                                <span class="subscriber-date">
+                                    Desde {formatDate(subscriber.subscribed_at)}
+                                </span>
+                            </div>
+                        ))}
+                    {subscribers.filter((s) => !usersMap.has(s.email)).length >
+                        20 && (
+                        <div class="more-subscribers">
+                            +
+                            {subscribers.filter((s) => !usersMap.has(s.email))
+                                .length - 20}{" "}
+                            más
+                        </div>
+                    )}
+                </div>
+            </div>
+        )
+    }
+</AdminLayout>
+
+<style>
+    .page-header {
+        margin-bottom: 2rem;
+    }
+
+    .page-header h1 {
+        font-size: 2rem;
+        color: var(--navy);
+        margin: 0 0 0.5rem 0;
+    }
+
+    .page-header p {
+        color: #6b7280;
+        margin: 0;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.25rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .stat-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+    }
+
+    .stat-icon.blue {
+        background: #dbeafe;
+    }
+    .stat-icon.green {
+        background: #d1fae5;
+    }
+    .stat-icon.purple {
+        background: #ede9fe;
+    }
+    .stat-icon.gold {
+        background: #fef3c7;
+    }
+
+    .stat-content {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .stat-number {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: var(--navy);
+    }
+
+    .stat-label {
+        font-size: 0.85rem;
+        color: #6b7280;
+    }
+
+    .card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .card h2 {
+        font-size: 1.25rem;
+        color: var(--navy);
+        margin: 0 0 1.5rem 0;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .filters-card {
+        padding: 1rem 1.5rem;
+    }
+
+    .filters {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .search-box {
+        flex: 1;
+        min-width: 250px;
+    }
+
+    .search-box input {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 0.95rem;
+    }
+
+    .search-box input:focus {
+        outline: none;
+        border-color: var(--navy);
+        box-shadow: 0 0 0 3px rgba(26, 39, 68, 0.1);
+    }
+
+    .filter-buttons {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .filter-btn {
+        padding: 0.5rem 1rem;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        background: white;
+        color: #6b7280;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .filter-btn:hover {
+        border-color: var(--navy);
+        color: var(--navy);
+    }
+
+    .filter-btn.active {
+        background: var(--navy);
+        border-color: var(--navy);
+        color: white;
+    }
+
+    .users-table-wrapper {
+        overflow-x: auto;
+    }
+
+    .users-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .users-table th {
+        padding: 1rem;
+        text-align: left;
+        font-weight: 600;
+        color: #374151;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        background: #f9fafb;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .users-table td {
+        padding: 1rem;
+        border-bottom: 1px solid #e5e7eb;
+        vertical-align: middle;
+    }
+
+    .users-table tr:hover {
+        background: #f9fafb;
+    }
+
+    .user-cell {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .user-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: var(--navy);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        font-size: 1rem;
+    }
+
+    .user-info {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .user-name {
+        font-weight: 600;
+        color: var(--navy);
+    }
+
+    .vip-badge {
+        font-size: 0.7rem;
+        color: #d97706;
+        background: #fef3c7;
+        padding: 2px 6px;
+        border-radius: 10px;
+        margin-top: 2px;
+        display: inline-block;
+        width: fit-content;
+    }
+
+    .email-cell {
+        color: #6b7280;
+        font-size: 0.9rem;
+    }
+
+    .orders-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        background: #f3f4f6;
+        color: #6b7280;
+    }
+
+    .orders-badge.recurring {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    .status-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 500;
+    }
+
+    .status-badge.subscribed {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    .status-badge.not-subscribed {
+        background: #f3f4f6;
+        color: #9ca3af;
+    }
+
+    .btn {
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        border: none;
+        font-size: 0.85rem;
+        text-decoration: none;
+        transition: all 0.2s;
+    }
+
+    .btn-secondary {
+        background: #f3f4f6;
+        color: #374151;
+    }
+
+    .btn-secondary:hover {
+        background: #e5e7eb;
+    }
+
+    .btn-sm {
+        padding: 0.4rem 0.75rem;
+        font-size: 0.8rem;
+    }
+
+    .section-description {
+        color: #6b7280;
+        margin: -1rem 0 1.5rem 0;
+        font-size: 0.95rem;
+    }
+
+    .subscribers-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 0.75rem;
+    }
+
+    .subscriber-card {
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .subscriber-email {
+        color: var(--navy);
+        font-weight: 500;
+        font-size: 0.9rem;
+    }
+
+    .subscriber-date {
+        color: #9ca3af;
+        font-size: 0.8rem;
+    }
+
+    .more-subscribers {
+        background: var(--navy);
+        color: white;
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 3rem;
+        color: #6b7280;
+    }
+
+    @media (max-width: 768px) {
+        .filters {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .filter-buttons {
+            overflow-x: auto;
+            padding-bottom: 0.5rem;
+        }
+
+        .users-table th,
+        .users-table td {
+            padding: 0.75rem;
+        }
+    }
+</style>
+
+<script>
+    // Búsqueda y filtrado
+    const searchInput = document.getElementById(
+        "search-input",
+    ) as HTMLInputElement;
+    const filterBtns = document.querySelectorAll(".filter-btn");
+    const tableRows = document.querySelectorAll("#users-table tbody tr");
+
+    let currentFilter = "all";
+    let searchTerm = "";
+
+    function applyFilters() {
+        tableRows.forEach((row) => {
+            const email = row.getAttribute("data-email") || "";
+            const name = row.getAttribute("data-name") || "";
+            const isRecurring = row.getAttribute("data-recurring") === "true";
+            const isNewsletter = row.getAttribute("data-newsletter") === "true";
+
+            // Filtro de búsqueda
+            const matchesSearch =
+                searchTerm === "" ||
+                email.includes(searchTerm.toLowerCase()) ||
+                name.includes(searchTerm.toLowerCase());
+
+            // Filtro de tipo
+            let matchesFilter = true;
+            if (currentFilter === "recurring") {
+                matchesFilter = isRecurring;
+            } else if (currentFilter === "newsletter") {
+                matchesFilter = isNewsletter;
+            }
+
+            (row as HTMLElement).style.display =
+                matchesSearch && matchesFilter ? "" : "none";
+        });
+    }
+
+    searchInput?.addEventListener("input", (e) => {
+        searchTerm = (e.target as HTMLInputElement).value;
+        applyFilters();
+    });
+
+    filterBtns.forEach((btn) => {
+        btn.addEventListener("click", () => {
+            filterBtns.forEach((b) => b.classList.remove("active"));
+            btn.classList.add("active");
+            currentFilter = btn.getAttribute("data-filter") || "all";
+            applyFilters();
+        });
+    });
+</script>

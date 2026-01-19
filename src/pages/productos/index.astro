@@ -2,6 +2,7 @@
 import PublicLayout from "../../layouts/PublicLayout.astro";
 import ProductCard from "../../components/product/ProductCard.astro";
 import { getProducts, getCategories } from "../../lib/supabase";
+import { formatPrice } from "../../lib/utils";
 
 // SSG
 export const prerender = true;
@@ -9,10 +10,10 @@ export const prerender = true;
 const products = await getProducts();
 const categories = await getCategories();
 
-// Obtener parámetros de URL para filtros (en SSG estos serían manejados con JS)
-const searchParams = Astro.url.searchParams;
-const categoryFilter = searchParams.get("categoria");
-const sortBy = searchParams.get("orden") || "recientes";
+// Calcular rango de precios
+const prices = products.map((p) => p.price);
+const minPrice = Math.min(...prices) / 100;
+const maxPrice = Math.max(...prices) / 100;
 ---
 
 <PublicLayout
@@ -20,76 +21,432 @@ const sortBy = searchParams.get("orden") || "recientes";
     description="Explora nuestra colección completa de moda masculina premium"
 >
     <!-- Page Header -->
-    <section class="bg-surface-secondary py-12 lg:py-16">
+    <section class="bg-surface-secondary py-8 lg:py-12">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <nav class="flex items-center gap-2 text-sm text-text-muted mb-4">
+                <a href="/" class="hover:text-brand-navy transition-colors"
+                    >Inicio</a
+                >
+                <span>/</span>
+                <span class="text-text-primary">Productos</span>
+            </nav>
             <div
                 class="flex flex-col lg:flex-row lg:items-end justify-between gap-6"
             >
                 <div>
-                    <nav
-                        class="flex items-center gap-2 text-sm text-text-muted mb-4"
-                    >
-                        <a
-                            href="/"
-                            class="hover:text-brand-navy transition-colors"
-                            >Inicio</a
-                        >
-                        <span>/</span>
-                        <span class="text-text-primary">Productos</span>
-                    </nav>
                     <h1
                         class="text-3xl lg:text-4xl font-serif font-bold text-brand-navy"
                     >
                         Todos los Productos
                     </h1>
-                    <p class="text-text-secondary mt-2">
+                    <p class="text-text-secondary mt-2" id="products-count">
                         {products.length} productos disponibles
                     </p>
-                </div>
-
-                <!-- Sort Dropdown -->
-                <div class="flex items-center gap-4">
-                    <label for="sort-select" class="text-sm text-text-secondary"
-                        >Ordenar por:</label
-                    >
-                    <select
-                        id="sort-select"
-                        class="px-4 py-2 rounded-lg border border-border-light bg-surface-primary text-sm focus:border-brand-navy focus:outline-none focus:ring-2 focus:ring-brand-navy/20"
-                    >
-                        <option value="recientes">Más recientes</option>
-                        <option value="precio-asc">Precio: menor a mayor</option
-                        >
-                        <option value="precio-desc"
-                            >Precio: mayor a menor</option
-                        >
-                        <option value="nombre">Nombre A-Z</option>
-                    </select>
                 </div>
             </div>
         </div>
     </section>
 
+    <!-- Filter Bar -->
+    <section
+        class="sticky top-16 lg:top-20 z-30 bg-white border-b border-gray-100 shadow-sm"
+    >
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="py-4">
+                <div
+                    class="flex flex-col lg:flex-row gap-4 lg:items-center lg:justify-between"
+                >
+                    <!-- Search & Filters Row -->
+                    <div class="flex flex-wrap items-center gap-3">
+                        <!-- Search Input -->
+                        <div
+                            class="relative flex-1 min-w-[200px] lg:min-w-[280px]"
+                        >
+                            <svg
+                                class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                                ></path>
+                            </svg>
+                            <input
+                                type="text"
+                                id="search-input"
+                                placeholder="Buscar productos..."
+                                class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:border-brand-navy focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-navy/20 transition-all"
+                            />
+                        </div>
+
+                        <!-- Filter Toggle Button (Mobile) -->
+                        <button
+                            id="filter-toggle"
+                            class="lg:hidden flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:border-gray-300 transition-colors"
+                        >
+                            <svg
+                                class="w-5 h-5"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+                                ></path>
+                            </svg>
+                            Filtros
+                            <span
+                                id="active-filters-badge"
+                                class="hidden px-1.5 py-0.5 bg-brand-navy text-white text-xs rounded-full"
+                                >0</span
+                            >
+                        </button>
+                    </div>
+
+                    <!-- Desktop Filters -->
+                    <div class="hidden lg:flex items-center gap-3">
+                        <!-- Price Range Dropdown -->
+                        <div class="relative" id="price-dropdown-container">
+                            <button
+                                id="price-dropdown-btn"
+                                class="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:border-brand-navy hover:text-brand-navy transition-colors"
+                            >
+                                <span id="price-label">Precio</span>
+                                <svg
+                                    class="w-4 h-4 text-gray-400"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+
+                            <!-- Price Dropdown Panel -->
+                            <div
+                                id="price-dropdown"
+                                class="hidden absolute right-0 top-full mt-2 w-72 bg-white rounded-xl shadow-lg border border-gray-100 p-4 z-50"
+                            >
+                                <div class="mb-4">
+                                    <label
+                                        class="text-sm font-medium text-gray-700 mb-2 block"
+                                        >Rango de precio</label
+                                    >
+                                    <div class="flex items-center gap-3">
+                                        <div class="flex-1">
+                                            <div class="relative">
+                                                <span
+                                                    class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"
+                                                    >€</span
+                                                >
+                                                <input
+                                                    type="number"
+                                                    id="price-min"
+                                                    placeholder="Mín"
+                                                    min="0"
+                                                    class="w-full pl-8 pr-3 py-2 rounded-lg border border-gray-200 text-sm focus:border-brand-navy focus:outline-none"
+                                                />
+                                            </div>
+                                        </div>
+                                        <span class="text-gray-400">—</span>
+                                        <div class="flex-1">
+                                            <div class="relative">
+                                                <span
+                                                    class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"
+                                                    >€</span
+                                                >
+                                                <input
+                                                    type="number"
+                                                    id="price-max"
+                                                    placeholder="Máx"
+                                                    min="0"
+                                                    class="w-full pl-8 pr-3 py-2 rounded-lg border border-gray-200 text-sm focus:border-brand-navy focus:outline-none"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button
+                                        id="price-clear"
+                                        class="flex-1 px-3 py-2 text-sm text-gray-600 hover:text-gray-800 transition-colors"
+                                    >
+                                        Limpiar
+                                    </button>
+                                    <button
+                                        id="price-apply"
+                                        class="flex-1 px-3 py-2 bg-brand-navy text-white text-sm font-medium rounded-lg hover:bg-brand-navy-light transition-colors"
+                                    >
+                                        Aplicar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Sort Dropdown -->
+                        <div class="relative" id="sort-dropdown-container">
+                            <button
+                                id="sort-dropdown-btn"
+                                class="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:border-gray-300 transition-colors"
+                            >
+                                <svg
+                                    class="w-4 h-4 text-gray-500"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"
+                                    ></path>
+                                </svg>
+                                <span id="sort-label">Más recientes</span>
+                                <svg
+                                    class="w-4 h-4 text-gray-400"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+
+                            <!-- Sort Dropdown Panel -->
+                            <div
+                                id="sort-dropdown"
+                                class="hidden absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-50"
+                            >
+                                <button
+                                    data-sort="recientes"
+                                    class="sort-option w-full px-4 py-2 text-left text-sm hover:bg-gray-50 transition-colors text-brand-navy font-medium"
+                                >
+                                    Más recientes
+                                </button>
+                                <button
+                                    data-sort="precio-asc"
+                                    class="sort-option w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                                >
+                                    Precio: menor a mayor
+                                </button>
+                                <button
+                                    data-sort="precio-desc"
+                                    class="sort-option w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                                >
+                                    Precio: mayor a menor
+                                </button>
+                                <button
+                                    data-sort="nombre"
+                                    class="sort-option w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                                >
+                                    Nombre A-Z
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Active Filters Tags -->
+                <div
+                    id="active-filters"
+                    class="hidden flex-wrap items-center gap-2 pt-3 border-t border-gray-100 mt-3"
+                >
+                    <!-- Filter tags will be added dynamically -->
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Mobile Filter Panel -->
+    <div id="mobile-filter-panel" class="hidden fixed inset-0 z-50 lg:hidden">
+        <div class="absolute inset-0 bg-black/50" id="mobile-filter-overlay">
+        </div>
+        <div
+            class="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl max-h-[80vh] overflow-y-auto"
+        >
+            <div
+                class="sticky top-0 bg-white px-4 py-4 border-b border-gray-100 flex items-center justify-between"
+            >
+                <h3 class="text-lg font-semibold text-brand-navy">Filtros</h3>
+                <button
+                    id="close-mobile-filter"
+                    class="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                    <svg
+                        class="w-5 h-5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="p-4 space-y-6">
+                <!-- Price Range -->
+                <div>
+                    <label
+                        class="text-sm font-semibold text-brand-navy uppercase tracking-wider mb-3 block"
+                    >
+                        Rango de precio
+                    </label>
+                    <div class="flex items-center gap-3">
+                        <div class="flex-1">
+                            <div class="relative">
+                                <span
+                                    class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"
+                                    >€</span
+                                >
+                                <input
+                                    type="number"
+                                    id="mobile-price-min"
+                                    placeholder="Mín"
+                                    min="0"
+                                    class="w-full pl-8 pr-3 py-3 rounded-xl border border-gray-200 text-sm focus:border-brand-navy focus:outline-none"
+                                />
+                            </div>
+                        </div>
+                        <span class="text-gray-400">—</span>
+                        <div class="flex-1">
+                            <div class="relative">
+                                <span
+                                    class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"
+                                    >€</span
+                                >
+                                <input
+                                    type="number"
+                                    id="mobile-price-max"
+                                    placeholder="Máx"
+                                    min="0"
+                                    class="w-full pl-8 pr-3 py-3 rounded-xl border border-gray-200 text-sm focus:border-brand-navy focus:outline-none"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sort -->
+                <div>
+                    <label
+                        class="text-sm font-semibold text-brand-navy uppercase tracking-wider mb-3 block"
+                    >
+                        Ordenar por
+                    </label>
+                    <div class="space-y-2">
+                        <label
+                            class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors"
+                        >
+                            <input
+                                type="radio"
+                                name="mobile-sort"
+                                value="recientes"
+                                checked
+                                class="w-4 h-4 text-brand-navy focus:ring-brand-navy"
+                            />
+                            <span class="text-gray-700">Más recientes</span>
+                        </label>
+                        <label
+                            class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors"
+                        >
+                            <input
+                                type="radio"
+                                name="mobile-sort"
+                                value="precio-asc"
+                                class="w-4 h-4 text-brand-navy focus:ring-brand-navy"
+                            />
+                            <span class="text-gray-700"
+                                >Precio: menor a mayor</span
+                            >
+                        </label>
+                        <label
+                            class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors"
+                        >
+                            <input
+                                type="radio"
+                                name="mobile-sort"
+                                value="precio-desc"
+                                class="w-4 h-4 text-brand-navy focus:ring-brand-navy"
+                            />
+                            <span class="text-gray-700"
+                                >Precio: mayor a menor</span
+                            >
+                        </label>
+                        <label
+                            class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors"
+                        >
+                            <input
+                                type="radio"
+                                name="mobile-sort"
+                                value="nombre"
+                                class="w-4 h-4 text-brand-navy focus:ring-brand-navy"
+                            />
+                            <span class="text-gray-700">Nombre A-Z</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div
+                class="sticky bottom-0 bg-white px-4 py-4 border-t border-gray-100 flex gap-3"
+            >
+                <button
+                    id="mobile-clear-filters"
+                    class="flex-1 py-3 rounded-xl border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+                >
+                    Limpiar
+                </button>
+                <button
+                    id="mobile-apply-filters"
+                    class="flex-1 py-3 rounded-xl bg-brand-navy text-white font-medium hover:bg-brand-navy-light transition-colors"
+                >
+                    Ver resultados
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Main Content -->
-    <section class="py-12">
+    <section class="py-8 lg:py-12">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex flex-col lg:flex-row gap-8">
-                <!-- Sidebar Filters -->
-                <aside class="lg:w-64 flex-shrink-0">
-                    <div class="sticky top-24 space-y-8">
-                        <!-- Categories Filter -->
+                <!-- Sidebar Categories (Desktop) -->
+                <aside class="hidden lg:block lg:w-56 flex-shrink-0">
+                    <div class="sticky top-40 space-y-6">
                         <div>
                             <h3
                                 class="text-sm font-semibold text-brand-navy uppercase tracking-wider mb-4"
                             >
                                 Categorías
                             </h3>
-                            <ul class="space-y-2">
+                            <ul class="space-y-1">
                                 <li>
                                     <a
                                         href="/productos"
-                                        class="flex items-center justify-between py-2 text-text-secondary hover:text-brand-navy transition-colors"
+                                        class="category-link active flex items-center justify-between py-2 px-3 rounded-lg text-text-secondary hover:bg-gray-50 transition-colors"
+                                        data-category=""
                                     >
-                                        <span>Todas las categorías</span>
+                                        <span>Todas</span>
                                         <span
                                             class="text-xs bg-surface-tertiary px-2 py-1 rounded"
                                             >{products.length}</span
@@ -106,7 +463,10 @@ const sortBy = searchParams.get("orden") || "recientes";
                                             <li>
                                                 <a
                                                     href={`/categoria/${category.slug}`}
-                                                    class="flex items-center justify-between py-2 text-text-secondary hover:text-brand-navy transition-colors"
+                                                    class="category-link flex items-center justify-between py-2 px-3 rounded-lg text-text-secondary hover:bg-gray-50 transition-colors"
+                                                    data-category={
+                                                        category.slug
+                                                    }
                                                 >
                                                     <span>{category.name}</span>
                                                     <span class="text-xs bg-surface-tertiary px-2 py-1 rounded">
@@ -119,136 +479,460 @@ const sortBy = searchParams.get("orden") || "recientes";
                                 }
                             </ul>
                         </div>
-
-                        <!-- Price Filter -->
-                        <div>
-                            <h3
-                                class="text-sm font-semibold text-brand-navy uppercase tracking-wider mb-4"
-                            >
-                                Precio
-                            </h3>
-                            <div class="space-y-2">
-                                <label
-                                    class="flex items-center gap-3 cursor-pointer"
-                                >
-                                    <input
-                                        type="checkbox"
-                                        class="w-4 h-4 rounded border-border-medium text-brand-navy focus:ring-brand-navy"
-                                    />
-                                    <span class="text-text-secondary"
-                                        >Menos de 50€</span
-                                    >
-                                </label>
-                                <label
-                                    class="flex items-center gap-3 cursor-pointer"
-                                >
-                                    <input
-                                        type="checkbox"
-                                        class="w-4 h-4 rounded border-border-medium text-brand-navy focus:ring-brand-navy"
-                                    />
-                                    <span class="text-text-secondary"
-                                        >50€ - 100€</span
-                                    >
-                                </label>
-                                <label
-                                    class="flex items-center gap-3 cursor-pointer"
-                                >
-                                    <input
-                                        type="checkbox"
-                                        class="w-4 h-4 rounded border-border-medium text-brand-navy focus:ring-brand-navy"
-                                    />
-                                    <span class="text-text-secondary"
-                                        >100€ - 200€</span
-                                    >
-                                </label>
-                                <label
-                                    class="flex items-center gap-3 cursor-pointer"
-                                >
-                                    <input
-                                        type="checkbox"
-                                        class="w-4 h-4 rounded border-border-medium text-brand-navy focus:ring-brand-navy"
-                                    />
-                                    <span class="text-text-secondary"
-                                        >Más de 200€</span
-                                    >
-                                </label>
-                            </div>
-                        </div>
-
-                        <!-- Stock Filter -->
-                        <div>
-                            <h3
-                                class="text-sm font-semibold text-brand-navy uppercase tracking-wider mb-4"
-                            >
-                                Disponibilidad
-                            </h3>
-                            <label
-                                class="flex items-center gap-3 cursor-pointer"
-                            >
-                                <input
-                                    type="checkbox"
-                                    checked
-                                    class="w-4 h-4 rounded border-border-medium text-brand-navy focus:ring-brand-navy"
-                                />
-                                <span class="text-text-secondary"
-                                    >Solo en stock</span
-                                >
-                            </label>
-                        </div>
                     </div>
                 </aside>
 
                 <!-- Products Grid -->
                 <div class="flex-1">
-                    {
-                        products.length > 0 ? (
-                            <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 lg:gap-8">
-                                {products.map((product) => (
+                    <!-- Products Container -->
+                    <div
+                        id="products-grid"
+                        class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 lg:gap-8"
+                    >
+                        {
+                            products.map((product) => (
+                                <div
+                                    class="product-item"
+                                    data-name={product.name.toLowerCase()}
+                                    data-price={product.price}
+                                    data-created={product.created_at}
+                                    data-category={product.category?.slug || ""}
+                                >
                                     <ProductCard product={product} />
-                                ))}
-                            </div>
-                        ) : (
-                            <div class="text-center py-20">
-                                <div class="w-24 h-24 mx-auto mb-6 text-gray-200">
-                                    <svg
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                        stroke="currentColor"
-                                    >
-                                        <path
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            stroke-width="1"
-                                            d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                                        />
-                                    </svg>
                                 </div>
-                                <h3 class="text-xl font-semibold text-brand-navy mb-2">
-                                    No hay productos disponibles
-                                </h3>
-                                <p class="text-text-muted">
-                                    Pronto añadiremos nuevos productos a nuestra
-                                    colección.
-                                </p>
-                            </div>
-                        )
-                    }
+                            ))
+                        }
+                    </div>
+
+                    <!-- No Results -->
+                    <div id="no-results" class="hidden text-center py-20">
+                        <div class="w-24 h-24 mx-auto mb-6 text-gray-200">
+                            <svg
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="1"
+                                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                                ></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-semibold text-brand-navy mb-2">
+                            No se encontraron productos
+                        </h3>
+                        <p class="text-text-muted mb-6">
+                            Intenta ajustar los filtros o buscar con otros
+                            términos.
+                        </p>
+                        <button
+                            id="clear-all-filters"
+                            class="px-6 py-3 bg-brand-navy text-white font-medium rounded-xl hover:bg-brand-navy-light transition-colors"
+                        >
+                            Limpiar todos los filtros
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
     </section>
 </PublicLayout>
 
-<script>
-    // Cliente-side sorting
-    const sortSelect = document.getElementById(
-        "sort-select",
-    ) as HTMLSelectElement;
+<script define:vars={{ minPriceDefault: minPrice, maxPriceDefault: maxPrice }}>
+    // State
+    let currentFilters = {
+        search: "",
+        priceMin: null,
+        priceMax: null,
+        sort: "recientes",
+    };
 
-    sortSelect?.addEventListener("change", (e) => {
-        const value = (e.target as HTMLSelectElement).value;
-        const url = new URL(window.location.href);
-        url.searchParams.set("orden", value);
-        window.location.href = url.toString();
+    // DOM Elements
+    const searchInput = document.getElementById("search-input");
+    const productsGrid = document.getElementById("products-grid");
+    const productItems = document.querySelectorAll(".product-item");
+    const productsCount = document.getElementById("products-count");
+    const noResults = document.getElementById("no-results");
+    const activeFiltersContainer = document.getElementById("active-filters");
+    const activeFiltersBadge = document.getElementById("active-filters-badge");
+
+    // Desktop dropdowns
+    const priceDropdownBtn = document.getElementById("price-dropdown-btn");
+    const priceDropdown = document.getElementById("price-dropdown");
+    const priceMinInput = document.getElementById("price-min");
+    const priceMaxInput = document.getElementById("price-max");
+    const priceLabel = document.getElementById("price-label");
+    const priceApply = document.getElementById("price-apply");
+    const priceClear = document.getElementById("price-clear");
+
+    const sortDropdownBtn = document.getElementById("sort-dropdown-btn");
+    const sortDropdown = document.getElementById("sort-dropdown");
+    const sortLabel = document.getElementById("sort-label");
+    const sortOptions = document.querySelectorAll(".sort-option");
+
+    // Mobile
+    const filterToggle = document.getElementById("filter-toggle");
+    const mobileFilterPanel = document.getElementById("mobile-filter-panel");
+    const mobileFilterOverlay = document.getElementById(
+        "mobile-filter-overlay",
+    );
+    const closeMobileFilter = document.getElementById("close-mobile-filter");
+    const mobilePriceMin = document.getElementById("mobile-price-min");
+    const mobilePriceMax = document.getElementById("mobile-price-max");
+    const mobileClearFilters = document.getElementById("mobile-clear-filters");
+    const mobileApplyFilters = document.getElementById("mobile-apply-filters");
+    const clearAllFilters = document.getElementById("clear-all-filters");
+
+    // Search with debounce
+    let searchTimeout;
+    searchInput?.addEventListener("input", (e) => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            currentFilters.search = e.target.value.toLowerCase().trim();
+            applyFilters();
+        }, 300);
     });
+
+    // Price dropdown toggle
+    priceDropdownBtn?.addEventListener("click", (e) => {
+        e.stopPropagation();
+        sortDropdown?.classList.add("hidden");
+        priceDropdown?.classList.toggle("hidden");
+    });
+
+    // Sort dropdown toggle
+    sortDropdownBtn?.addEventListener("click", (e) => {
+        e.stopPropagation();
+        priceDropdown?.classList.add("hidden");
+        sortDropdown?.classList.toggle("hidden");
+    });
+
+    // Close dropdowns on outside click
+    document.addEventListener("click", () => {
+        priceDropdown?.classList.add("hidden");
+        sortDropdown?.classList.add("hidden");
+    });
+
+    // Prevent dropdown close on click inside
+    priceDropdown?.addEventListener("click", (e) => e.stopPropagation());
+
+    // Sort options
+    sortOptions?.forEach((option) => {
+        option.addEventListener("click", () => {
+            const sortValue = option.getAttribute("data-sort");
+            currentFilters.sort = sortValue;
+
+            // Update UI
+            sortOptions.forEach((o) =>
+                o.classList.remove("text-brand-navy", "font-medium"),
+            );
+            option.classList.add("text-brand-navy", "font-medium");
+
+            const labels = {
+                recientes: "Más recientes",
+                "precio-asc": "Precio: menor a mayor",
+                "precio-desc": "Precio: mayor a menor",
+                nombre: "Nombre A-Z",
+            };
+            sortLabel.textContent = labels[sortValue] || "Más recientes";
+
+            sortDropdown?.classList.add("hidden");
+            applyFilters();
+        });
+    });
+
+    // Price apply
+    priceApply?.addEventListener("click", () => {
+        const min = parseFloat(priceMinInput?.value) || null;
+        const max = parseFloat(priceMaxInput?.value) || null;
+
+        currentFilters.priceMin = min;
+        currentFilters.priceMax = max;
+
+        // Update label
+        if (min && max) {
+            priceLabel.textContent = `${min}€ - ${max}€`;
+        } else if (min) {
+            priceLabel.textContent = `Desde ${min}€`;
+        } else if (max) {
+            priceLabel.textContent = `Hasta ${max}€`;
+        } else {
+            priceLabel.textContent = "Precio";
+        }
+
+        priceDropdown?.classList.add("hidden");
+        applyFilters();
+    });
+
+    // Price clear
+    priceClear?.addEventListener("click", () => {
+        priceMinInput.value = "";
+        priceMaxInput.value = "";
+        currentFilters.priceMin = null;
+        currentFilters.priceMax = null;
+        priceLabel.textContent = "Precio";
+        priceDropdown?.classList.add("hidden");
+        applyFilters();
+    });
+
+    // Mobile filter panel
+    filterToggle?.addEventListener("click", () => {
+        mobileFilterPanel?.classList.remove("hidden");
+        document.body.style.overflow = "hidden";
+    });
+
+    const closeMobileFilterHandler = () => {
+        mobileFilterPanel?.classList.add("hidden");
+        document.body.style.overflow = "";
+    };
+
+    closeMobileFilter?.addEventListener("click", closeMobileFilterHandler);
+    mobileFilterOverlay?.addEventListener("click", closeMobileFilterHandler);
+
+    // Mobile apply filters
+    mobileApplyFilters?.addEventListener("click", () => {
+        const min = parseFloat(mobilePriceMin?.value) || null;
+        const max = parseFloat(mobilePriceMax?.value) || null;
+        const sortRadio = document.querySelector(
+            'input[name="mobile-sort"]:checked',
+        );
+
+        currentFilters.priceMin = min;
+        currentFilters.priceMax = max;
+        if (sortRadio) currentFilters.sort = sortRadio.value;
+
+        closeMobileFilterHandler();
+        applyFilters();
+    });
+
+    // Mobile clear filters
+    mobileClearFilters?.addEventListener("click", () => {
+        mobilePriceMin.value = "";
+        mobilePriceMax.value = "";
+        document.querySelector(
+            'input[name="mobile-sort"][value="recientes"]',
+        ).checked = true;
+        currentFilters = {
+            search: "",
+            priceMin: null,
+            priceMax: null,
+            sort: "recientes",
+        };
+        closeMobileFilterHandler();
+        applyFilters();
+    });
+
+    // Clear all filters button
+    clearAllFilters?.addEventListener("click", () => {
+        searchInput.value = "";
+        priceMinInput.value = "";
+        priceMaxInput.value = "";
+        priceLabel.textContent = "Precio";
+        sortLabel.textContent = "Más recientes";
+        currentFilters = {
+            search: "",
+            priceMin: null,
+            priceMax: null,
+            sort: "recientes",
+        };
+        applyFilters();
+    });
+
+    // Apply filters and sort
+    function applyFilters() {
+        let visibleCount = 0;
+        const items = Array.from(productItems);
+
+        // First filter
+        items.forEach((item) => {
+            const name = item.getAttribute("data-name");
+            const price = parseInt(item.getAttribute("data-price")) / 100;
+
+            let visible = true;
+
+            // Search filter
+            if (
+                currentFilters.search &&
+                !name.includes(currentFilters.search)
+            ) {
+                visible = false;
+            }
+
+            // Price filter
+            if (currentFilters.priceMin && price < currentFilters.priceMin) {
+                visible = false;
+            }
+            if (currentFilters.priceMax && price > currentFilters.priceMax) {
+                visible = false;
+            }
+
+            if (visible) {
+                item.classList.remove("hidden");
+                visibleCount++;
+            } else {
+                item.classList.add("hidden");
+            }
+        });
+
+        // Then sort visible items
+        const visibleItems = items.filter(
+            (item) => !item.classList.contains("hidden"),
+        );
+
+        visibleItems.sort((a, b) => {
+            switch (currentFilters.sort) {
+                case "precio-asc":
+                    return (
+                        parseInt(a.getAttribute("data-price")) -
+                        parseInt(b.getAttribute("data-price"))
+                    );
+                case "precio-desc":
+                    return (
+                        parseInt(b.getAttribute("data-price")) -
+                        parseInt(a.getAttribute("data-price"))
+                    );
+                case "nombre":
+                    return a
+                        .getAttribute("data-name")
+                        .localeCompare(b.getAttribute("data-name"));
+                case "recientes":
+                default:
+                    return (
+                        new Date(b.getAttribute("data-created")) -
+                        new Date(a.getAttribute("data-created"))
+                    );
+            }
+        });
+
+        // Reorder DOM
+        visibleItems.forEach((item) => productsGrid.appendChild(item));
+
+        // Update count
+        productsCount.textContent = `${visibleCount} productos disponibles`;
+
+        // Show/hide no results
+        if (visibleCount === 0) {
+            productsGrid.classList.add("hidden");
+            noResults.classList.remove("hidden");
+        } else {
+            productsGrid.classList.remove("hidden");
+            noResults.classList.add("hidden");
+        }
+
+        // Update active filters display
+        updateActiveFilters();
+    }
+
+    function updateActiveFilters() {
+        const filters = [];
+
+        if (currentFilters.search) {
+            filters.push({
+                type: "search",
+                label: `"${currentFilters.search}"`,
+            });
+        }
+        if (currentFilters.priceMin || currentFilters.priceMax) {
+            let label = "";
+            if (currentFilters.priceMin && currentFilters.priceMax) {
+                label = `${currentFilters.priceMin}€ - ${currentFilters.priceMax}€`;
+            } else if (currentFilters.priceMin) {
+                label = `Desde ${currentFilters.priceMin}€`;
+            } else {
+                label = `Hasta ${currentFilters.priceMax}€`;
+            }
+            filters.push({ type: "price", label });
+        }
+
+        // Update badge
+        const filterCount = filters.length;
+        if (activeFiltersBadge) {
+            if (filterCount > 0) {
+                activeFiltersBadge.classList.remove("hidden");
+                activeFiltersBadge.textContent = filterCount;
+            } else {
+                activeFiltersBadge.classList.add("hidden");
+            }
+        }
+
+        // Update tags container
+        if (activeFiltersContainer) {
+            if (filters.length > 0) {
+                activeFiltersContainer.classList.remove("hidden");
+                activeFiltersContainer.classList.add("flex");
+                activeFiltersContainer.innerHTML =
+                    filters
+                        .map(
+                            (f) => `
+                    <span class="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-100 text-gray-700 text-sm rounded-full">
+                        ${f.label}
+                        <button class="remove-filter hover:text-red-500 transition-colors" data-type="${f.type}">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </span>
+                `,
+                        )
+                        .join("") +
+                    `
+                    <button id="clear-filters-btn" class="text-sm text-gray-500 hover:text-gray-700 ml-2 underline">
+                        Limpiar todo
+                    </button>
+                `;
+
+                // Add listeners to remove buttons
+                activeFiltersContainer
+                    .querySelectorAll(".remove-filter")
+                    .forEach((btn) => {
+                        btn.addEventListener("click", () => {
+                            const type = btn.getAttribute("data-type");
+                            if (type === "search") {
+                                currentFilters.search = "";
+                                searchInput.value = "";
+                            } else if (type === "price") {
+                                currentFilters.priceMin = null;
+                                currentFilters.priceMax = null;
+                                priceMinInput.value = "";
+                                priceMaxInput.value = "";
+                                priceLabel.textContent = "Precio";
+                            }
+                            applyFilters();
+                        });
+                    });
+
+                document
+                    .getElementById("clear-filters-btn")
+                    ?.addEventListener("click", () => {
+                        searchInput.value = "";
+                        priceMinInput.value = "";
+                        priceMaxInput.value = "";
+                        priceLabel.textContent = "Precio";
+                        currentFilters = {
+                            ...currentFilters,
+                            search: "",
+                            priceMin: null,
+                            priceMax: null,
+                        };
+                        applyFilters();
+                    });
+            } else {
+                activeFiltersContainer.classList.add("hidden");
+                activeFiltersContainer.classList.remove("flex");
+            }
+        }
+    }
+
+    // Initial sort
+    applyFilters();
 </script>
+
+<style>
+    .category-link.active {
+        background-color: #f3f4f6;
+        color: #1e3a5f;
+        font-weight: 500;
+    }
+</style>

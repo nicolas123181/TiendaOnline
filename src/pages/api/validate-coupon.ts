@@ -4,7 +4,7 @@ import { validateCoupon } from '../../lib/supabase';
 export const POST: APIRoute = async (context) => {
     try {
         const body = await context.request.json();
-        const { code, total } = body;
+        const { code, total, userEmail } = body;
 
         if (!code || !total) {
             return new Response(
@@ -17,7 +17,8 @@ export const POST: APIRoute = async (context) => {
             );
         }
 
-        const result = await validateCoupon(code, total);
+        // Pasar el email del usuario para verificar límite por persona
+        const result = await validateCoupon(code, total, userEmail);
 
         return new Response(
             JSON.stringify(result),

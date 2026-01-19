@@ -7,6 +7,7 @@ export const prerender = false;
 
 // Obtener configuración actual
 const flashOffersEnabled = await getSetting("flash_offers_enabled");
+const lowStockThreshold = (await getSetting("low_stock_threshold")) || "5";
 
 let success = false;
 let error = "";
@@ -15,26 +16,52 @@ let error = "";
 if (Astro.request.method === "POST") {
     try {
         const formData = await Astro.request.formData();
-        const flashOffers = formData.get("flash_offers") === "on";
+        const action = formData.get("action");
 
-        // Actualizar o insertar configuración
-        const { error: upsertError } = await supabase
-            .from("app_settings")
-            .upsert(
-                {
-                    key: "flash_offers_enabled",
-                    value: flashOffers.toString(),
-                    updated_at: new Date().toISOString(),
-                },
-                {
-                    onConflict: "key",
-                },
-            );
+        if (action === "flash_offers") {
+            const flashOffers = formData.get("flash_offers") === "on";
+            // Actualizar configuración de ofertas flash
+            const { error: upsertError } = await supabase
+                .from("app_settings")
+                .upsert(
+                    {
+                        key: "flash_offers_enabled",
+                        value: flashOffers.toString(),
+                        updated_at: new Date().toISOString(),
+                    },
+                    { onConflict: "key" },
+                );
 
-        if (upsertError) {
-            error = `Error al guardar: ${upsertError.message}`;
-        } else {
-            success = true;
+            if (upsertError) {
+                error = `Error al guardar: ${upsertError.message}`;
+            } else {
+                success = true;
+            }
+        } else if (action === "stock_threshold") {
+            const threshold = formData.get("low_stock_threshold") as string;
+            const thresholdNum = parseInt(threshold);
+
+            if (isNaN(thresholdNum) || thresholdNum < 1 || thresholdNum > 100) {
+                error = "El umbral debe ser un número entre 1 y 100";
+            } else {
+                // Actualizar umbral de stock
+                const { error: upsertError } = await supabase
+                    .from("app_settings")
+                    .upsert(
+                        {
+                            key: "low_stock_threshold",
+                            value: thresholdNum.toString(),
+                            updated_at: new Date().toISOString(),
+                        },
+                        { onConflict: "key" },
+                    );
+
+                if (upsertError) {
+                    error = `Error al guardar: ${upsertError.message}`;
+                } else {
+                    success = true;
+                }
+            }
         }
     } catch (e) {
         error = "Ha ocurrido un error inesperado.";
@@ -43,6 +70,7 @@ if (Astro.request.method === "POST") {
 }
 
 const isFlashOffersEnabled = flashOffersEnabled === "true";
+const currentThreshold = parseInt(lowStockThreshold) || 5;
 ---
 
 <AdminLayout title="Configuración">
@@ -117,6 +145,11 @@ const isFlashOffersEnabled = flashOffersEnabled === "true";
                     </p>
 
                     <form method="POST">
+                        <input
+                            type="hidden"
+                            name="action"
+                            value="flash_offers"
+                        />
                         <div
                             class="flex items-center justify-between p-4 bg-surface-secondary rounded-xl"
                         >
@@ -166,6 +199,94 @@ const isFlashOffersEnabled = flashOffersEnabled === "true";
                                     clip-rule="evenodd"></path>
                             </svg>
                             Los cambios se reflejan inmediatamente en la tienda.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Low Stock Threshold -->
+        <div class="bg-surface-primary rounded-2xl p-6 shadow-soft">
+            <div class="flex items-start gap-4">
+                <div class="p-3 bg-red-100 rounded-xl">
+                    <svg
+                        class="w-6 h-6 text-red-600"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                        ></path>
+                    </svg>
+                </div>
+                <div class="flex-1">
+                    <h2 class="text-lg font-semibold text-brand-navy mb-2">
+                        Umbral de Stock Bajo
+                    </h2>
+                    <p class="text-sm text-text-muted mb-4">
+                        Configura el número de unidades a partir del cual
+                        recibirás alertas de stock bajo. Cuando un producto (o
+                        talla) tenga igual o menos unidades que este umbral,
+                        recibirás una notificación.
+                    </p>
+
+                    <form method="POST" class="space-y-4">
+                        <input
+                            type="hidden"
+                            name="action"
+                            value="stock_threshold"
+                        />
+
+                        <div>
+                            <label
+                                class="block text-sm font-medium text-text-primary mb-2"
+                            >
+                                Umbral de alerta (unidades)
+                            </label>
+                            <div class="flex items-center gap-4">
+                                <input
+                                    type="number"
+                                    name="low_stock_threshold"
+                                    value={currentThreshold}
+                                    min="1"
+                                    max="100"
+                                    class="w-24 px-4 py-3 rounded-xl border border-border-light bg-surface-secondary text-text-primary text-center font-bold text-lg"
+                                />
+                                <span class="text-sm text-text-muted">
+                                    unidades o menos = alerta
+                                </span>
+                            </div>
+                        </div>
+
+                        <button
+                            type="submit"
+                            class="px-6 py-2.5 bg-brand-navy text-white rounded-lg font-medium hover:bg-brand-navy-light transition-colors"
+                        >
+                            💾 Guardar Umbral
+                        </button>
+                    </form>
+
+                    <div
+                        class="mt-4 p-3 bg-amber-50 rounded-lg border border-amber-200"
+                    >
+                        <p
+                            class="text-xs text-amber-700 flex items-center gap-2"
+                        >
+                            <svg
+                                class="w-4 h-4 shrink-0"
+                                fill="currentColor"
+                                viewBox="0 0 20 20"
+                            >
+                                <path
+                                    fill-rule="evenodd"
+                                    d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                                    clip-rule="evenodd"></path>
+                            </svg>
+                            Recibirás un email cuando el stock llegue a este nivel.
                         </p>
                     </div>
                 </div>

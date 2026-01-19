@@ -2,6 +2,8 @@
 import BaseLayout from "./BaseLayout.astro";
 import CartSlideOver from "../components/ui/CartSlideOver.astro";
 import CartIcon from "../components/islands/CartIcon";
+import LiveSearch from "../components/islands/LiveSearch";
+import NewsletterPopup from "../components/islands/NewsletterPopup";
 import { getCategories } from "../lib/supabase";
 
 interface Props {
@@ -88,6 +90,48 @@ const currentPath = Astro.url.pathname;
 
                 <!-- Actions -->
                 <div class="flex items-center gap-3">
+                    <!-- Dark Mode Toggle -->
+                    <button
+                        id="theme-toggle"
+                        class="p-2 text-text-secondary hover:text-brand-navy dark:hover:text-amber-400 transition-colors relative group"
+                        aria-label="Cambiar tema"
+                        title="Cambiar modo claro/oscuro"
+                    >
+                        <!-- Sun icon (shown in dark mode) -->
+                        <svg
+                            class="w-5 h-5 hidden dark:block"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            stroke-width="2"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
+                            ></path>
+                        </svg>
+                        <!-- Moon icon (shown in light mode) -->
+                        <svg
+                            class="w-5 h-5 block dark:hidden"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            stroke-width="2"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+                            ></path>
+                        </svg>
+                    </button>
+
+                    <!-- Live Search (React Island) -->
+                    <div class="hidden sm:block">
+                        <LiveSearch client:load />
+                    </div>
+
                     <!-- User/Profile Button -->
                     <a
                         href="/perfil"
@@ -106,6 +150,27 @@ const currentPath = Astro.url.pathname;
                                 stroke-linejoin="round"
                                 stroke-width="2"
                                 d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                            ></path>
+                        </svg>
+                    </a>
+
+                    <!-- Wishlist/Favorites Button -->
+                    <a
+                        href="/favoritos"
+                        class="p-2 text-text-secondary hover:text-red-500 transition-colors relative hidden sm:block"
+                        aria-label="Mis favoritos"
+                    >
+                        <svg
+                            class="w-6 h-6"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            stroke-width="2"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
                             ></path>
                         </svg>
                     </a>
@@ -243,6 +308,13 @@ const currentPath = Astro.url.pathname;
                         </li>
                         <li>
                             <a
+                                href="/guia-tallas"
+                                class="text-gray-400 hover:text-white text-sm transition-colors"
+                                >Guía de tallas</a
+                            >
+                        </li>
+                        <li>
+                            <a
                                 href="/envios-devoluciones"
                                 class="text-gray-400 hover:text-white text-sm transition-colors"
                                 >Envíos y devoluciones</a
@@ -354,13 +426,76 @@ const currentPath = Astro.url.pathname;
     <!-- Cart Slide Over -->
     <CartSlideOver />
 
-    <!-- Mobile Menu Script -->
-    <script>
-        const mobileMenuBtn = document.getElementById("mobile-menu-btn");
-        const mobileMenu = document.getElementById("mobile-menu");
+    <!-- Theme & Mobile Menu Scripts -->
+    <script is:inline>
+        // ==========================================
+        // THEME TOGGLE - Dark Mode
+        // ==========================================
 
-        mobileMenuBtn?.addEventListener("click", () => {
-            mobileMenu?.classList.toggle("hidden");
+        // Función para aplicar el tema
+        function applyTheme(theme) {
+            if (theme === "dark") {
+                document.documentElement.classList.add("dark");
+            } else {
+                document.documentElement.classList.remove("dark");
+            }
+        }
+
+        // Cargar tema guardado o preferencia del sistema
+        function initTheme() {
+            const savedTheme = localStorage.getItem("theme");
+
+            if (savedTheme) {
+                applyTheme(savedTheme);
+            } else if (
+                window.matchMedia("(prefers-color-scheme: dark)").matches
+            ) {
+                applyTheme("dark");
+            } else {
+                applyTheme("light");
+            }
+        }
+
+        // Toggle del tema
+        function toggleTheme() {
+            const isDark = document.documentElement.classList.contains("dark");
+            const newTheme = isDark ? "light" : "dark";
+
+            applyTheme(newTheme);
+            localStorage.setItem("theme", newTheme);
+        }
+
+        // Inicializar tema inmediatamente para evitar flash
+        initTheme();
+
+        // Event listener para el botón de toggle
+        document.addEventListener("DOMContentLoaded", () => {
+            const themeToggle = document.getElementById("theme-toggle");
+            themeToggle?.addEventListener("click", toggleTheme);
+        });
+
+        // Escuchar cambios en la preferencia del sistema
+        window
+            .matchMedia("(prefers-color-scheme: dark)")
+            .addEventListener("change", (e) => {
+                if (!localStorage.getItem("theme")) {
+                    applyTheme(e.matches ? "dark" : "light");
+                }
+            });
+
+        // ==========================================
+        // MOBILE MENU
+        // ==========================================
+        document.addEventListener("DOMContentLoaded", () => {
+            const mobileMenuBtn = document.getElementById("mobile-menu-btn");
+            const mobileMenu = document.getElementById("mobile-menu");
+
+            mobileMenuBtn?.addEventListener("click", () => {
+                mobileMenu?.classList.toggle("hidden");
+            });
         });
     </script>
+
+    <!-- Newsletter Popup -->
+    <NewsletterPopup client:load />
 </BaseLayout>

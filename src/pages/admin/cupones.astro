@@ -1,0 +1,828 @@
+---
+import AdminLayout from "../../layouts/AdminLayout.astro";
+import { supabase, isSupabaseConfigured } from "../../lib/supabase";
+
+// Verificar si Supabase está configurado
+if (!isSupabaseConfigured) {
+    return Astro.redirect("/admin/login?error=config");
+}
+
+// Procesar formularios
+let message = "";
+let messageType: "success" | "error" = "success";
+
+if (Astro.request.method === "POST") {
+    const formData = await Astro.request.formData();
+    const action = formData.get("action") as string;
+
+    if (action === "create") {
+        const code = (formData.get("code") as string)
+            .toUpperCase()
+            .replace(/\s/g, "");
+        const discountType = formData.get("discount_type") as string;
+        const discountValue = parseInt(
+            formData.get("discount_value") as string,
+        );
+        const minPurchase =
+            parseInt(formData.get("min_purchase") as string) || 0;
+        const maxUses = parseInt(formData.get("max_uses") as string) || null;
+        const maxUsesPerUser =
+            parseInt(formData.get("max_uses_per_user") as string) || null;
+        const startDate = (formData.get("start_date") as string) || null;
+        const endDate = (formData.get("end_date") as string) || null;
+
+        // Validar código único
+        const { data: existing } = await supabase
+            .from("coupons")
+            .select("id")
+            .eq("code", code)
+            .single();
+
+        if (existing) {
+            message = "Ya existe un cupón con ese código";
+            messageType = "error";
+        } else {
+            const { error } = await supabase.from("coupons").insert({
+                code,
+                discount_type: discountType,
+                discount_value:
+                    discountType === "percentage"
+                        ? discountValue
+                        : discountValue * 100, // Convertir a céntimos si es fijo
+                min_purchase: minPurchase * 100, // Convertir a céntimos
+                max_uses: maxUses,
+                max_uses_per_user: maxUsesPerUser,
+                start_date: startDate || new Date().toISOString(), // Usar fecha actual si no se proporciona
+                end_date: endDate || null,
+                is_active: true,
+            });
+
+            if (error) {
+                message = `Error al crear cupón: ${error.message}`;
+                messageType = "error";
+            } else {
+                message = `Cupón "${code}" creado correctamente`;
+                messageType = "success";
+            }
+        }
+    } else if (action === "toggle") {
+        const id = parseInt(formData.get("id") as string);
+        const isActive = formData.get("is_active") === "true";
+
+        const { error } = await supabase
+            .from("coupons")
+            .update({ is_active: !isActive })
+            .eq("id", id);
+
+        if (error) {
+            message = `Error: ${error.message}`;
+            messageType = "error";
+        } else {
+            message = `Cupón ${!isActive ? "activado" : "desactivado"}`;
+            messageType = "success";
+        }
+    } else if (action === "delete") {
+        const id = parseInt(formData.get("id") as string);
+
+        const { error } = await supabase.from("coupons").delete().eq("id", id);
+
+        if (error) {
+            message = `Error al eliminar: ${error.message}`;
+            messageType = "error";
+        } else {
+            message = "Cupón eliminado correctamente";
+            messageType = "success";
+        }
+    }
+}
+
+// Obtener todos los cupones
+const { data: coupons } = await supabase
+    .from("coupons")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+// Obtener uso de cupones
+const { data: usageData } = await supabase
+    .from("coupon_usage")
+    .select("coupon_id");
+
+// Contar usos por cupón
+const usageCount = new Map<number, number>();
+usageData?.forEach((u) => {
+    usageCount.set(u.coupon_id, (usageCount.get(u.coupon_id) || 0) + 1);
+});
+
+// Funciones helper
+function formatDiscount(type: string, value: number): string {
+    if (type === "percentage") {
+        return `${value}%`;
+    } else {
+        return `${(value / 100).toFixed(2)}€`;
+    }
+}
+
+function formatDate(dateStr: string | null): string {
+    if (!dateStr) return "—";
+    return new Date(dateStr).toLocaleDateString("es-ES", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+    });
+}
+
+function getCouponStatus(coupon: any): { text: string; class: string } {
+    const now = new Date();
+
+    if (!coupon.is_active) {
+        return { text: "Desactivado", class: "status-inactive" };
+    }
+
+    if (coupon.end_date && new Date(coupon.end_date) < now) {
+        return { text: "Expirado", class: "status-expired" };
+    }
+
+    if (coupon.start_date && new Date(coupon.start_date) > now) {
+        return { text: "Programado", class: "status-scheduled" };
+    }
+
+    if (
+        coupon.max_uses &&
+        (usageCount.get(coupon.id) || 0) >= coupon.max_uses
+    ) {
+        return { text: "Agotado", class: "status-expired" };
+    }
+
+    return { text: "Activo", class: "status-active" };
+}
+---
+
+<AdminLayout title="Gestión de Cupones">
+    <div class="page-header">
+        <h1>🏷️ Gestión de Cupones</h1>
+        <p>Crea y administra códigos de descuento para tus clientes</p>
+    </div>
+
+    {
+        message && (
+            <div
+                class={`alert ${messageType === "error" ? "alert-error" : "alert-success"}`}
+            >
+                {message}
+            </div>
+        )
+    }
+
+    <!-- Formulario de creación -->
+    <div class="card create-form">
+        <h2>➕ Crear Nuevo Cupón</h2>
+        <form method="POST">
+            <input type="hidden" name="action" value="create" />
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="code">Código del cupón *</label>
+                    <input
+                        type="text"
+                        id="code"
+                        name="code"
+                        required
+                        placeholder="Ej: VERANO20"
+                        style="text-transform: uppercase;"
+                    />
+                    <span class="form-hint"
+                        >Sin espacios. Se convertirá a mayúsculas.</span
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="discount_type">Tipo de descuento *</label>
+                    <select id="discount_type" name="discount_type" required>
+                        <option value="percentage">Porcentaje (%)</option>
+                        <option value="fixed">Cantidad fija (€)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="discount_value">Valor del descuento *</label>
+                    <input
+                        type="number"
+                        id="discount_value"
+                        name="discount_value"
+                        required
+                        min="1"
+                        placeholder="Ej: 15"
+                    />
+                    <span class="form-hint" id="discount-hint"
+                        >Porcentaje de descuento</span
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="min_purchase">Compra mínima (€)</label>
+                    <input
+                        type="number"
+                        id="min_purchase"
+                        name="min_purchase"
+                        min="0"
+                        placeholder="0 = Sin mínimo"
+                    />
+                </div>
+
+                <div class="form-group">
+                    <label for="max_uses">Usos máximos totales</label>
+                    <input
+                        type="number"
+                        id="max_uses"
+                        name="max_uses"
+                        min="1"
+                        placeholder="Ilimitado"
+                    />
+                    <span class="form-hint"
+                        >Total de veces que puede usarse</span
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="max_uses_per_user">Límite por persona</label>
+                    <input
+                        type="number"
+                        id="max_uses_per_user"
+                        name="max_uses_per_user"
+                        min="1"
+                        placeholder="Ilimitado"
+                    />
+                    <span class="form-hint">Veces por cliente individual</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="start_date">Fecha inicio</label>
+                    <input type="date" id="start_date" name="start_date" />
+                </div>
+
+                <div class="form-group">
+                    <label for="end_date">Fecha fin</label>
+                    <input type="date" id="end_date" name="end_date" />
+                </div>
+
+                <div class="form-group form-actions">
+                    <button type="submit" class="btn btn-primary">
+                        🏷️ Crear Cupón
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Lista de cupones -->
+    <div class="card">
+        <h2>📋 Cupones Existentes ({coupons?.length || 0})</h2>
+
+        {
+            !coupons || coupons.length === 0 ? (
+                <div class="empty-state">
+                    <p>No hay cupones creados</p>
+                    <p class="hint">Crea tu primer cupón de descuento arriba</p>
+                </div>
+            ) : (
+                <div class="coupons-table-wrapper">
+                    <table class="coupons-table">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Descuento</th>
+                                <th>Mínimo</th>
+                                <th>Usos</th>
+                                <th>Validez</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {coupons.map((coupon) => {
+                                const status = getCouponStatus(coupon);
+                                const uses = usageCount.get(coupon.id) || 0;
+                                return (
+                                    <tr
+                                        class={
+                                            !coupon.is_active
+                                                ? "row-inactive"
+                                                : ""
+                                        }
+                                    >
+                                        <td>
+                                            <span class="coupon-code">
+                                                {coupon.code}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="discount-value">
+                                                {formatDiscount(
+                                                    coupon.discount_type,
+                                                    coupon.discount_value,
+                                                )}
+                                            </span>
+                                            <span class="discount-type">
+                                                {coupon.discount_type ===
+                                                "percentage"
+                                                    ? "descuento"
+                                                    : "de descuento"}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            {coupon.min_purchase > 0
+                                                ? `${(coupon.min_purchase / 100).toFixed(0)}€`
+                                                : "—"}
+                                        </td>
+                                        <td>
+                                            <div class="uses-info">
+                                                <span>{uses}</span>
+                                                {coupon.max_uses && (
+                                                    <span class="max-uses">
+                                                        {" "}
+                                                        / {coupon.max_uses}{" "}
+                                                        total
+                                                    </span>
+                                                )}
+                                            </div>
+                                            {coupon.max_uses_per_user && (
+                                                <div class="per-user-limit">
+                                                    👤{" "}
+                                                    {coupon.max_uses_per_user}
+                                                    /persona
+                                                </div>
+                                            )}
+                                        </td>
+                                        <td>
+                                            <div class="dates">
+                                                {coupon.start_date ||
+                                                coupon.end_date ? (
+                                                    <>
+                                                        {formatDate(
+                                                            coupon.start_date,
+                                                        )}{" "}
+                                                        —{" "}
+                                                        {formatDate(
+                                                            coupon.end_date,
+                                                        )}
+                                                    </>
+                                                ) : (
+                                                    <span class="no-limit">
+                                                        Sin límite
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span
+                                                class={`status-badge ${status.class}`}
+                                            >
+                                                {status.text}
+                                            </span>
+                                        </td>
+                                        <td class="actions-cell">
+                                            <form
+                                                method="POST"
+                                                style="display: inline;"
+                                            >
+                                                <input
+                                                    type="hidden"
+                                                    name="action"
+                                                    value="toggle"
+                                                />
+                                                <input
+                                                    type="hidden"
+                                                    name="id"
+                                                    value={coupon.id}
+                                                />
+                                                <input
+                                                    type="hidden"
+                                                    name="is_active"
+                                                    value={coupon.is_active.toString()}
+                                                />
+                                                <button
+                                                    type="submit"
+                                                    class={`btn btn-sm ${coupon.is_active ? "btn-warning" : "btn-success"}`}
+                                                >
+                                                    {coupon.is_active
+                                                        ? "⏸️ Pausar"
+                                                        : "▶️ Activar"}
+                                                </button>
+                                            </form>
+                                            {uses === 0 && (
+                                                <form
+                                                    method="POST"
+                                                    style="display: inline;"
+                                                    onsubmit="return confirm('¿Seguro que deseas eliminar este cupón?')"
+                                                >
+                                                    <input
+                                                        type="hidden"
+                                                        name="action"
+                                                        value="delete"
+                                                    />
+                                                    <input
+                                                        type="hidden"
+                                                        name="id"
+                                                        value={coupon.id}
+                                                    />
+                                                    <button
+                                                        type="submit"
+                                                        class="btn btn-sm btn-danger"
+                                                    >
+                                                        🗑️
+                                                    </button>
+                                                </form>
+                                            )}
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+            )
+        }
+    </div>
+
+    <!-- Info de uso -->
+    <div class="card info-card">
+        <h2>ℹ️ Cómo funcionan los cupones</h2>
+        <div class="info-grid">
+            <div class="info-item">
+                <h4>📝 Código</h4>
+                <p>
+                    El cliente introduce el código en el checkout. Se convierte
+                    automáticamente a mayúsculas.
+                </p>
+            </div>
+            <div class="info-item">
+                <h4>💰 Tipos de descuento</h4>
+                <p>
+                    <strong>Porcentaje:</strong> Descuenta un % del total.<br
+                    /><strong>Fijo:</strong> Resta una cantidad exacta.
+                </p>
+            </div>
+            <div class="info-item">
+                <h4>🛒 Compra mínima</h4>
+                <p>
+                    El cupón solo aplica si el carrito supera este valor (antes
+                    de envío).
+                </p>
+            </div>
+            <div class="info-item">
+                <h4>📅 Validez</h4>
+                <p>
+                    Puedes programar fechas de inicio/fin. Sin fechas = siempre
+                    válido.
+                </p>
+            </div>
+        </div>
+    </div>
+</AdminLayout>
+
+<style>
+    .page-header {
+        margin-bottom: 2rem;
+    }
+
+    .page-header h1 {
+        font-size: 2rem;
+        color: var(--navy);
+        margin: 0 0 0.5rem 0;
+    }
+
+    .page-header p {
+        color: #6b7280;
+        margin: 0;
+    }
+
+    .card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .card h2 {
+        font-size: 1.25rem;
+        color: var(--navy);
+        margin: 0 0 1.5rem 0;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .alert {
+        padding: 1rem 1.5rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+        font-weight: 500;
+    }
+
+    .alert-success {
+        background: #d1fae5;
+        color: #065f46;
+        border: 1px solid #10b981;
+    }
+
+    .alert-error {
+        background: #fee2e2;
+        color: #991b1b;
+        border: 1px solid #dc2626;
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 1rem;
+        align-items: flex-end;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .form-group label {
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        color: #374151;
+        font-size: 0.9rem;
+    }
+
+    .form-group input,
+    .form-group select {
+        padding: 0.75rem 1rem;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 1rem;
+        transition:
+            border-color 0.2s,
+            box-shadow 0.2s;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+        outline: none;
+        border-color: var(--navy);
+        box-shadow: 0 0 0 3px rgba(26, 39, 68, 0.1);
+    }
+
+    .form-hint {
+        font-size: 0.8rem;
+        color: #9ca3af;
+        margin-top: 0.25rem;
+    }
+
+    .form-actions {
+        align-self: flex-end;
+    }
+
+    .btn {
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        border: none;
+        font-size: 0.95rem;
+        transition: all 0.2s;
+    }
+
+    .btn-primary {
+        background: #1a2744;
+        background-color: #1a2744 !important;
+        color: #ffffff !important;
+    }
+
+    .btn-primary:hover {
+        background: #2d4a6f;
+    }
+
+    .btn-success {
+        background: #10b981;
+        color: white;
+    }
+
+    .btn-success:hover {
+        background: #059669;
+    }
+
+    .btn-warning {
+        background: #f59e0b;
+        color: white;
+    }
+
+    .btn-warning:hover {
+        background: #d97706;
+    }
+
+    .btn-danger {
+        background: #dc2626;
+        color: white;
+    }
+
+    .btn-danger:hover {
+        background: #b91c1c;
+    }
+
+    .btn-sm {
+        padding: 0.4rem 0.75rem;
+        font-size: 0.8rem;
+    }
+
+    .coupons-table-wrapper {
+        overflow-x: auto;
+    }
+
+    .coupons-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .coupons-table th {
+        background: #f9fafb;
+        padding: 1rem;
+        text-align: left;
+        font-weight: 600;
+        color: #374151;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .coupons-table td {
+        padding: 1rem;
+        border-bottom: 1px solid #e5e7eb;
+        vertical-align: middle;
+    }
+
+    .coupons-table tr:hover {
+        background: #f9fafb;
+    }
+
+    .coupons-table tr.row-inactive {
+        opacity: 0.6;
+    }
+
+    .coupon-code {
+        font-family: monospace;
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--navy);
+        background: #f0f4f8;
+        padding: 0.25rem 0.75rem;
+        border-radius: 6px;
+    }
+
+    .discount-value {
+        font-weight: 700;
+        color: #059669;
+        font-size: 1.1rem;
+    }
+
+    .discount-type {
+        color: #6b7280;
+        font-size: 0.85rem;
+        display: block;
+    }
+
+    .uses-info {
+        font-weight: 600;
+        color: var(--navy);
+    }
+
+    .max-uses {
+        color: #9ca3af;
+        font-weight: 400;
+    }
+
+    .per-user-limit {
+        font-size: 0.75rem;
+        color: #6366f1;
+        background: #eef2ff;
+        padding: 2px 8px;
+        border-radius: 4px;
+        margin-top: 4px;
+        display: inline-block;
+    }
+
+    .dates {
+        font-size: 0.85rem;
+        color: #6b7280;
+    }
+
+    .no-limit {
+        color: #9ca3af;
+        font-style: italic;
+    }
+
+    .status-badge {
+        display: inline-block;
+        padding: 0.35rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+
+    .status-active {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    .status-inactive {
+        background: #f3f4f6;
+        color: #6b7280;
+    }
+
+    .status-expired {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .status-scheduled {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+
+    .actions-cell {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .info-card {
+        background: linear-gradient(135deg, #f8f5f0 0%, #fff 100%);
+        border: 1px solid #e5e7eb;
+    }
+
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 1.25rem;
+    }
+
+    .info-item {
+        background: white;
+        padding: 1rem;
+        border-radius: 8px;
+        border: 1px solid #e5e7eb;
+    }
+
+    .info-item h4 {
+        color: var(--navy);
+        margin: 0 0 0.5rem 0;
+        font-size: 0.95rem;
+    }
+
+    .info-item p {
+        color: #6b7280;
+        font-size: 0.85rem;
+        margin: 0;
+        line-height: 1.5;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 3rem;
+        color: #6b7280;
+    }
+
+    .empty-state .hint {
+        font-size: 0.9rem;
+        color: #9ca3af;
+        margin-top: 0.5rem;
+    }
+
+    @media (max-width: 768px) {
+        .form-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .actions-cell {
+            flex-direction: column;
+        }
+    }
+</style>
+
+<script>
+    // Actualizar hint según tipo de descuento
+    const discountType = document.getElementById(
+        "discount_type",
+    ) as HTMLSelectElement;
+    const discountHint = document.getElementById("discount-hint");
+    const discountValue = document.getElementById(
+        "discount_value",
+    ) as HTMLInputElement;
+
+    discountType?.addEventListener("change", () => {
+        if (discountType.value === "percentage") {
+            discountHint!.textContent = "Porcentaje de descuento (1-100)";
+            discountValue.max = "100";
+            discountValue.placeholder = "Ej: 15";
+        } else {
+            discountHint!.textContent = "Cantidad en euros";
+            discountValue.removeAttribute("max");
+            discountValue.placeholder = "Ej: 10";
+        }
+    });
+</script>

@@ -64,7 +64,7 @@ CREATE TABLE IF NOT EXISTS orders (
   customer_city VARCHAR(100) NOT NULL,
   customer_postal_code VARCHAR(20) NOT NULL,
   customer_phone VARCHAR(50),
-  status VARCHAR(50) DEFAULT 'pending' CHECK (status IN ('pending', 'paid', 'shipped', 'delivered', 'cancelled')),
+  status VARCHAR(50) DEFAULT 'pending' CHECK (status IN ('pending', 'paid', 'ready_for_pickup', 'shipped', 'delivered', 'cancelled')),
   total INTEGER NOT NULL, -- Total en céntimos
   stripe_payment_intent_id VARCHAR(255),
   created_at TIMESTAMPTZ DEFAULT NOW(),

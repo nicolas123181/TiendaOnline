@@ -1,0 +1,90 @@
+name: Wishlist Email Notifications
+
+# Ejecutar todos los días a las 18:00 (hora de Madrid/España) - TEMPORAL PARA PRUEBA
+# Nota: El cron de GitHub usa UTC, Madrid es UTC+1 (invierno)
+# 18:00 Madrid = 17:00 UTC
+on:
+  schedule:
+    # TEMPORAL: Ejecutar a las 17:00 UTC (18:00 hora España)
+    # CAMBIAR A: '0 8 * * *' para las 9:00 AM España
+    - cron: '0 8 * * *'
+  
+  # Permitir ejecución manual desde GitHub Actions
+  workflow_dispatch:
+
+env:
+  # URL de tu aplicación desplegada
+  # Cambiar esto cuando despliegues la app
+  SITE_URL: ${{ secrets.SITE_URL }}
+  ADMIN_API_KEY: ${{ secrets.ADMIN_API_KEY }}
+
+jobs:
+  send-notifications:
+    name: Send Wishlist Notifications
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Check Site URL is configured
+        run: |
+          if [ -z "$SITE_URL" ]; then
+            echo "❌ Error: SITE_URL secret not configured"
+            echo "Please add SITE_URL to your repository secrets"
+            exit 1
+          fi
+          echo "✅ Site URL configured: $SITE_URL"
+
+      - name: Send Low Stock Notifications
+        id: low_stock
+        run: |
+          echo "📦 Checking for low stock wishlist notifications..."
+          
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+            "$SITE_URL/api/admin/wishlist-notifications" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $ADMIN_API_KEY" \
+            --max-time 30)
+          
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+          
+          echo "Response code: $HTTP_CODE"
+          echo "Response: $BODY"
+          
+          if [ "$HTTP_CODE" -eq 200 ]; then
+            echo "✅ Low stock notifications processed successfully"
+          else
+            echo "⚠️ Low stock notifications failed with code $HTTP_CODE"
+          fi
+
+      - name: Send Sale Notifications
+        id: sale
+        run: |
+          echo "🏷️ Checking for sale wishlist notifications..."
+          
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+            "$SITE_URL/api/admin/wishlist-sale-notifications" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $ADMIN_API_KEY" \
+            --max-time 30)
+          
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+          
+          echo "Response code: $HTTP_CODE"
+          echo "Response: $BODY"
+          
+          if [ "$HTTP_CODE" -eq 200 ]; then
+            echo "✅ Sale notifications processed successfully"
+          else
+            echo "⚠️ Sale notifications failed with code $HTTP_CODE"
+          fi
+
+      - name: Summary
+        run: |
+          echo "=========================================="
+          echo "📧 Wishlist Notifications Complete"
+          echo "=========================================="
+          echo "Time: $(date)"
+          echo ""
+          echo "Both low stock and sale notifications have been processed."
+          echo "Check the logs above for details on emails sent."

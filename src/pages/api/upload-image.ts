@@ -1,8 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getServiceSupabase } from '../../lib/supabase';
-
-// Nombre del bucket en Supabase Storage
-const BUCKET_NAME = 'Productos';
+import { uploadImage, deleteImage, getPublicIdFromUrl } from '../../lib/cloudinary';
 
 export const POST: APIRoute = async ({ request }) => {
     try {
@@ -16,7 +13,7 @@ export const POST: APIRoute = async ({ request }) => {
             );
         }
 
-        // Validar tipo de archivo
+        // Validate file type
         if (!file.type.startsWith('image/')) {
             return new Response(
                 JSON.stringify({ error: 'El archivo debe ser una imagen' }),
@@ -24,55 +21,37 @@ export const POST: APIRoute = async ({ request }) => {
             );
         }
 
-        // Validar tamaño (máximo 5MB)
-        const MAX_SIZE = 5 * 1024 * 1024;
+        // Validate size (max 10MB for Cloudinary)
+        const MAX_SIZE = 10 * 1024 * 1024;
         if (file.size > MAX_SIZE) {
             return new Response(
-                JSON.stringify({ error: 'El archivo es demasiado grande. Máximo 5MB.' }),
+                JSON.stringify({ error: 'El archivo es demasiado grande. Máximo 10MB.' }),
                 { status: 400, headers: { 'Content-Type': 'application/json' } }
             );
         }
 
-        // Generar nombre único para el archivo
+        // Generate unique filename
         const timestamp = Date.now();
         const randomString = Math.random().toString(36).substring(2, 8);
-        const extension = file.name.split('.').pop() || 'jpg';
-        const fileName = `${timestamp}-${randomString}.${extension}`;
+        const filename = `${timestamp}-${randomString}`;
 
-        // Obtener cliente de Supabase con permisos de servicio
-        const supabase = getServiceSupabase();
-
-        // Convertir File a ArrayBuffer
+        // Convert File to Buffer
         const arrayBuffer = await file.arrayBuffer();
-        const uint8Array = new Uint8Array(arrayBuffer);
+        const buffer = Buffer.from(arrayBuffer);
 
-        // Subir archivo al bucket de Supabase Storage
-        const { data, error: uploadError } = await supabase.storage
-            .from(BUCKET_NAME)
-            .upload(fileName, uint8Array, {
-                contentType: file.type,
-                cacheControl: '3600',
-                upsert: false
-            });
-
-        if (uploadError) {
-            console.error('Error uploading to Supabase Storage:', uploadError);
-            return new Response(
-                JSON.stringify({ error: `Error al subir la imagen: ${uploadError.message}` }),
-                { status: 500, headers: { 'Content-Type': 'application/json' } }
-            );
-        }
-
-        // Obtener URL pública del archivo
-        const { data: urlData } = supabase.storage
-            .from(BUCKET_NAME)
-            .getPublicUrl(data.path);
+        // Upload to Cloudinary
+        const result = await uploadImage(buffer, {
+            folder: 'productos',
+            filename: filename
+        });
 
         return new Response(
             JSON.stringify({
                 success: true,
-                url: urlData.publicUrl,
-                path: data.path
+                url: result.url,
+                publicId: result.publicId,
+                width: result.width,
+                height: result.height
             }),
             { status: 200, headers: { 'Content-Type': 'application/json' } }
         );
@@ -80,34 +59,44 @@ export const POST: APIRoute = async ({ request }) => {
     } catch (error) {
         console.error('Error in upload-image API:', error);
         return new Response(
-            JSON.stringify({ error: 'Error interno del servidor' }),
+            JSON.stringify({ error: 'Error interno del servidor al subir la imagen' }),
             { status: 500, headers: { 'Content-Type': 'application/json' } }
         );
     }
 };
 
-// También permitir eliminar imágenes
+// Delete images
 export const DELETE: APIRoute = async ({ request }) => {
     try {
-        const { path } = await request.json();
+        const { url, publicId } = await request.json();
 
-        if (!path) {
+        // Get public ID from URL if not provided directly
+        let idToDelete = publicId;
+        if (!idToDelete && url) {
+            // Only try to delete if it's a Cloudinary URL
+            if (url.includes('cloudinary.com')) {
+                idToDelete = getPublicIdFromUrl(url);
+            } else {
+                // It's a Supabase URL or other - just return success (don't try to delete)
+                return new Response(
+                    JSON.stringify({ success: true, message: 'URL externa, no se eliminó de Cloudinary' }),
+                    { status: 200, headers: { 'Content-Type': 'application/json' } }
+                );
+            }
+        }
+
+        if (!idToDelete) {
             return new Response(
-                JSON.stringify({ error: 'No se ha proporcionado la ruta del archivo' }),
+                JSON.stringify({ error: 'No se pudo determinar el ID de la imagen' }),
                 { status: 400, headers: { 'Content-Type': 'application/json' } }
             );
         }
 
-        const supabase = getServiceSupabase();
+        const deleted = await deleteImage(idToDelete);
 
-        const { error: deleteError } = await supabase.storage
-            .from(BUCKET_NAME)
-            .remove([path]);
-
-        if (deleteError) {
-            console.error('Error deleting from Supabase Storage:', deleteError);
+        if (!deleted) {
             return new Response(
-                JSON.stringify({ error: `Error al eliminar la imagen: ${deleteError.message}` }),
+                JSON.stringify({ error: 'Error al eliminar la imagen' }),
                 { status: 500, headers: { 'Content-Type': 'application/json' } }
             );
         }

@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import type { AstroCookies } from 'astro';
 
 const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
 const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key';
@@ -12,6 +13,38 @@ export const isSupabaseConfigured = Boolean(
     import.meta.env.PUBLIC_SUPABASE_ANON_KEY &&
     !import.meta.env.PUBLIC_SUPABASE_URL.includes('placeholder')
 );
+
+/**
+ * Crea un cliente de Supabase con autenticación basada en cookies
+ * IMPORTANTE: Usar esto en lugar del cliente global en páginas SSR
+ * para evitar compartir sesiones entre peticiones
+ */
+export function createServerClient(cookies: AstroCookies): SupabaseClient {
+    const accessToken = cookies.get('sb-access-token')?.value;
+    const refreshToken = cookies.get('sb-refresh-token')?.value;
+    
+    const client = createClient(supabaseUrl, supabaseAnonKey, {
+        auth: {
+            persistSession: false,
+            autoRefreshToken: false,
+        },
+        global: {
+            headers: accessToken ? {
+                Authorization: `Bearer ${accessToken}`
+            } : {}
+        }
+    });
+    
+    // Si hay tokens, setear la sesión
+    if (accessToken && refreshToken) {
+        client.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken
+        });
+    }
+    
+    return client;
+}
 
 // Cliente con service role para operaciones admin (solo server-side)
 export function getServiceSupabase(): SupabaseClient {
@@ -74,6 +107,21 @@ export interface OrderItem {
     product_price: number;
     quantity: number;
     size?: string;
+}
+
+export interface ProductSize {
+    id: number;
+    product_id: number;
+    size: string;
+    stock: number;
+    created_at: string;
+    updated_at: string;
+}
+
+// Tipo para manejar stock por tallas en formularios
+export interface SizeStock {
+    size: string;
+    stock: number;
 }
 
 export interface AppSettings {
@@ -156,6 +204,111 @@ export async function getFeaturedProducts(): Promise<Product[]> {
     } catch (e) {
         console.error('Error fetching featured products:', e);
         return [];
+    }
+}
+
+// ====== FUNCIONES DE STOCK POR TALLAS ======
+
+export async function getProductSizes(productId: number): Promise<ProductSize[]> {
+    if (!isSupabaseConfigured) return [];
+
+    try {
+        const { data, error } = await supabase
+            .from('product_sizes')
+            .select('*')
+            .eq('product_id', productId)
+            .order('size');
+
+        if (error) {
+            console.error('Error fetching product sizes:', error);
+            return [];
+        }
+        return data || [];
+    } catch (e) {
+        console.error('Error fetching product sizes:', e);
+        return [];
+    }
+}
+
+export async function updateProductSizes(productId: number, sizes: SizeStock[]): Promise<boolean> {
+    if (!isSupabaseConfigured) return false;
+
+    try {
+        // Primero eliminamos las tallas existentes
+        const { error: deleteError } = await supabase
+            .from('product_sizes')
+            .delete()
+            .eq('product_id', productId);
+
+        if (deleteError) {
+            console.error('Error deleting old sizes:', deleteError);
+            return false;
+        }
+
+        // Luego insertamos las nuevas tallas (solo las que tienen stock > 0 o todas)
+        const sizesToInsert = sizes.map(s => ({
+            product_id: productId,
+            size: s.size,
+            stock: s.stock
+        }));
+
+        if (sizesToInsert.length > 0) {
+            const { error: insertError } = await supabase
+                .from('product_sizes')
+                .insert(sizesToInsert);
+
+            if (insertError) {
+                console.error('Error inserting sizes:', insertError);
+                return false;
+            }
+        }
+
+        // El trigger de la BD actualizará automáticamente el stock total en products
+        return true;
+    } catch (e) {
+        console.error('Error updating product sizes:', e);
+        return false;
+    }
+}
+
+export async function getStockForSize(productId: number, size: string): Promise<number> {
+    if (!isSupabaseConfigured) return 0;
+
+    try {
+        const { data, error } = await supabase
+            .from('product_sizes')
+            .select('stock')
+            .eq('product_id', productId)
+            .eq('size', size)
+            .single();
+
+        if (error || !data) return 0;
+        return data.stock;
+    } catch (e) {
+        return 0;
+    }
+}
+
+export async function decrementSizeStock(productId: number, size: string, quantity: number): Promise<boolean> {
+    if (!isSupabaseConfigured) return false;
+
+    try {
+        // Usar la función de base de datos para evitar race conditions
+        const { data, error } = await supabase
+            .rpc('decrement_size_stock', {
+                p_product_id: productId,
+                p_size: size,
+                p_quantity: quantity
+            });
+
+        if (error) {
+            console.error('Error decrementing size stock:', error);
+            return false;
+        }
+        return data === true;
+    } catch (e) {
+        console.error('Error decrementing size stock:', e);
+        return false;
     }
 }
 
@@ -492,7 +645,7 @@ export interface Coupon {
     created_at: string;
 }
 
-export async function validateCoupon(code: string, orderTotal: number): Promise<{ valid: boolean; discount: number; message: string }> {
+export async function validateCoupon(code: string, orderTotal: number, userEmail?: string): Promise<{ valid: boolean; discount: number; message: string; couponId?: number }> {
     if (!isSupabaseConfigured) {
         return { valid: false, discount: 0, message: 'Sistema no configurado' };
     }
@@ -506,7 +659,7 @@ export async function validateCoupon(code: string, orderTotal: number): Promise<
             .single();
 
         if (error || !data) {
-            return { valid: false, discount: 0, message: 'Cupón no encontrado' };
+            return { valid: false, discount: 0, message: 'Cupón no encontrado o no válido' };
         }
 
         const now = new Date().toISOString();
@@ -520,9 +673,23 @@ export async function validateCoupon(code: string, orderTotal: number): Promise<
             return { valid: false, discount: 0, message: 'Este cupón ha expirado' };
         }
 
-        // Validar límite de usos
+        // Validar límite de usos TOTAL
         if (data.max_uses && data.used_count >= data.max_uses) {
             return { valid: false, discount: 0, message: 'Este cupón ya no está disponible' };
+        }
+
+        // Validar límite de usos POR USUARIO
+        if (data.max_uses_per_user && userEmail) {
+            // Contar cuántas veces este usuario ha usado este cupón
+            const { count, error: usageError } = await supabase
+                .from('coupon_usage')
+                .select('*', { count: 'exact', head: true })
+                .eq('coupon_id', data.id)
+                .eq('customer_email', userEmail);
+
+            if (!usageError && count !== null && count >= data.max_uses_per_user) {
+                return { valid: false, discount: 0, message: `Ya has usado este cupón ${data.max_uses_per_user} ${data.max_uses_per_user === 1 ? 'vez' : 'veces'}` };
+            }
         }
 
         // Validar compra mínima
@@ -538,7 +705,7 @@ export async function validateCoupon(code: string, orderTotal: number): Promise<
             discount = Math.min(data.discount_value, orderTotal);
         }
 
-        return { valid: true, discount, message: 'Cupón aplicado correctamente' };
+        return { valid: true, discount, message: 'Cupón aplicado correctamente', couponId: data.id };
     } catch (e) {
         console.error('Error validating coupon:', e);
         return { valid: false, discount: 0, message: 'Error al validar el cupón' };
@@ -581,3 +748,339 @@ export async function getProductOffer(productId: number): Promise<ProductOffer |
         return null;
     }
 }
+
+// =====================================================
+// WISHLIST / LISTA DE DESEOS
+// =====================================================
+
+export interface WishlistItem {
+    id: number;
+    user_id: string;
+    product_id: number;
+    size: string;
+    notified_low_stock: boolean;
+    created_at: string;
+}
+
+export interface WishlistItemWithProduct extends WishlistItem {
+    product?: Product;
+    size_stock?: number;
+}
+
+/**
+ * Añadir producto a la lista de deseos
+ */
+export async function addToWishlist(
+    userId: string,
+    productId: number,
+    size: string
+): Promise<boolean> {
+    if (!isSupabaseConfigured) return false;
+
+    try {
+        const { error } = await supabase
+            .from('wishlist')
+            .insert({
+                user_id: userId,
+                product_id: productId,
+                size: size
+            });
+
+        if (error) {
+            // Si ya existe, no es un error grave
+            if (error.code === '23505') {
+                console.log('Item already in wishlist');
+                return true;
+            }
+            console.error('Error adding to wishlist:', error);
+            return false;
+        }
+        return true;
+    } catch (e) {
+        console.error('Error adding to wishlist:', e);
+        return false;
+    }
+}
+
+/**
+ * Quitar producto de la lista de deseos
+ */
+export async function removeFromWishlist(
+    userId: string,
+    productId: number,
+    size: string
+): Promise<boolean> {
+    if (!isSupabaseConfigured) return false;
+
+    try {
+        const { error } = await supabase
+            .from('wishlist')
+            .delete()
+            .eq('user_id', userId)
+            .eq('product_id', productId)
+            .eq('size', size);
+
+        if (error) {
+            console.error('Error removing from wishlist:', error);
+            return false;
+        }
+        return true;
+    } catch (e) {
+        console.error('Error removing from wishlist:', e);
+        return false;
+    }
+}
+
+/**
+ * Toggle wishlist item (añadir si no existe, quitar si existe)
+ */
+export async function toggleWishlist(
+    userId: string,
+    productId: number,
+    size: string
+): Promise<{ isInWishlist: boolean; success: boolean }> {
+    if (!isSupabaseConfigured) return { isInWishlist: false, success: false };
+
+    try {
+        // Verificar si ya está en wishlist
+        const isIn = await isInWishlist(userId, productId, size);
+
+        if (isIn) {
+            const success = await removeFromWishlist(userId, productId, size);
+            return { isInWishlist: false, success };
+        } else {
+            const success = await addToWishlist(userId, productId, size);
+            return { isInWishlist: true, success };
+        }
+    } catch (e) {
+        console.error('Error toggling wishlist:', e);
+        return { isInWishlist: false, success: false };
+    }
+}
+
+/**
+ * Verificar si un producto+talla está en la wishlist del usuario
+ */
+export async function isInWishlist(
+    userId: string,
+    productId: number,
+    size: string
+): Promise<boolean> {
+    if (!isSupabaseConfigured) return false;
+
+    try {
+        const { data, error } = await supabase
+            .from('wishlist')
+            .select('id')
+            .eq('user_id', userId)
+            .eq('product_id', productId)
+            .eq('size', size)
+            .single();
+
+        return !error && !!data;
+    } catch (e) {
+        return false;
+    }
+}
+
+/**
+ * Obtener toda la wishlist del usuario con detalles de producto
+ */
+export async function getUserWishlist(userId: string): Promise<WishlistItemWithProduct[]> {
+    if (!isSupabaseConfigured) return [];
+
+    try {
+        const { data, error } = await supabase
+            .from('wishlist')
+            .select(`
+                *,
+                product:products(*)
+            `)
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false });
+
+        if (error || !data) return [];
+
+        // Obtener stock por talla para cada item
+        const itemsWithStock = await Promise.all(data.map(async (item: any) => {
+            const sizeStock = await getStockForSize(item.product_id, item.size);
+            return {
+                ...item,
+                size_stock: sizeStock
+            };
+        }));
+
+        return itemsWithStock;
+    } catch (e) {
+        console.error('Error getting user wishlist:', e);
+        return [];
+    }
+}
+
+/**
+ * Obtener el conteo de items en la wishlist del usuario
+ */
+export async function getWishlistCount(userId: string): Promise<number> {
+    if (!isSupabaseConfigured) return 0;
+
+    try {
+        const { count, error } = await supabase
+            .from('wishlist')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', userId);
+
+        if (error) return 0;
+        return count || 0;
+    } catch (e) {
+        return 0;
+    }
+}
+
+/**
+ * Obtener items de wishlist que tienen stock bajo para notificar
+ */
+export interface WishlistLowStockNotification {
+    wishlist_id: number;
+    user_id: string;
+    user_email: string;
+    user_name: string;
+    product_id: number;
+    product_name: string;
+    product_slug: string;
+    product_price: number;
+    product_image: string;
+    size: string;
+    size_stock: number;
+}
+
+export async function getWishlistLowStockNotifications(
+    stockThreshold: number = 9
+): Promise<WishlistLowStockNotification[]> {
+    if (!isSupabaseConfigured) return [];
+
+    try {
+        const { data, error } = await supabase
+            .rpc('get_wishlist_low_stock_notifications', {
+                stock_threshold: stockThreshold
+            });
+
+        if (error) {
+            console.error('Error getting low stock notifications:', error);
+            return [];
+        }
+
+        return data || [];
+    } catch (e) {
+        console.error('Error getting low stock notifications:', e);
+        return [];
+    }
+}
+
+/**
+ * Marcar items de wishlist como notificados
+ */
+export async function markWishlistNotified(wishlistIds: number[]): Promise<boolean> {
+    if (!isSupabaseConfigured || wishlistIds.length === 0) return false;
+
+    try {
+        const { error } = await supabase
+            .rpc('mark_wishlist_notified', {
+                wishlist_ids: wishlistIds
+            });
+
+        if (error) {
+            console.error('Error marking wishlist as notified:', error);
+            return false;
+        }
+        return true;
+    } catch (e) {
+        console.error('Error marking wishlist as notified:', e);
+        return false;
+    }
+}
+
+// =====================================================
+// WISHLIST SALE NOTIFICATIONS (Notificaciones de ofertas)
+// =====================================================
+
+export interface WishlistSaleNotification {
+    wishlist_id: number;
+    user_id: string;
+    user_email: string;
+    user_name: string;
+    product_id: number;
+    product_name: string;
+    product_slug: string;
+    original_price: number;
+    sale_price: number;
+    discount_percentage: number;
+    product_image: string;
+    size: string;
+}
+
+/**
+ * Obtener items de wishlist donde el producto está en oferta y no se ha notificado
+ */
+export async function getWishlistSaleNotifications(): Promise<WishlistSaleNotification[]> {
+    if (!isSupabaseConfigured) return [];
+
+    try {
+        const { data, error } = await supabase
+            .rpc('get_wishlist_sale_notifications');
+
+        if (error) {
+            console.error('Error getting sale notifications:', error);
+            return [];
+        }
+
+        return data || [];
+    } catch (e) {
+        console.error('Error getting sale notifications:', e);
+        return [];
+    }
+}
+
+/**
+ * Marcar items de wishlist como notificados de oferta
+ */
+export async function markWishlistSaleNotified(wishlistIds: number[]): Promise<boolean> {
+    if (!isSupabaseConfigured || wishlistIds.length === 0) return false;
+
+    try {
+        const { error } = await supabase
+            .rpc('mark_wishlist_sale_notified', {
+                wishlist_ids: wishlistIds
+            });
+
+        if (error) {
+            console.error('Error marking wishlist sale as notified:', error);
+            return false;
+        }
+        return true;
+    } catch (e) {
+        console.error('Error marking wishlist sale as notified:', e);
+        return false;
+    }
+}
+
+/**
+ * Resetear notificaciones de oferta para productos que ya no están en oferta
+ */
+export async function resetWishlistSaleNotifications(): Promise<boolean> {
+    if (!isSupabaseConfigured) return false;
+
+    try {
+        const { error } = await supabase
+            .rpc('reset_wishlist_sale_notifications');
+
+        if (error) {
+            console.error('Error resetting wishlist sale notifications:', error);
+            return false;
+        }
+        return true;
+    } catch (e) {
+        console.error('Error resetting wishlist sale notifications:', e);
+        return false;
+    }
+}
+
