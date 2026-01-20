@@ -11,36 +11,39 @@ import {
 } from '../../lib/email';
 import { createInvoice, type InvoiceItem } from '../../lib/invoice';
 
+// Helper para añadir delay entre emails y evitar rate limiting de Resend
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 /**
  * Convierte una URL de imagen a una URL pública absoluta
  */
 function getPublicImageUrl(imageUrl: string | null | undefined): string | undefined {
     if (!imageUrl) return undefined;
-    
+
     // Si ya es una URL absoluta (http:// o https://), retornarla tal cual
     if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
         return imageUrl;
     }
-    
+
     // Obtener la URL base de Supabase desde las variables de entorno
     const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
-    
+
     // Si la URL comienza con /storage/v1/object/public/, es una URL relativa de Supabase Storage
     if (imageUrl.startsWith('/storage/v1/object/public/')) {
         return supabaseUrl ? `${supabaseUrl}${imageUrl}` : imageUrl;
     }
-    
+
     // Si empieza con /, es una ruta relativa del sitio
     if (imageUrl.startsWith('/')) {
         const siteUrl = import.meta.env.PUBLIC_SITE_URL || 'http://localhost:4321';
         return `${siteUrl}${imageUrl}`;
     }
-    
+
     // Si no tiene protocolo pero parece ser un path de bucket (products/xxx.jpg)
     if (imageUrl.includes('/')) {
         return supabaseUrl ? `${supabaseUrl}/storage/v1/object/public/${imageUrl}` : imageUrl;
     }
-    
+
     // Fallback: retornar la URL original
     return imageUrl;
 }
@@ -342,6 +345,8 @@ export const POST: APIRoute = async ({ request }) => {
                 invoiceId: invoiceData?.id,
             });
             console.log(`✅ Confirmation email sent`);
+            // Delay de 2 segundos antes del siguiente email para evitar rate limiting
+            await delay(2000);
         } catch (emailError) {
             console.error('❌ Error sending confirmation email:', emailError);
         }
@@ -352,6 +357,9 @@ export const POST: APIRoute = async ({ request }) => {
         if (outOfStockProducts.length > 0) {
             try {
                 await sendOutOfStockAlert(outOfStockProducts);
+                console.log(`✅ Out of stock alert sent`);
+                // Delay de 2 segundos antes del siguiente email
+                await delay(2000);
             } catch (e) {
                 console.error('❌ Error sending out of stock alert:', e);
             }
@@ -360,6 +368,9 @@ export const POST: APIRoute = async ({ request }) => {
         if (lowStockProducts.length > 0) {
             try {
                 await sendLowStockAlert(lowStockProducts);
+                console.log(`✅ Low stock alert sent`);
+                // Delay de 2 segundos antes del siguiente email
+                await delay(2000);
             } catch (e) {
                 console.error('❌ Error sending low stock alert:', e);
             }

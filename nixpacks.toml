@@ -1,0 +1,16 @@
+# Nixpacks configuration for Astro with Node adapter
+[phases.setup]
+nixPkgs = ["nodejs_22"]
+
+[phases.install]
+cmds = ["npm install"]
+
+[phases.build]
+cmds = ["npm run build"]
+
+# Disable default caching to avoid EBUSY conflicts
+[phases.install.caching]
+enabled = false
+
+[start]
+cmd = "node ./dist/server/entry.mjs"
