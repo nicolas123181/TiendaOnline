@@ -27,17 +27,17 @@ const latestProducts = products.slice(0, 8);
 // Imágenes específicas para cada categoría - Moda Masculina Premium
 const categoryImages: Record<string, string> = {
   camisas:
-    "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=800&q=80",
+    "https://images.unsplash.com/photo-1620012253295-c15cc3e65df4?w=800&q=80",
   camisetas:
-    "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=800&q=80",
+    "https://images.unsplash.com/photo-1581655353564-df123a1eb820?w=800&q=80",
   pantalones:
-    "https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=800&q=80",
+    "https://images.unsplash.com/photo-1473966968600-fa801b869a1a?w=800&q=80",
   trajes:
-    "https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=800&q=80",
-  chalecos:
     "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=800&q=80",
+  chalecos:
+    "https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=800&q=80",
   abrigos:
-    "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&q=80",
+    "https://images.unsplash.com/photo-1539533018447-63fcce2678e3?w=800&q=80",
 };
 ---
 
@@ -509,12 +509,14 @@ const categoryImages: Record<string, string> = {
   </section>
 
   <!-- Newsletter Section -->
-  <section class="py-24 bg-brand-navy">
+  <section class="py-24 bg-surface-secondary border-b border-gray-200">
     <div class="max-w-2xl mx-auto px-4 text-center">
-      <h2 class="text-3xl md:text-4xl font-serif font-light text-white mb-4">
+      <h2
+        class="text-3xl md:text-4xl font-serif font-light text-brand-navy mb-4"
+      >
         Únete al Club
       </h2>
-      <p class="text-white/60 mb-8">
+      <p class="text-gray-600 mb-8">
         Suscríbete para recibir acceso anticipado a nuevas colecciones, ofertas
         exclusivas y contenido de estilo.
       </p>
@@ -522,16 +524,16 @@ const categoryImages: Record<string, string> = {
         <input
           type="email"
           placeholder="Tu email"
-          class="flex-1 px-6 py-4 bg-white/10 border border-white/20 text-white placeholder-white/50 focus:outline-none focus:border-white/50"
+          class="flex-1 px-6 py-4 bg-white border border-gray-300 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-brand-navy focus:ring-1 focus:ring-brand-navy rounded-lg"
         />
         <button
           type="submit"
-          class="px-8 py-4 bg-white text-gray-900 text-sm tracking-wider uppercase font-medium hover:bg-gray-100 transition-colors"
+          class="px-8 py-4 bg-brand-navy text-white text-sm tracking-wider uppercase font-medium hover:bg-brand-navy-light transition-colors rounded-lg"
         >
           Suscribirse
         </button>
       </form>
-      <p class="text-white/40 text-xs mt-4">
+      <p class="text-gray-400 text-xs mt-4">
         Al suscribirte, aceptas nuestra política de privacidad
       </p>
     </div>

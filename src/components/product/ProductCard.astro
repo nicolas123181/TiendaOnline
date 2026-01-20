@@ -28,12 +28,12 @@ const isLowStock = product.stock > 0 && product.stock <= 5;
     <!-- Image Container -->
     <a
         href={`/productos/${product.slug}`}
-        class="block aspect-[3/4] overflow-hidden bg-gray-100 relative"
+        class="block aspect-[3/4] overflow-hidden bg-white relative"
     >
         <img
             src={mainImage}
             alt={product.name}
-            class="absolute inset-0 w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-700 ease-out"
+            class="absolute inset-0 w-full h-full object-contain object-center group-hover:scale-105 transition-transform duration-700 ease-out"
             loading="lazy"
         />
 

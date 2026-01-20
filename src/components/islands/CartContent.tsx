@@ -130,7 +130,7 @@ export default function CartContent() {
             </div>
 
             {/* Footer */}
-            <div className="border-t border-gray-100 p-6 space-y-4">
+            <div className="border-t border-gray-100 p-6 space-y-2">
                 <div className="flex items-center justify-between">
                     <span className="text-gray-600">Subtotal</span>
                     <span className="text-xl font-semibold text-gray-900">
@@ -140,12 +140,6 @@ export default function CartContent() {
                 <p className="text-sm text-gray-500">
                     Gastos de envío calculados en el checkout
                 </p>
-                <a
-                    href="/carrito"
-                    className="block w-full py-4 bg-slate-800 text-white text-center font-medium rounded-xl hover:bg-slate-700 transition-colors"
-                >
-                    Finalizar Compra
-                </a>
             </div>
         </div>
     );
