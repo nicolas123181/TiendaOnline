@@ -162,6 +162,98 @@ export const POST: APIRoute = async ({ request }) => {
             }
 
             console.log(`💰 Reembolso procesado para devolución ${returnData.return_number}: ${stripeRefundId}`);
+
+            // ============================================
+            // 1. RESTAURAR STOCK AUTOMÁTICAMENTE
+            // ============================================
+            if (returnData.items && Array.isArray(returnData.items)) {
+                console.log('🔄 Restaurando stock de productos devueltos...');
+                for (const item of returnData.items) {
+                    try {
+                        // Obtener product_id original desde order_items
+                        const { data: orderItem } = await supabase
+                            .from('order_items')
+                            .select('product_id')
+                            .eq('id', item.order_item_id)
+                            .single();
+
+                        if (orderItem && orderItem.product_id) {
+                            // Restaurar stock general
+                            await supabase.rpc('increment_stock', {
+                                product_id_param: orderItem.product_id,
+                                quantity_param: item.quantity
+                            });
+
+                            // Restaurar stock por talla si aplica
+                            if (item.size) {
+                                await supabase.rpc('increment_product_size_stock', {
+                                    p_product_id: orderItem.product_id,
+                                    p_size: item.size,
+                                    p_quantity: item.quantity
+                                }).catch(async () => {
+                                    // Fallback manual si no existe RPC específico de talla
+                                    const { data: sizeStock } = await supabase
+                                        .from('product_sizes')
+                                        .select('stock')
+                                        .eq('product_id', orderItem.product_id)
+                                        .eq('size', item.size)
+                                        .single();
+
+                                    if (sizeStock) {
+                                        await supabase
+                                            .from('product_sizes')
+                                            .update({ stock: sizeStock.stock + item.quantity })
+                                            .eq('product_id', orderItem.product_id)
+                                            .eq('size', item.size);
+                                    }
+                                });
+                            }
+                        }
+                    } catch (stockError) {
+                        console.error('Error restaurando stock para item:', item, stockError);
+                    }
+                }
+            }
+
+            // ============================================
+            // 2. GENERAR FACTURA RECTIFICATIVA (Credit Note)
+            // ============================================
+            try {
+                // Importar dinámicamente para evitar problemas de dependencias circulares
+                const { createInvoice, getInvoiceByOrderId } = await import('../../../lib/invoice');
+
+                // Buscar factura original
+                const originalInvoice = await getInvoiceByOrderId(returnData.order_id);
+
+                if (originalInvoice) {
+                    console.log('📄 Generando factura rectificativa...');
+
+                    // Crear items de factura con importes negativos
+                    const invoiceItems = returnData.items.map((item: any) => ({
+                        productName: item.product_name,
+                        productSize: item.size,
+                        quantity: item.quantity,
+                        unitPrice: -Math.abs(item.price), // Precio negativo
+                        lineTotal: -Math.abs(item.price * item.quantity)
+                    }));
+
+                    await createInvoice({
+                        orderId: returnData.order_id,
+                        customerName: returnData.customer_name,
+                        customerEmail: returnData.customer_email,
+                        items: invoiceItems,
+                        subtotal: -Math.abs(finalAmount || 0),
+                        total: -Math.abs(finalAmount || 0), // El total negativo
+                        taxRate: originalInvoice.tax_rate,
+                        notes: `Devolución ${returnData.return_number} - Reembolso procesado`,
+                        type: 'credit_note',
+                        originalInvoiceId: originalInvoice.id
+                    });
+                    console.log('✅ Factura rectificativa generada');
+                }
+            } catch (invoiceError) {
+                console.error('Error generando factura rectificativa:', invoiceError);
+            }
         }
 
         // Actualizar la devolución en la base de datos

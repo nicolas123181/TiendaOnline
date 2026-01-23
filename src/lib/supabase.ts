@@ -49,6 +49,9 @@ export function createServerClient(cookies: AstroCookies): SupabaseClient {
 // Cliente con service role para operaciones admin (solo server-side)
 export function getServiceSupabase(): SupabaseClient {
     const serviceRoleKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder-key';
+    if (!serviceRoleKey || serviceRoleKey === 'placeholder-key' || serviceRoleKey === 'your-service-role-key-here') {
+        throw new Error('SUPABASE_SERVICE_ROLE_KEY is not configured. Set a valid service role key in .env and restart the server.');
+    }
     return createClient(supabaseUrl, serviceRoleKey, {
         auth: {
             autoRefreshToken: false,

@@ -557,6 +557,22 @@ const orderId = Astro.params.id;
             loadingState?.classList.add("hidden");
             orderContent?.classList.remove("hidden");
 
+            // Mostrar sección de cancelación si el estado es 'paid'
+            const cancelSection = document.getElementById(
+                "cancel-order-section",
+            );
+            if (cancelSection) {
+                console.log(
+                    "Checking order status for cancellation:",
+                    order.status,
+                );
+                if (order.status === "paid") {
+                    cancelSection.classList.remove("hidden");
+                } else {
+                    cancelSection.classList.add("hidden");
+                }
+            }
+
             // Load invoice info
             await loadInvoiceInfo();
         } catch (error) {
@@ -697,51 +713,6 @@ const orderId = Astro.params.id;
 
     loadOrder();
 
-    // =====================================================
-    // CANCEL ORDER FUNCTIONALITY
-    // =====================================================
-    let currentOrderStatus = "";
-
-    // Función para mostrar sección de cancelación si aplica
-    function setupCancelSection(status: string) {
-        currentOrderStatus = status;
-        const cancelSection = document.getElementById("cancel-order-section");
-
-        // Solo mostrar si el pedido está en estado "paid"
-        if (cancelSection && status === "paid") {
-            cancelSection.classList.remove("hidden");
-        }
-    }
-
-    // Modificar loadOrder para guardar el estado
-    const originalLoadOrder = loadOrder;
-    async function loadOrderWithCancel() {
-        if (!orderId) return;
-
-        try {
-            const {
-                data: { session },
-            } = await supabase.auth.getSession();
-            if (!session) return;
-
-            const { data: order, error } = await supabase
-                .from("orders")
-                .select("status")
-                .eq("id", orderId)
-                .eq("customer_email", session.user.email)
-                .single();
-
-            if (order) {
-                setupCancelSection(order.status);
-            }
-        } catch (error) {
-            console.error("Error checking order status:", error);
-        }
-    }
-
-    // Cargar estado para cancelación después de cargar el pedido
-    setTimeout(loadOrderWithCancel, 500);
-
     // Handler del botón de cancelación
     const cancelOrderBtn = document.getElementById("cancel-order-btn");
     cancelOrderBtn?.addEventListener("click", async () => {
@@ -771,13 +742,34 @@ const orderId = Astro.params.id;
                 body: JSON.stringify({ orderId: parseInt(orderId) }),
             });
 
-            const result = await response.json();
+            let result;
+            try {
+                const text = await response.text();
+                try {
+                    result = JSON.parse(text);
+                } catch (e) {
+                    // If not JSON, it might be an HTML error page (404/500)
+                    console.error("Non-JSON response:", text);
+                    throw new Error(
+                        `Server returned non-JSON response: ${response.status} ${response.statusText}`,
+                    );
+                }
 
-            if (result.success) {
-                alert("✅ " + result.message);
-                window.location.reload();
-            } else {
-                alert("❌ " + (result.error || "Error al cancelar el pedido"));
+                if (result.success) {
+                    alert("✅ " + result.message);
+                    window.location.reload();
+                } else {
+                    alert(
+                        "❌ " + (result.error || "Error al cancelar el pedido"),
+                    );
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                }
+            } catch (error) {
+                console.error("Cancel parsing error:", error);
+                alert(
+                    `❌ Error del servidor (${response.status}): No se pudo procesar la respuesta.`,
+                );
                 btn.disabled = false;
                 btn.innerHTML = originalText;
             }

@@ -249,7 +249,7 @@ const currentPath = Astro.url.pathname;
     </main>
 
     <!-- Footer -->
-    <footer class="bg-brand-navy text-text-inverse">
+    <footer class="bg-brand-navy dark:bg-gradient-to-br dark:from-gray-800 dark:to-gray-900 text-text-inverse">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
                 <!-- Brand -->
@@ -259,10 +259,10 @@ const currentPath = Astro.url.pathname;
                     >
                         VANTAGE
                     </h3>
-                    <p class="text-sm text-gray-400 tracking-wider mb-4">
+                    <p class="text-sm text-gray-400 dark:text-gray-300 tracking-wider mb-4">
                         Est. 2024
                     </p>
-                    <p class="text-gray-400 text-sm leading-relaxed">
+                    <p class="text-gray-400 dark:text-gray-300 text-sm leading-relaxed">
                         Moda masculina premium con estilo sofisticado. Calidad
                         excepcional para el hombre moderno.
                     </p>
@@ -270,12 +270,12 @@ const currentPath = Astro.url.pathname;
 
                 <!-- Links -->
                 <div>
-                    <h4 class="font-semibold mb-4 text-brand-cream">Tienda</h4>
+                    <h4 class="font-semibold mb-4 text-brand-cream dark:text-white">Tienda</h4>
                     <ul class="space-y-2">
                         <li>
                             <a
                                 href="/productos"
-                                class="text-gray-400 hover:text-white text-sm transition-colors"
+                                class="text-gray-400 dark:text-gray-300 hover:text-white text-sm transition-colors"
                                 >Todos los productos</a
                             >
                         </li>
@@ -284,7 +284,7 @@ const currentPath = Astro.url.pathname;
                                 <li>
                                     <a
                                         href={`/categoria/${category.slug}`}
-                                        class="text-gray-400 hover:text-white text-sm transition-colors"
+                                        class="text-gray-400 dark:text-gray-300 hover:text-white text-sm transition-colors"
                                     >
                                         {category.name}
                                     </a>
@@ -295,42 +295,42 @@ const currentPath = Astro.url.pathname;
                 </div>
 
                 <div>
-                    <h4 class="font-semibold mb-4 text-brand-cream">
+                    <h4 class="font-semibold mb-4 text-brand-cream dark:text-white">
                         Información
                     </h4>
                     <ul class="space-y-2">
                         <li>
                             <a
                                 href="/sobre-nosotros"
-                                class="text-gray-400 hover:text-white text-sm transition-colors"
+                                class="text-gray-400 dark:text-gray-300 hover:text-white text-sm transition-colors"
                                 >Sobre nosotros</a
                             >
                         </li>
                         <li>
                             <a
                                 href="/guia-tallas"
-                                class="text-gray-400 hover:text-white text-sm transition-colors"
+                                class="text-gray-400 dark:text-gray-300 hover:text-white text-sm transition-colors"
                                 >Guía de tallas</a
                             >
                         </li>
                         <li>
                             <a
                                 href="/envios-devoluciones"
-                                class="text-gray-400 hover:text-white text-sm transition-colors"
+                                class="text-gray-400 dark:text-gray-300 hover:text-white text-sm transition-colors"
                                 >Envíos y devoluciones</a
                             >
                         </li>
                         <li>
                             <a
                                 href="/privacidad"
-                                class="text-gray-400 hover:text-white text-sm transition-colors"
+                                class="text-gray-400 dark:text-gray-300 hover:text-white text-sm transition-colors"
                                 >Política de privacidad</a
                             >
                         </li>
                         <li>
                             <a
                                 href="/terminos"
-                                class="text-gray-400 hover:text-white text-sm transition-colors"
+                                class="text-gray-400 dark:text-gray-300 hover:text-white text-sm transition-colors"
                                 >Términos y condiciones</a
                             >
                         </li>
@@ -339,10 +339,10 @@ const currentPath = Astro.url.pathname;
 
                 <!-- Contact -->
                 <div>
-                    <h4 class="font-semibold mb-4 text-brand-cream">
+                    <h4 class="font-semibold mb-4 text-brand-cream dark:text-white">
                         Contacto
                     </h4>
-                    <ul class="space-y-2 text-sm text-gray-400">
+                    <ul class="space-y-2 text-sm text-gray-400 dark:text-gray-300">
                         <li class="flex items-center gap-2">
                             <svg
                                 class="w-4 h-4"
@@ -381,7 +381,7 @@ const currentPath = Astro.url.pathname;
                     <div class="flex gap-4 mt-6">
                         <a
                             href="#"
-                            class="p-2 bg-brand-navy-light rounded-lg hover:bg-brand-leather transition-colors"
+                            class="p-2 bg-brand-navy-light dark:bg-gray-700 rounded-lg hover:bg-brand-leather dark:hover:bg-gray-600 transition-colors text-white"
                         >
                             <svg
                                 class="w-5 h-5"
@@ -395,7 +395,7 @@ const currentPath = Astro.url.pathname;
                         </a>
                         <a
                             href="#"
-                            class="p-2 bg-brand-navy-light rounded-lg hover:bg-brand-leather transition-colors"
+                            class="p-2 bg-brand-navy-light dark:bg-gray-700 rounded-lg hover:bg-brand-leather dark:hover:bg-gray-600 transition-colors text-white"
                         >
                             <svg
                                 class="w-5 h-5"
@@ -413,7 +413,7 @@ const currentPath = Astro.url.pathname;
 
             <!-- Copyright -->
             <div
-                class="border-t border-brand-navy-light mt-12 pt-8 text-center text-sm text-gray-500"
+                class="border-t border-brand-navy-light dark:border-gray-700 mt-12 pt-8 text-center text-sm text-gray-500 dark:text-gray-400"
             >
                 <p>
                     &copy; {new Date().getFullYear()} Vantage. Todos los derechos
@@ -422,7 +422,6 @@ const currentPath = Astro.url.pathname;
             </div>
         </div>
     </footer>
-
     <!-- Cart Slide Over -->
     <CartSlideOver />
 

@@ -49,7 +49,10 @@ export interface InvoiceData {
     discount?: number;
     taxRate?: number; // por defecto 21%
     paymentMethod?: string;
+    paymentMethod?: string;
     notes?: string;
+    type?: 'standard' | 'credit_note';
+    originalInvoiceId?: number;
 }
 
 export interface Invoice {
@@ -66,6 +69,8 @@ export interface Invoice {
     total: number;
     issue_date: string;
     status: string;
+    type: string; // 'standard' or 'credit_note'
+    original_invoice_id?: number;
     pdf_url?: string;
 }
 
@@ -160,7 +165,9 @@ export async function createInvoice(data: InvoiceData): Promise<Invoice | null> 
                 payment_method: data.paymentMethod || 'Tarjeta de crédito',
                 payment_status: 'paid',
                 status: 'issued',
-                notes: data.notes
+                notes: data.notes,
+                type: data.type || 'standard',
+                original_invoice_id: data.originalInvoiceId
             })
             .select()
             .single();
@@ -523,7 +530,7 @@ export function generateInvoiceHTML(invoice: any, items: any[]): string {
             <div class="header">
                 <div class="logo">VANTAGE</div>
                 <div class="invoice-title">
-                    <h1>FACTURA</h1>
+                    <h1>${invoice.type === 'credit_note' ? 'FACTURA RECTIFICATIVA' : 'FACTURA'}</h1>
                     <div class="invoice-number">${invoice.invoice_number}</div>
                 </div>
             </div>
@@ -564,8 +571,14 @@ export function generateInvoiceHTML(invoice: any, items: any[]): string {
                 </div>
                 <div class="date-item">
                     <span class="label">Estado:</span>
-                    <span class="payment-badge">PAGADO</span>
+                    <span class="payment-badge">${invoice.type === 'credit_note' ? 'REEMBOLSADO' : 'PAGADO'}</span>
                 </div>
+                ${invoice.original_invoice_id ? `
+                <div class="date-item">
+                    <span class="label">Ref. Factura:</span>
+                    <span class="value">#${invoice.original_invoice_id}</span>
+                </div>
+                ` : ''}
             </div>
             
             <!-- Items -->

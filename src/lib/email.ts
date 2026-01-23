@@ -1339,3 +1339,144 @@ export async function sendWishlistSaleEmail(data: WishlistSaleEmailData): Promis
   }
 }
 
+// =====================================================
+// CANCELLED ORDER ADMIN NOTIFICATION
+// =====================================================
+
+interface CancelledOrderAlertData {
+  orderId: number;
+  customerName: string;
+  customerEmail: string;
+  total: number;
+  cancelReason?: string;
+  items?: Array<{
+    productName: string;
+    quantity: number;
+    size?: string;
+  }>;
+}
+
+/**
+ * Envía notificación al administrador cuando un cliente cancela un pedido pagado
+ * Solo para pedidos en estado 'paid' - los enviados son devoluciones
+ */
+export async function sendCancelledOrderAdminAlert(data: CancelledOrderAlertData): Promise<boolean> {
+  if (!resend) {
+    console.warn('⚠️ Resend no configurado, alerta de cancelación no enviada');
+    return false;
+  }
+
+  const ADMIN_EMAIL = 'p2590149@gmail.com';
+
+  // Definir colores de marca localmente para el email
+  const BRAND_COLORS_EMAIL = {
+    navy: '#1a2744',
+    red: '#dc2626',
+    success: '#16a34a'
+  };
+
+  try {
+    const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 0; background: #fef2f2; }
+        .container { max-width: 600px; margin: 0 auto; padding: 40px 20px; }
+        .card { background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+        .header { background: ${BRAND_COLORS_EMAIL.red}; color: white; padding: 40px; text-align: center; }
+        .header h1 { margin: 0; font-size: 28px; font-weight: 400; }
+        .header .icon { font-size: 60px; margin-bottom: 15px; }
+        .logo { font-size: 20px; font-weight: 300; letter-spacing: 0.3em; margin-bottom: 15px; opacity: 0.9; }
+        .content { padding: 40px; }
+        .order-box { background: #fef2f2; border-radius: 12px; padding: 25px; text-align: center; margin: 20px 0; border: 2px solid ${BRAND_COLORS_EMAIL.red}; }
+        .order-number { font-size: 36px; font-weight: bold; color: ${BRAND_COLORS_EMAIL.red}; }
+        .info-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #e5e7eb; }
+        .info-row:last-child { border-bottom: none; }
+        .label { color: #6b7280; }
+        .value { font-weight: bold; color: #111827; }
+        .alert-box { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px 20px; border-radius: 0 8px 8px 0; margin: 20px 0; }
+        .button { display: inline-block; background: ${BRAND_COLORS_EMAIL.navy}; color: white; padding: 16px 40px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; }
+        .footer { text-align: center; padding: 30px; background: #f9fafb; color: #6b7280; font-size: 14px; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="card">
+          <div class="header">
+            <div class="logo">VANTAGE</div>
+            <div class="icon">❌</div>
+            <h1>Pedido Cancelado por Cliente</h1>
+            <p style="margin: 10px 0 0 0; opacity: 0.9;">Un cliente ha cancelado su pedido</p>
+          </div>
+          <div class="content">
+            <div class="order-box">
+              <p style="margin: 0 0 5px 0; color: #6b7280; font-size: 14px;">Pedido cancelado</p>
+              <div class="order-number">#${data.orderId.toString().padStart(5, '0')}</div>
+            </div>
+
+            <div class="alert-box">
+              <strong>⚠️ Acciones automáticas completadas:</strong>
+              <p style="margin: 10px 0 0 0; color: #92400e;">
+                ✅ Stock restaurado en inventario<br>
+                ✅ Reembolso procesado en Stripe<br>
+                ✅ Cliente notificado por email
+              </p>
+            </div>
+
+            <div style="margin: 25px 0;">
+              <div class="info-row">
+                <span class="label">Cliente</span>
+                <span class="value">${data.customerName}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">Email</span>
+                <span class="value">${data.customerEmail}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">Monto reembolsado</span>
+                <span class="value" style="color: ${BRAND_COLORS_EMAIL.red}; font-size: 20px;">€${(data.total / 100).toFixed(2)}</span>
+              </div>
+            </div>
+
+            ${data.items && data.items.length > 0 ? `
+            <div style="margin: 25px 0; padding: 20px; background: #f9fafb; border-radius: 12px;">
+              <h3 style="margin: 0 0 15px 0; color: ${BRAND_COLORS_EMAIL.navy}; font-size: 16px; font-weight: 600;">📦 Productos cancelados (stock restaurado)</h3>
+              ${data.items.map(item => `
+                <div style="padding: 12px; background: white; border-radius: 8px; margin-bottom: 10px; border-left: 3px solid ${BRAND_COLORS_EMAIL.red};">
+                  <div style="font-weight: 600; color: ${BRAND_COLORS_EMAIL.navy}; font-size: 14px;">${item.productName}</div>
+                  ${item.size ? `<div style="font-size: 12px; color: #6b7280; margin-top: 2px;">Talla: ${item.size}</div>` : ''}
+                  <div style="font-size: 12px; color: #9ca3af; margin-top: 2px;">Cantidad restaurada: ${item.quantity}</div>
+                </div>
+              `).join('')}
+            </div>
+            ` : ''}
+            <center>
+              <a href="https://vantage.com/admin/pedidos/${data.orderId}" class="button">Ver Detalles en Admin</a>
+            </center>
+          </div>
+          <div class="footer">
+            <p>Este es un mensaje automático del sistema Vantage • Cancelación de pedido pagado</p>
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+    `;
+
+    const result = await resend.emails.send({
+      from: 'Vantage Admin <onboarding@resend.dev>',
+      to: ADMIN_EMAIL,
+      subject: `❌ Pedido Cancelado #${data.orderId.toString().padStart(5, '0')} - ${data.customerName} - €${(data.total / 100).toFixed(2)}`,
+      html,
+    });
+
+    console.log('✅ Cancelled order admin alert sent:', result);
+    return true;
+  } catch (error) {
+    console.error('❌ Error sending cancelled order admin alert:', error);
+    return false;
+  }
+}
+

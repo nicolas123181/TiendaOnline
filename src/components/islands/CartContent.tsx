@@ -130,7 +130,7 @@ export default function CartContent() {
             </div>
 
             {/* Footer */}
-            <div className="border-t border-gray-100 p-6 space-y-2">
+            <div className="border-t border-gray-100 p-6 space-y-4">
                 <div className="flex items-center justify-between">
                     <span className="text-gray-600">Subtotal</span>
                     <span className="text-xl font-semibold text-gray-900">
@@ -140,6 +140,14 @@ export default function CartContent() {
                 <p className="text-sm text-gray-500">
                     Gastos de envío calculados en el checkout
                 </p>
+                
+                {/* Checkout Button */}
+                <a
+                    href="/checkout"
+                    className="block w-full py-4 bg-gradient-to-r from-slate-800 to-slate-700 text-white text-center font-semibold rounded-xl hover:from-slate-700 hover:to-slate-600 transition-all shadow-lg hover:shadow-xl"
+                >
+                    Finalizar Compra
+                </a>
             </div>
         </div>
     );

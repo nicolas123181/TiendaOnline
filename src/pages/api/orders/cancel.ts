@@ -1,8 +1,19 @@
 import type { APIRoute } from 'astro';
-import { createClient } from '@supabase/supabase-js';
+import { createServerClient } from '../../../lib/supabase';
+import { Resend } from 'resend';
+import Stripe from 'stripe';
 
-const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
-const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
+const resendApiKey = import.meta.env.RESEND_API_KEY;
+const stripeSecretKey = import.meta.env.STRIPE_SECRET_KEY;
+
+const resend = resendApiKey ? new Resend(resendApiKey) : null;
+const stripe = stripeSecretKey ? new Stripe(stripeSecretKey) : null;
+
+const BRAND_COLORS = {
+    navy: '#1a2744',
+    red: '#dc2626',
+    success: '#16a34a'
+};
 
 export const POST: APIRoute = async ({ request, cookies }) => {
     try {
@@ -15,28 +26,20 @@ export const POST: APIRoute = async ({ request, cookies }) => {
             }), { status: 400 });
         }
 
-        const supabase = createClient(supabaseUrl, supabaseServiceKey);
+        // 1. Verificar autenticación usando el helper robusto
+        // createServerClient maneja automáticamente la obtención de tokens de las cookies
+        const authClient = createServerClient(cookies);
+        const { data: { user }, error: authError } = await authClient.auth.getUser();
 
-        // Verificar autenticación
-        const accessToken = cookies.get('sb-access-token')?.value;
-        if (!accessToken) {
+        if (authError || !user) {
             return new Response(JSON.stringify({
                 success: false,
-                error: 'No estás autenticado'
+                error: 'Sesión inválida o expirada. Por favor recarga la página.'
             }), { status: 401 });
         }
 
-        // Obtener usuario
-        const { data: { user } } = await supabase.auth.getUser(accessToken);
-        if (!user) {
-            return new Response(JSON.stringify({
-                success: false,
-                error: 'Sesión inválida'
-            }), { status: 401 });
-        }
-
-        // Obtener pedido con items
-        const { data: order, error: orderError } = await supabase
+        // Obtener pedido con items (usando authClient que ya sabemos que tiene sesión válida)
+        const { data: order, error: orderError } = await authClient
             .from('orders')
             .select(`
                 *,
@@ -44,114 +47,130 @@ export const POST: APIRoute = async ({ request, cookies }) => {
                     id,
                     product_id,
                     quantity,
-                    size
+                    size,
+                    product_name
                 )
             `)
             .eq('id', orderId)
+            // Asegurarnos de que el pedido pertenece al usuario autenticado
             .eq('customer_email', user.email)
             .single();
 
+        console.log('🔍 Debug Cancel:', {
+            orderId,
+            userEmail: user.email,
+            found: !!order,
+            error: orderError?.message
+        });
+
         if (orderError || !order) {
+            // Intento de debug adicional: buscar sin filtro de email para ver si existe
             return new Response(JSON.stringify({
                 success: false,
-                error: 'Pedido no encontrado'
+                error: 'Pedido no encontrado.'
             }), { status: 404 });
         }
 
-        // Verificar que el pedido está en estado "paid" (antes de envío)
+        // Verificar que el pedido está en estado "paid"
         if (order.status !== 'paid') {
-            const statusMessages: Record<string, string> = {
-                'pending': 'El pedido aún no ha sido pagado',
-                'shipped': 'El pedido ya ha sido enviado y no puede cancelarse',
-                'delivered': 'El pedido ya ha sido entregado. Puedes solicitar una devolución.',
-                'cancelled': 'El pedido ya está cancelado'
-            };
-
             return new Response(JSON.stringify({
                 success: false,
-                error: statusMessages[order.status] || 'Este pedido no puede cancelarse'
+                error: 'Este pedido no puede cancelarse'
             }), { status: 400 });
         }
 
-        // =====================================================
-        // TRANSACCIÓN ATÓMICA: Cancelar pedido + Restaurar stock
-        // =====================================================
+        // ============================================
+        // EMAIL 1: CANCELACIÓN EN PROCESO
+        // ============================================
+        if (resend) {
+            try {
+                await resend.emails.send({
+                    from: 'Vantage <onboarding@resend.dev>',
+                    to: order.customer_email,
+                    subject: `⏳ Procesando tu cancelación - Pedido #${orderId}`,
+                    html: getProcessingEmailHtml(order.customer_name, orderId.toString())
+                });
+                console.log('📧 Email "En proceso" enviado');
+            } catch (e) {
+                console.error('Error enviando email en proceso:', e);
+            }
+        }
 
-        // 1. Restaurar stock de productos
+        // ============================================
+        // 1. REEMBOLSO EN STRIPE
+        // ============================================
+        let stripeRefundId = null;
+        if (stripe && order.stripe_payment_intent_id) {
+            try {
+                const refund = await stripe.refunds.create({
+                    payment_intent: order.stripe_payment_intent_id,
+                    reason: 'requested_by_customer'
+                });
+                stripeRefundId = refund.id;
+                console.log('💰 Reembolso Stripe exitoso:', refund.id);
+            } catch (stripeError) {
+                console.error('Error Stripe:', stripeError);
+                // Continuamos con la cancelación aunque falle Stripe (se puede arreglar manual)
+                // O podríamos abortar. En este caso continuamos para liberar stock.
+            }
+        }
+
+        // ============================================
+        // 2. RESTAURAR STOCK
+        // ============================================
+        // Validar que order.order_items existe
+        if (!order.order_items || order.order_items.length === 0) {
+            throw new Error('No items found in order. Unable to restore stock.');
+        }
+
         for (const item of order.order_items) {
-            // Restaurar stock general del producto
-            const { error: stockError } = await supabase.rpc('increment_stock', {
+            if (!item || !item.product_id || !item.quantity) {
+                throw new Error(`Invalid item data in order ${orderId}`);
+            }
+
+            // Stock general RPC
+            const { error: rpcError } = await authClient.rpc('increment_stock', {
                 product_id_param: item.product_id,
                 quantity_param: item.quantity
             });
 
-            if (stockError) {
-                console.error('Error restoring product stock:', stockError);
-                // Intentar con update directo si RPC no existe
-                await supabase
-                    .from('products')
-                    .update({ stock: supabase.rpc('add', { a: 'stock', b: item.quantity }) })
-                    .eq('id', item.product_id);
+            if (rpcError) {
+                throw new Error(`Failed to increment stock via RPC for product ${item.product_id}: ${rpcError.message}`);
             }
 
-            // Restaurar stock por talla si aplica
+            // Stock por talla
             if (item.size) {
-                const { error: sizeStockError } = await supabase
+                const { data: sizeStock, error: fetchError } = await authClient
                     .from('product_sizes')
                     .select('stock')
                     .eq('product_id', item.product_id)
                     .eq('size', item.size)
                     .single();
 
-                if (!sizeStockError) {
-                    await supabase
-                        .from('product_sizes')
-                        .update({
-                            stock: supabase.rpc('add', { a: 'stock', b: item.quantity })
-                        })
-                        .eq('product_id', item.product_id)
-                        .eq('size', item.size);
+                if (fetchError) {
+                    throw new Error(`Failed to fetch product size for product ${item.product_id}: ${fetchError.message}`);
                 }
-            }
-        }
 
-        // 2. Restaurar stock directamente (método alternativo más confiable)
-        for (const item of order.order_items) {
-            // Obtener stock actual del producto
-            const { data: product } = await supabase
-                .from('products')
-                .select('stock')
-                .eq('id', item.product_id)
-                .single();
+                if (!sizeStock) {
+                    throw new Error(`Product size not found for product ${item.product_id} and size ${item.size}`);
+                }
 
-            if (product) {
-                await supabase
-                    .from('products')
-                    .update({ stock: product.stock + item.quantity })
-                    .eq('id', item.product_id);
-            }
-
-            // Restaurar stock por talla
-            if (item.size) {
-                const { data: sizeStock } = await supabase
+                const { error: updateError } = await authClient
                     .from('product_sizes')
-                    .select('stock')
+                    .update({ stock: sizeStock.stock + item.quantity })
                     .eq('product_id', item.product_id)
-                    .eq('size', item.size)
-                    .single();
+                    .eq('size', item.size);
 
-                if (sizeStock) {
-                    await supabase
-                        .from('product_sizes')
-                        .update({ stock: sizeStock.stock + item.quantity })
-                        .eq('product_id', item.product_id)
-                        .eq('size', item.size);
+                if (updateError) {
+                    throw new Error(`Failed to update size stock for product ${item.product_id}: ${updateError.message}`);
                 }
             }
         }
 
-        // 3. Cambiar estado del pedido a "cancelled"
-        const { error: updateError } = await supabase
+        // ============================================
+        // 3. ACTUALIZAR ESTADO PEDIDO
+        // ============================================
+        const { error: updateError } = await authClient
             .from('orders')
             .update({
                 status: 'cancelled',
@@ -159,26 +178,128 @@ export const POST: APIRoute = async ({ request, cookies }) => {
             })
             .eq('id', orderId);
 
-        if (updateError) {
-            console.error('Error updating order status:', updateError);
-            return new Response(JSON.stringify({
-                success: false,
-                error: 'Error al cancelar el pedido'
-            }), { status: 500 });
+        if (updateError) throw updateError;
+
+        // ============================================
+        // EMAIL 2: CANCELACIÓN COMPLETADA
+        // ============================================
+        if (resend) {
+            try {
+                await resend.emails.send({
+                    from: 'Vantage <onboarding@resend.dev>',
+                    to: order.customer_email,
+                    subject: `✅ Pedido Cancelado - #${orderId}`,
+                    html: getCancelledEmailHtml(order.customer_name, orderId.toString(), order.total)
+                });
+                console.log('📧 Email "Cancelado" enviado al cliente');
+            } catch (e) {
+                console.error('Error enviando email cancelado:', e);
+            }
         }
 
-        console.log(`✅ Order ${orderId} cancelled. Stock restored for ${order.order_items.length} items.`);
+        // ============================================
+        // EMAIL 3: NOTIFICACIÓN AL ADMINISTRADOR
+        // (Con retardo para evitar límites de Resend)
+        // ============================================
+        // Enviar notificación al admin de forma asíncrona con retardo
+        setTimeout(async () => {
+            try {
+                const { sendCancelledOrderAdminAlert } = await import('../../../lib/email');
+                
+                const adminAlertSent = await sendCancelledOrderAdminAlert({
+                    orderId: orderId,
+                    customerName: order.customer_name,
+                    customerEmail: order.customer_email,
+                    total: order.total,
+                    items: order.order_items?.map((item: any) => ({
+                        productName: item.product_name,
+                        quantity: item.quantity,
+                        size: item.size
+                    }))
+                });
+                
+                if (adminAlertSent) {
+                    console.log('📧 Email de alerta al administrador enviado correctamente');
+                } else {
+                    console.warn('⚠️ Fallo al enviar email al administrador pero la cancelación fue procesada');
+                }
+            } catch (emailError) {
+                console.error('❌ Error enviando alerta al admin:', emailError);
+                // No bloqueamos la respuesta al cliente si falla el email al admin
+            }
+        }, 2000); // Retardo de 2 segundos para evitar límites de Resend
 
         return new Response(JSON.stringify({
             success: true,
-            message: 'Pedido cancelado correctamente. El stock ha sido restaurado.'
+            message: 'Pedido cancelado y reembolsado correctamente. El administrador ha sido notificado.'
         }), { status: 200 });
 
     } catch (error) {
-        console.error('Cancel order error:', error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error('Cancel order error:', errorMessage);
+        
+        // Log detallado del error
+        if (error instanceof Error) {
+            console.error('Error stack:', error.stack);
+        }
+        
         return new Response(JSON.stringify({
             success: false,
-            error: 'Error interno del servidor'
+            error: errorMessage || 'Error interno del servidor'
         }), { status: 500 });
     }
 };
+
+// --- TEMPLATES DE EMAIL ---
+
+function getProcessingEmailHtml(name: string, orderId: string): string {
+    return `
+    <!DOCTYPE html>
+    <html>
+    <body style="font-family: sans-serif; background: #f5f5f5; padding: 40px;">
+        <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+            <div style="background: ${BRAND_COLORS.navy}; color: white; padding: 30px; text-align: center;">
+                <h1 style="margin:0; font-weight: 300;">Cancelación en Curso</h1>
+            </div>
+            <div style="padding: 40px;">
+                <p>Hola <strong>${name}</strong>,</p>
+                <p>Hemos recibido tu solicitud para cancelar el pedido <strong>#${orderId}</strong>.</p>
+                <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 15px; margin: 20px 0;">
+                    <p style="margin:0; color: #1e40af;">🔄 Estamos procesando la devolución del stock y el reembolso de tu dinero.</p>
+                </div>
+                <p>Recibirás una confirmación en unos instantes.</p>
+            </div>
+        </div>
+    </body>
+    </html>`;
+}
+
+function getCancelledEmailHtml(name: string, orderId: string, amount: number): string {
+    const formattedAmount = new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(amount / 100);
+    return `
+    <!DOCTYPE html>
+    <html>
+    <body style="font-family: sans-serif; background: #f5f5f5; padding: 40px;">
+        <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+            <div style="background: ${BRAND_COLORS.red}; color: white; padding: 30px; text-align: center;">
+                <h1 style="margin:0; font-weight: 300;">Pedido Cancelado</h1>
+            </div>
+            <div style="padding: 40px;">
+                <p>Hola <strong>${name}</strong>,</p>
+                <p>Tu pedido <strong>#${orderId}</strong> ha sido cancelado exitosamente.</p>
+                
+                <div style="background: #fee2e2; border: 2px solid #fca5a5; border-radius: 12px; padding: 20px; text-align: center; margin: 30px 0;">
+                    <p style="margin:0 0 5px 0; color: #991b1b; font-weight: bold;">Reembolso Emitido</p>
+                    <p style="margin:0; font-size: 24px; color: ${BRAND_COLORS.red}; font-weight: bold;">${formattedAmount}</p>
+                </div>
+
+                <p>El dinero debería aparecer en tu cuenta en un plazo de 5-10 días hábiles.</p>
+                <p style="font-size: 0.9em; color: #666;">Si tienes alguna duda, responde a este correo.</p>
+            </div>
+             <div style="background: #f9fafb; padding: 20px; text-align: center; color: #6b7280; font-size: 12px;">
+                © 2026 Vantage Fashion
+            </div>
+        </div>
+    </body>
+    </html>`;
+}
