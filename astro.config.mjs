@@ -7,7 +7,7 @@ import node from '@astrojs/node';
 // https://astro.build/config
 // En Astro 5, usamos 'server' con prerender por defecto en las páginas estáticas
 export default defineConfig({
-    site:'https://nicovantage.victoriafp.online',
+    site:'http://nicovantage.victoriafp.online',
     output: 'server',
     adapter: node({
         mode: 'standalone'
