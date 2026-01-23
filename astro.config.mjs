@@ -9,8 +9,11 @@ import node from '@astrojs/node';
 export default defineConfig({
     site:'https://nicovantage.victoriafp.online',
     output: 'server',
+    security: {
+        checkOrigin: false
+    },
     adapter: node({
-        mode: 'standalone'
+        mode: 'standalone',
     }),
     integrations: [
         react()
