@@ -46,6 +46,26 @@ export function createServerClient(cookies: AstroCookies): SupabaseClient {
     return client;
 }
 
+/**
+ * Crea un cliente de Supabase con autenticación por header Authorization.
+ * Útil para clientes móviles que envían Bearer token en la petición.
+ */
+export function createServerClientFromAuthHeader(
+    authHeader: string
+): SupabaseClient {
+    return createClient(supabaseUrl, supabaseAnonKey, {
+        auth: {
+            persistSession: false,
+            autoRefreshToken: false,
+        },
+        global: {
+            headers: {
+                Authorization: authHeader
+            }
+        }
+    });
+}
+
 // Cliente con service role para operaciones admin (solo server-side)
 export function getServiceSupabase(): SupabaseClient {
     const serviceRoleKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder-key';

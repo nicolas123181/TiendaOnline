@@ -4,22 +4,36 @@ import Stripe from 'stripe';
 const stripeSecretKey = import.meta.env.STRIPE_SECRET_KEY;
 const stripe = new Stripe(stripeSecretKey, { apiVersion: '2023-10-16' });
 
-const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-};
-
-export const OPTIONS: APIRoute = async () => {
-    return new Response(null, {
-        status: 204,
-        headers: corsHeaders,
-    });
-};
-
-export const POST: APIRoute = async ({ request }) => {
+/**
+ * Endpoint que recibe datos del pedido via query params y redirige a Stripe Checkout.
+ * Esto evita problemas de CORS ya que Flutter solo hace un redirect, no un fetch.
+ * 
+ * GET /api/checkout-redirect?data=BASE64_ENCODED_JSON
+ */
+export const GET: APIRoute = async ({ request, redirect }) => {
     try {
-        const body = await request.json();
+        const url = new URL(request.url);
+        const encodedData = url.searchParams.get('data');
+
+        if (!encodedData) {
+            return new Response(
+                JSON.stringify({ error: 'Missing data parameter' }),
+                { status: 400, headers: { 'Content-Type': 'application/json' } }
+            );
+        }
+
+        // Decodificar datos del pedido
+        let orderData: any;
+        try {
+            const jsonString = atob(encodedData);
+            orderData = JSON.parse(jsonString);
+        } catch (e) {
+            return new Response(
+                JSON.stringify({ error: 'Invalid data encoding' }),
+                { status: 400, headers: { 'Content-Type': 'application/json' } }
+            );
+        }
+
         const {
             items,
             customer_email,
@@ -35,18 +49,12 @@ export const POST: APIRoute = async ({ request }) => {
             total,
             successUrl,
             cancelUrl
-        } = body;
+        } = orderData;
 
         if (!items || !Array.isArray(items) || items.length === 0) {
             return new Response(
                 JSON.stringify({ error: 'No hay productos en el carrito' }),
-                {
-                    status: 400,
-                    headers: {
-                        'Content-Type': 'application/json',
-                        ...corsHeaders,
-                    },
-                }
+                { status: 400, headers: { 'Content-Type': 'application/json' } }
             );
         }
 
@@ -82,25 +90,20 @@ export const POST: APIRoute = async ({ request }) => {
         let stripeCouponId: string | undefined;
         if (discount && discount > 0) {
             try {
-                // Crear un cupón temporal en Stripe
                 const coupon = await stripe.coupons.create({
-                    amount_off: discount, // en céntimos
+                    amount_off: discount,
                     currency: 'eur',
                     duration: 'once',
                     name: 'Descuento aplicado',
                     max_redemptions: 1,
                 });
                 stripeCouponId = coupon.id;
-                console.log(`✅ Stripe coupon created: ${coupon.id} for ${discount} cents`);
             } catch (couponError) {
                 console.error('Error creating Stripe coupon:', couponError);
-                // Continuar sin el cupón si falla
             }
         }
 
-        // Preparar datos del pedido para guardar en metadata
-        // Stripe metadata tiene límite de 500 caracteres por valor
-        // Así que simplificamos los items
+        // Preparar datos del pedido para metadata
         const simplifiedItems = items.map((item: any) => ({
             id: item.id,
             name: item.name,
@@ -110,7 +113,7 @@ export const POST: APIRoute = async ({ request }) => {
             image: item.image || null,
         }));
 
-        const orderData = {
+        const metaOrderData = {
             customerName: customer_name,
             customerEmail: customer_email,
             customerPhone: customer_phone || '',
@@ -125,18 +128,20 @@ export const POST: APIRoute = async ({ request }) => {
             discount: discount || 0,
         };
 
+        const origin = new URL(request.url).origin;
+        
         // Crear Checkout Session
         const sessionConfig: Stripe.Checkout.SessionCreateParams = {
             payment_method_types: ['card'],
             line_items: lineItems,
             mode: 'payment',
-            success_url: successUrl || `${new URL(request.url).origin}/checkout/exito?session_id={CHECKOUT_SESSION_ID}`,
-            cancel_url: cancelUrl || `${new URL(request.url).origin}/checkout`,
+            success_url: successUrl || `${origin}/checkout/exito?session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: cancelUrl || `${origin}/checkout`,
             customer_email: customer_email,
             locale: 'es',
             metadata: {
                 customer_name,
-                orderData: JSON.stringify(orderData),
+                orderData: JSON.stringify(metaOrderData),
             },
             billing_address_collection: 'auto',
             phone_number_collection: {
@@ -144,37 +149,27 @@ export const POST: APIRoute = async ({ request }) => {
             },
         };
 
-        // Añadir descuento si existe cupón
         if (stripeCouponId) {
             sessionConfig.discounts = [{ coupon: stripeCouponId }];
         }
 
         const session = await stripe.checkout.sessions.create(sessionConfig);
 
-        return new Response(
-            JSON.stringify({
-                sessionId: session.id,
-                url: session.url
-            }),
-            {
-                status: 200,
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...corsHeaders,
-                },
-            }
-        );
+        if (!session.url) {
+            return new Response(
+                JSON.stringify({ error: 'No se pudo crear la sesión de checkout' }),
+                { status: 500, headers: { 'Content-Type': 'application/json' } }
+            );
+        }
+
+        // Redirigir directamente a Stripe Checkout
+        return redirect(session.url, 302);
+
     } catch (error) {
-        console.error('Stripe Checkout error:', error);
+        console.error('Stripe Checkout redirect error:', error);
         return new Response(
             JSON.stringify({ error: (error as Error).message }),
-            {
-                status: 500,
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...corsHeaders,
-                },
-            }
+            { status: 500, headers: { 'Content-Type': 'application/json' } }
         );
     }
 };

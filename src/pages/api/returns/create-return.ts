@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { createServerClient } from '../../../lib/supabase';
+import { createServerClient, createServerClientFromAuthHeader } from '../../../lib/supabase';
 import { Resend } from 'resend';
 import PDFDocument from 'pdfkit';
 import bwipjs from 'bwip-js';
@@ -290,8 +290,13 @@ async function generateReturnLabelPDF(
 
 export const POST: APIRoute = async ({ request, cookies }) => {
     try {
-        // Usar cliente autenticado con cookies del usuario
-        const supabase = createServerClient(cookies);
+        // Usar cliente autenticado con cookies o header Authorization
+        const authHeader = request.headers.get('authorization') ??
+            request.headers.get('Authorization');
+
+        const supabase = authHeader
+            ? createServerClientFromAuthHeader(authHeader)
+            : createServerClient(cookies);
 
         const { orderId, items, reason, reasonDetails } = await request.json();
 

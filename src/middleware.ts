@@ -2,6 +2,20 @@ import { defineMiddleware } from 'astro:middleware';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
 
 export const onRequest = defineMiddleware(async (context, next) => {
+    const isApiRoute = context.url.pathname.startsWith('/api');
+    const corsHeaders = {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    };
+
+    if (isApiRoute && context.request.method === 'OPTIONS') {
+        return new Response(null, {
+            status: 204,
+            headers: corsHeaders,
+        });
+    }
+
     // Solo proteger rutas /admin (excepto login)
     const isAdminRoute = context.url.pathname.startsWith('/admin');
     const isLoginPage = context.url.pathname === '/admin/login';
@@ -28,6 +42,19 @@ export const onRequest = defineMiddleware(async (context, next) => {
         }
     }
 
-    return next();
+    const response = await next();
+
+    if (!isApiRoute) return response;
+
+    const headers = new Headers(response.headers);
+    for (const [key, value] of Object.entries(corsHeaders)) {
+        headers.set(key, value);
+    }
+
+    return new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers,
+    });
 });
 

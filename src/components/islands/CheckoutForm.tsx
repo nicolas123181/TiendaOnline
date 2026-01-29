@@ -177,7 +177,7 @@ export default function CheckoutForm({ shippingMethods }: CheckoutFormProps) {
     // Navegación entre pasos
     const goToNextStep = () => {
         setError('');
-        
+
         // Validar paso actual antes de avanzar
         if (currentStep === 1) {
             if (!formData.customer_name.trim()) {
@@ -328,43 +328,9 @@ export default function CheckoutForm({ shippingMethods }: CheckoutFormProps) {
         );
     }
 
-    // Si no está logueado, mostrar mensaje
-    if (isLoggedIn === false) {
-        return (
-            <div className="max-w-md mx-auto py-12">
-                <div className="bg-white rounded-2xl shadow-lg p-8 text-center border border-gray-100">
-                    <div className="w-20 h-20 mx-auto mb-6 bg-blue-50 rounded-full flex items-center justify-center">
-                        <svg className="w-10 h-10 text-brand-navy" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                        </svg>
-                    </div>
-                    <h2 className="text-2xl font-bold text-gray-900 mb-3">
-                        Inicia sesión para continuar
-                    </h2>
-                    <p className="text-gray-600 mb-8">
-                        Necesitas una cuenta para realizar tu compra y poder hacer seguimiento de tus pedidos.
-                    </p>
-                    <div className="space-y-3">
-                        <a
-                            href={`/login?returnTo=${encodeURIComponent('/checkout')}`}
-                            className="block w-full py-4 bg-brand-navy text-white font-semibold rounded-xl hover:bg-brand-navy-light transition-colors"
-                        >
-                            Iniciar Sesión
-                        </a>
-                        <a
-                            href={`/registro?returnTo=${encodeURIComponent('/checkout')}`}
-                            className="block w-full py-4 border-2 border-gray-200 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 transition-colors"
-                        >
-                            Crear Cuenta
-                        </a>
-                    </div>
-                    <p className="text-sm text-gray-500 mt-6">
-                        Tu carrito se mantendrá guardado
-                    </p>
-                </div>
-            </div>
-        );
-    }
+
+    // GUEST CHECKOUT: Ya no se requiere login
+    // Los usuarios pueden comprar sin cuenta
 
     return (
         <div className="max-w-6xl mx-auto">
@@ -377,29 +343,26 @@ export default function CheckoutForm({ shippingMethods }: CheckoutFormProps) {
                                 type="button"
                                 onClick={() => goToStep(step.id)}
                                 disabled={step.id > currentStep}
-                                className={`flex flex-col items-center gap-2 transition-all ${
-                                    step.id <= currentStep ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'
-                                }`}
+                                className={`flex flex-col items-center gap-2 transition-all ${step.id <= currentStep ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'
+                                    }`}
                             >
                                 <div
-                                    className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold transition-all ${
-                                        step.id === currentStep
+                                    className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold transition-all ${step.id === currentStep
                                             ? 'bg-brand-navy text-white scale-110 shadow-lg'
                                             : step.id < currentStep
-                                            ? 'bg-green-500 text-white'
-                                            : 'bg-gray-200 text-gray-400'
-                                    }`}
+                                                ? 'bg-green-500 text-white'
+                                                : 'bg-gray-200 text-gray-400'
+                                        }`}
                                 >
                                     {step.id < currentStep ? '✓' : step.icon}
                                 </div>
                                 <span
-                                    className={`text-sm font-medium hidden md:block ${
-                                        step.id === currentStep
+                                    className={`text-sm font-medium hidden md:block ${step.id === currentStep
                                             ? 'text-brand-navy'
                                             : step.id < currentStep
-                                            ? 'text-green-600'
-                                            : 'text-gray-400'
-                                    }`}
+                                                ? 'text-green-600'
+                                                : 'text-gray-400'
+                                        }`}
                                 >
                                     {step.name}
                                 </span>
@@ -407,9 +370,8 @@ export default function CheckoutForm({ shippingMethods }: CheckoutFormProps) {
                             {index < STEPS.length - 1 && (
                                 <div className="flex-1 h-1 mx-4">
                                     <div
-                                        className={`h-full rounded-full transition-all duration-300 ${
-                                            step.id < currentStep ? 'bg-green-500' : 'bg-gray-200'
-                                        }`}
+                                        className={`h-full rounded-full transition-all duration-300 ${step.id < currentStep ? 'bg-green-500' : 'bg-gray-200'
+                                            }`}
                                     ></div>
                                 </div>
                             )}
@@ -421,20 +383,22 @@ export default function CheckoutForm({ shippingMethods }: CheckoutFormProps) {
             <form onSubmit={handleSubmit} className="grid lg:grid-cols-3 gap-8">
                 {/* Main Content */}
                 <div className="lg:col-span-2">
-                    {/* User Info Banner */}
-                    <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-4 flex items-center gap-3 mb-6">
-                        <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center shrink-0">
-                            <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
+                    {/* User Info Banner - Solo visible para usuarios logueados */}
+                    {isLoggedIn && userEmail && (
+                        <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-4 flex items-center gap-3 mb-6">
+                            <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center shrink-0">
+                                <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm font-semibold text-green-800 truncate">
+                                    {userName || userEmail}
+                                </p>
+                                <p className="text-xs text-green-600 truncate">{userEmail}</p>
+                            </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-green-800 truncate">
-                                {userName || userEmail}
-                            </p>
-                            <p className="text-xs text-green-600 truncate">{userEmail}</p>
-                        </div>
-                    </div>
+                    )}
 
                     {/* Error Message */}
                     {error && (
@@ -589,11 +553,10 @@ export default function CheckoutForm({ shippingMethods }: CheckoutFormProps) {
                                     {shippingMethods.map(method => (
                                         <label
                                             key={method.id}
-                                            className={`flex items-start p-5 border-2 rounded-xl cursor-pointer transition-all hover:shadow-md ${
-                                                formData.shipping_method_id === method.id.toString()
+                                            className={`flex items-start p-5 border-2 rounded-xl cursor-pointer transition-all hover:shadow-md ${formData.shipping_method_id === method.id.toString()
                                                     ? 'border-brand-navy bg-blue-50'
                                                     : 'border-gray-200 hover:border-gray-300'
-                                            }`}
+                                                }`}
                                         >
                                             <input
                                                 type="radio"
