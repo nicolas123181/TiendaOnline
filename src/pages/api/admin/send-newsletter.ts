@@ -25,7 +25,11 @@ export const POST: APIRoute = async ({ request }) => {
             }), { status: 500, headers: { 'Content-Type': 'application/json' } });
         }
 
-        const { subject, preview, content } = await request.json();
+        const body = await request.json();
+        const { subject, preview, content } = body;
+        // Optional: allow caller to provide explicit recipients to send to
+        // Format: [{ email: string, name?: string }, ...]
+        const explicitRecipients = Array.isArray(body.recipients) ? body.recipients : null;
 
         if (!subject || !content) {
             return new Response(JSON.stringify({
@@ -34,18 +38,30 @@ export const POST: APIRoute = async ({ request }) => {
             }), { status: 400, headers: { 'Content-Type': 'application/json' } });
         }
 
-        // Obtener suscriptores activos
-        const { data: subscribers, error: subError } = await supabase
-            .from('newsletter_subscribers')
-            .select('email, name')
-            .eq('is_active', true);
+        // Obtener suscriptores: si el cliente envía una lista explícita, usarla.
+        let subscribers: Array<{ email: string; name?: string }> | null = null;
 
-        if (subError) {
-            console.error('Error fetching subscribers:', subError);
-            return new Response(JSON.stringify({
-                success: false,
-                error: 'Error al obtener suscriptores'
-            }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+        if (explicitRecipients && explicitRecipients.length > 0) {
+            subscribers = explicitRecipients.map((r: any) => ({
+                email: String(r.email),
+                name: r.name ? String(r.name) : undefined,
+            }));
+        } else {
+            // Obtener suscriptores activos desde la BD
+            const { data: dbSubscribers, error: subError } = await supabase
+                .from('newsletter_subscribers')
+                .select('email, name')
+                .eq('is_active', true);
+
+            if (subError) {
+                console.error('Error fetching subscribers:', subError);
+                return new Response(JSON.stringify({
+                    success: false,
+                    error: 'Error al obtener suscriptores'
+                }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+            }
+
+            subscribers = dbSubscribers as any[] || [];
         }
 
         if (!subscribers || subscribers.length === 0) {
