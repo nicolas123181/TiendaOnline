@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { supabase } from '../../../lib/supabase';
-import { sendDeliveryConfirmationEmail } from '../../../lib/email';
+import { sendDeliveryConfirmationEmail, SITE_URL } from '../../../lib/email';
 import { Resend } from 'resend';
 
 const resendApiKey = import.meta.env.RESEND_API_KEY;
@@ -180,7 +180,7 @@ function getReadyForPickupEmailHtml(orderId: number, customerName: string): stri
                     <p>Si tienes alguna pregunta, no dudes en contactarnos.</p>
                     
                     <center>
-                        <a href="https://vantage.com/perfil" class="button">Ver Detalles del Pedido</a>
+                        <a href="${SITE_URL}/perfil" class="button">Ver Detalles del Pedido</a>
                     </center>
                 </div>
                 <div class="footer">

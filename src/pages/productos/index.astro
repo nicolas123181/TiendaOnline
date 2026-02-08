@@ -4,8 +4,8 @@ import ProductCard from "../../components/product/ProductCard.astro";
 import { getProducts, getCategories } from "../../lib/supabase";
 import { formatPrice } from "../../lib/utils";
 
-// SSG
-export const prerender = true;
+// SSR - Fetch live data on each request
+export const prerender = false;
 
 const products = await getProducts();
 const categories = await getCategories();

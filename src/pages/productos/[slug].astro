@@ -4,7 +4,6 @@ import ProductCard from "../../components/product/ProductCard.astro";
 import ProductGallery from "../../components/product/ProductGallery.astro";
 import AddToCartButton from "../../components/islands/AddToCartButton";
 import {
-    getProducts,
     getProductBySlug,
     getProductsByCategory,
     getProductSizes,
@@ -12,44 +11,25 @@ import {
 } from "../../lib/supabase";
 import { formatPrice, getSizesForCategory } from "../../lib/utils";
 
-// SSG - Generar rutas estáticas
-export const prerender = true;
+// SSR - Fetch live data on each request
+export const prerender = false;
 
-export async function getStaticPaths() {
-    const products = await getProducts();
+const { slug } = Astro.params;
 
-    // Para cada producto, obtener también su stock por tallas
-    const paths = await Promise.all(
-        products.map(async (product) => {
-            const productSizes = await getProductSizes(product.id);
-            return {
-                params: { slug: product.slug },
-                props: {
-                    product,
-                    productSizes: productSizes.map((ps) => ({
-                        size: ps.size,
-                        stock: ps.stock,
-                    })),
-                },
-            };
-        }),
-    );
-
-    return paths;
+if (!slug) {
+    return Astro.redirect("/productos");
 }
 
-interface Props {
-    product: Awaited<ReturnType<typeof getProductBySlug>>;
-    productSizes: SizeStock[];
-}
-
-const { product, productSizes } = Astro.props;
+const product = await getProductBySlug(slug);
 
 if (!product) {
     return Astro.redirect("/404");
 }
 
-// Productos relacionados (misma categoría)
+// Fetch live size stock data
+const productSizes = await getProductSizes(product.id);
+
+// Related products (same category)
 const relatedProducts = await getProductsByCategory(
     product.category?.slug || "",
 );
@@ -57,14 +37,28 @@ const filteredRelated = relatedProducts
     .filter((p) => p.id !== product.id)
     .slice(0, 4);
 
-// Tallas según categoría
+// Sizes based on category
 const sizes = getSizesForCategory(product.category?.slug || "");
 
-// Crear mapa de stock por talla desde los datos
+// Create size stock map from live data
 const sizeStocks: SizeStock[] = sizes.map((size) => {
     const found = productSizes.find((ps) => ps.size === size);
     return { size, stock: found?.stock || 0 };
 });
+
+// Calculate total stock from sizes (more accurate than product.stock)
+const totalStock = sizeStocks.reduce((sum, s) => sum + s.stock, 0);
+
+// Sale price logic
+const isOnSale =
+    product.is_on_sale &&
+    product.sale_price !== null &&
+    product.sale_price !== undefined;
+const currentPrice = isOnSale ? product.sale_price! : product.price;
+const originalPrice = product.price;
+const discountPercentage = isOnSale
+    ? Math.round(((originalPrice - currentPrice) / originalPrice) * 100)
+    : 0;
 ---
 
 <PublicLayout
@@ -149,13 +143,27 @@ const sizeStocks: SizeStock[] = sizes.map((size) => {
                     </h1>
 
                     <!-- Price -->
-                    <div class="flex items-center gap-4 mb-6">
-                        <span class="text-3xl font-bold text-brand-navy">
-                            {formatPrice(product.price)}
-                        </span>
+                    <div class="flex flex-wrap items-center gap-4 mb-6">
+                        <div class="flex items-center gap-3">
+                            <span class="text-3xl font-bold text-brand-navy">
+                                {formatPrice(currentPrice)}
+                            </span>
+                            {
+                                isOnSale && (
+                                    <>
+                                        <span class="text-xl text-text-muted line-through">
+                                            {formatPrice(originalPrice)}
+                                        </span>
+                                        <span class="inline-flex items-center px-2.5 py-1 bg-red-100 text-red-700 text-sm font-bold rounded-full">
+                                            -{discountPercentage}%
+                                        </span>
+                                    </>
+                                )
+                            }
+                        </div>
                         <!-- Stock Status -->
                         {
-                            product.stock > 0 ? (
+                            totalStock > 0 ? (
                                 <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-status-success-bg text-status-success text-sm font-medium rounded-full">
                                     <svg
                                         class="w-4 h-4"
@@ -168,7 +176,7 @@ const sizeStocks: SizeStock[] = sizes.map((size) => {
                                             clip-rule="evenodd"
                                         />
                                     </svg>
-                                    En stock ({product.stock} disponibles)
+                                    En stock ({totalStock} disponibles)
                                 </span>
                             ) : (
                                 <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-status-error-bg text-status-error text-sm font-medium rounded-full">
@@ -206,8 +214,8 @@ const sizeStocks: SizeStock[] = sizes.map((size) => {
                             id: product.id,
                             name: product.name,
                             slug: product.slug,
-                            price: product.price,
-                            stock: product.stock,
+                            price: currentPrice,
+                            stock: totalStock,
                             images: product.images,
                             categorySlug: product.category?.slug,
                         }}

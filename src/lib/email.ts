@@ -9,6 +9,12 @@ if (!resendApiKey) {
 
 const resend = resendApiKey ? new Resend(resendApiKey) : null;
 
+// Centralized SITE_URL - block vantage.es and use correct domain
+const envUrl = import.meta.env.PUBLIC_SITE_URL;
+export const SITE_URL = (envUrl && !envUrl.includes('vantage.es'))
+  ? envUrl
+  : 'https://nicovantage.victoriafp.online';
+
 // Colores de marca Vantage
 const BRAND_COLORS = {
   navy: '#1a2744',
@@ -55,7 +61,7 @@ export async function sendOrderConfirmationEmail(data: OrderEmailData) {
     return null;
   }
   try {
-    const siteUrl = data.baseUrl || import.meta.env.PUBLIC_SITE_URL || 'https://vantage.es';
+    const siteUrl = data.baseUrl || SITE_URL;
 
     const itemsHtml = data.items
       .map(
@@ -263,7 +269,7 @@ export async function sendShippingNotificationEmail(data: {
     return null;
   }
   try {
-    const siteUrl = data.baseUrl || import.meta.env.PUBLIC_SITE_URL || 'http://localhost:4321';
+    const siteUrl = data.baseUrl || SITE_URL;
     const logoUrl = `${siteUrl}/images/vantage-logo.jpg`;
 
     const html = `
@@ -399,7 +405,7 @@ export async function sendDeliveryConfirmationEmail(data: {
     return null;
   }
   try {
-    const siteUrl = data.baseUrl || import.meta.env.PUBLIC_SITE_URL || 'http://localhost:4321';
+    const siteUrl = data.baseUrl || SITE_URL;
     const logoUrl = `${siteUrl}/images/vantage-logo.jpg`;
 
     const html = `
@@ -642,7 +648,7 @@ export async function sendNewOrderAdminAlert(data: NewOrderAlertData): Promise<b
             ` : ''}
 
             <center>
-              <a href="https://vantage.com/admin/pedidos" class="button">Ver Pedido en Admin</a>
+              <a href="${SITE_URL}/admin/pedidos" class="button">Ver Pedido en Admin</a>
             </center>
           </div>
           <div class="footer">
@@ -724,7 +730,7 @@ export async function sendLowStockAlert(products: LowStockProduct[]): Promise<bo
   }
 
   try {
-    const siteUrl = import.meta.env.PUBLIC_SITE_URL || 'http://localhost:4321';
+    const siteUrl = SITE_URL;
 
     const productsListHtml = products
       .map(p => {
@@ -885,7 +891,7 @@ export async function sendOutOfStockAlert(products: OutOfStockProduct[]): Promis
   }
 
   try {
-    const siteUrl = import.meta.env.PUBLIC_SITE_URL || 'http://localhost:4321';
+    const siteUrl = SITE_URL;
 
     const productsListHtml = products
       .map(p => {
@@ -1061,7 +1067,7 @@ export async function sendWishlistLowStockEmail(data: WishlistLowStockEmailData)
   }
 
   try {
-    const siteUrl = data.baseUrl || import.meta.env.PUBLIC_SITE_URL || 'http://localhost:4321';
+    const siteUrl = data.baseUrl || SITE_URL;
     const productUrl = `${siteUrl}/productos/${data.productSlug}`;
     const priceFormatted = (data.productPrice / 100).toFixed(2);
     const customerName = extractNameFromEmail(data.customerEmail, data.customerName);
@@ -1211,7 +1217,7 @@ export async function sendWishlistSaleEmail(data: WishlistSaleEmailData): Promis
   }
 
   try {
-    const siteUrl = data.baseUrl || import.meta.env.PUBLIC_SITE_URL || 'http://localhost:4321';
+    const siteUrl = data.baseUrl || SITE_URL;
     const productUrl = `${siteUrl}/productos/${data.productSlug}`;
     const originalPriceFormatted = (data.originalPrice / 100).toFixed(2);
     const salePriceFormatted = (data.salePrice / 100).toFixed(2);
@@ -1453,7 +1459,7 @@ export async function sendCancelledOrderAdminAlert(data: CancelledOrderAlertData
             </div>
             ` : ''}
             <center>
-              <a href="https://vantage.com/admin/pedidos/${data.orderId}" class="button">Ver Detalles en Admin</a>
+              <a href="${SITE_URL}/admin/pedidos/${data.orderId}" class="button">Ver Detalles en Admin</a>
             </center>
           </div>
           <div class="footer">
