@@ -7,7 +7,8 @@ import {
     sendOutOfStockAlert,
     LOW_STOCK_THRESHOLD,
     type LowStockProduct,
-    type OutOfStockProduct
+    type OutOfStockProduct,
+    SITE_URL
 } from '../../lib/email';
 import { createInvoice, type InvoiceItem } from '../../lib/invoice';
 
@@ -35,8 +36,7 @@ function getPublicImageUrl(imageUrl: string | null | undefined): string | undefi
 
     // Si empieza con /, es una ruta relativa del sitio
     if (imageUrl.startsWith('/')) {
-        const siteUrl = import.meta.env.PUBLIC_SITE_URL || 'http://localhost:4321';
-        return `${siteUrl}${imageUrl}`;
+        return `${SITE_URL}${imageUrl}`;
     }
 
     // Si no tiene protocolo pero parece ser un path de bucket (products/xxx.jpg)

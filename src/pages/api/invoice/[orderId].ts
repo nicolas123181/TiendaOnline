@@ -13,10 +13,14 @@ export const GET: APIRoute = async ({ params }) => {
   }
   try {
     console.log("Loading invoice for order ID:", orderId);
-    const { data: invoice, error: invoiceError } = await supabase.from("invoices").select("*").eq("order_id", orderId).single();
-    if (invoiceError || !invoice) {
-      console.error("Invoice not found:", invoiceError);
-      return new Response(JSON.stringify({ error: "Invoice not found" }), { status: 404, headers: { "Content-Type": "application/json" } });
+    const { data: invoice, error: invoiceError } = await supabase.from("invoices").select("*").eq("order_id", orderId).maybeSingle();
+    if (invoiceError) {
+      console.error("Error fetching invoice:", invoiceError);
+      return new Response(JSON.stringify({ error: "Error fetching invoice" }), { status: 500, headers: { "Content-Type": "application/json" } });
+    }
+    if (!invoice) {
+      // No invoice exists for this order - this is normal for unpaid/new orders
+      return new Response(JSON.stringify({ error: "Invoice not found", message: "No invoice has been generated for this order yet" }), { status: 404, headers: { "Content-Type": "application/json" } });
     }
     const { data: items, error: itemsError } = await supabase.from("invoice_items").select("*").eq("invoice_id", invoice.id);
     if (itemsError) {

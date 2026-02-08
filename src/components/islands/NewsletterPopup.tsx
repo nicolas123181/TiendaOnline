@@ -1,6 +1,12 @@
 import { useState, useEffect } from 'react';
 
-const PROMO_CODE = 'BIENVENIDO10';
+interface PopupConfig {
+    enabled: boolean;
+    title: string;
+    message: string;
+    promoCode: string;
+    discount: string;
+}
 
 export default function NewsletterPopup() {
     const [isOpen, setIsOpen] = useState(false);
@@ -8,20 +14,45 @@ export default function NewsletterPopup() {
     const [isLoading, setIsLoading] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
     const [error, setError] = useState('');
+    const [config, setConfig] = useState<PopupConfig>({
+        enabled: true,
+        title: '10% de Descuento Exclusivo',
+        message: 'Suscríbete a nuestra newsletter y recibe un descuento especial en tu primera compra.',
+        promoCode: 'BIENVENIDO10',
+        discount: '10'
+    });
 
     useEffect(() => {
-        // Verificar si ya se mostró el popup
-        const hasSeenPopup = localStorage.getItem('newsletter_popup_seen');
-        const isAuthenticated = document.cookie.includes('sb-access-token');
+        // Fetch popup configuration
+        const loadConfig = async () => {
+            try {
+                const response = await fetch('/api/popup-config');
+                if (response.ok) {
+                    const data = await response.json();
+                    setConfig(data);
 
-        if (!hasSeenPopup && !isAuthenticated) {
-            // Mostrar después de 5 segundos
-            const timer = setTimeout(() => {
-                setIsOpen(true);
-            }, 5000);
+                    // Only show popup if enabled
+                    if (!data.enabled) return;
+                }
+            } catch (err) {
+                console.error('Error loading popup config:', err);
+            }
 
-            return () => clearTimeout(timer);
-        }
+            // Check if popup should show
+            const hasSeenPopup = localStorage.getItem('newsletter_popup_seen');
+            const isAuthenticated = document.cookie.includes('sb-access-token');
+
+            if (!hasSeenPopup && !isAuthenticated) {
+                // Show after 5 seconds
+                const timer = setTimeout(() => {
+                    setIsOpen(true);
+                }, 5000);
+
+                return () => clearTimeout(timer);
+            }
+        };
+
+        loadConfig();
     }, []);
 
     const handleClose = () => {
@@ -56,7 +87,7 @@ export default function NewsletterPopup() {
         }
     };
 
-    if (!isOpen) return null;
+    if (!isOpen || !config.enabled) return null;
 
     return (
         <div
@@ -94,10 +125,10 @@ export default function NewsletterPopup() {
                         <>
                             <div className="text-center mb-6">
                                 <h2 className="text-xl font-serif text-[#1a2744] mb-2">
-                                    10% de Descuento Exclusivo
+                                    {config.title}
                                 </h2>
                                 <p className="text-gray-600 text-sm">
-                                    Suscríbete a nuestra newsletter y recibe un descuento especial en tu primera compra.
+                                    {config.message}
                                 </p>
                             </div>
 
@@ -159,14 +190,14 @@ export default function NewsletterPopup() {
 
                             <div className="bg-gray-50 border border-gray-200 rounded-lg p-5 mb-6">
                                 <p className="text-2xl font-mono font-semibold text-[#1a2744] tracking-widest">
-                                    {PROMO_CODE}
+                                    {config.promoCode}
                                 </p>
-                                <p className="text-sm text-gray-500 mt-2">10% de descuento</p>
+                                <p className="text-sm text-gray-500 mt-2">{config.discount}% de descuento</p>
                             </div>
 
                             <button
                                 onClick={() => {
-                                    navigator.clipboard.writeText(PROMO_CODE);
+                                    navigator.clipboard.writeText(config.promoCode);
                                     handleClose();
                                 }}
                                 className="px-8 py-2.5 bg-[#1a2744] text-white font-medium rounded-lg hover:bg-[#243555] transition-colors"

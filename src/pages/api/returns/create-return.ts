@@ -600,7 +600,7 @@ function getAdminReturnEmailHtml(
                     <p>El cliente ha recibido un PDF con la etiqueta para entregar el paquete en Correos.</p>
                     
                     <center style="margin-top: 25px;">
-                        <a href="https://vantage.com/admin/devoluciones" class="button">Ver en Panel Admin</a>
+                        <a href="https://nicovantage.victoriafp.online/admin/devoluciones" class="button">Ver en Panel Admin</a>
                     </center>
                 </div>
             </div>

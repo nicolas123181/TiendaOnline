@@ -5,6 +5,16 @@ import { Resend } from 'resend';
 const resendApiKey = import.meta.env.RESEND_API_KEY;
 const resend = resendApiKey ? new Resend(resendApiKey) : null;
 
+const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'POST,OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
+export const OPTIONS: APIRoute = async () => {
+    return new Response(null, { status: 204, headers: corsHeaders });
+};
+
 // Colores de marca Vantage
 const BRAND_COLORS = {
     navy: '#1a2744',
@@ -22,23 +32,21 @@ export const POST: APIRoute = async ({ request }) => {
             return new Response(JSON.stringify({
                 success: false,
                 error: 'Email service no configurado'
-            }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+            }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }
 
         const body = await request.json();
         const { subject, preview, content } = body;
-        // Optional: allow caller to provide explicit recipients to send to
-        // Format: [{ email: string, name?: string }, ...]
         const explicitRecipients = Array.isArray(body.recipients) ? body.recipients : null;
 
         if (!subject || !content) {
             return new Response(JSON.stringify({
                 success: false,
                 error: 'Asunto y contenido son requeridos'
-            }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+            }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }
 
-        // Obtener suscriptores: si el cliente envía una lista explícita, usarla.
+        // Obtener suscriptores activos (o usar lista enviada por el cliente)
         let subscribers: Array<{ email: string; name?: string }> | null = null;
 
         if (explicitRecipients && explicitRecipients.length > 0) {
@@ -47,7 +55,6 @@ export const POST: APIRoute = async ({ request }) => {
                 name: r.name ? String(r.name) : undefined,
             }));
         } else {
-            // Obtener suscriptores activos desde la BD
             const { data: dbSubscribers, error: subError } = await supabase
                 .from('newsletter_subscribers')
                 .select('email, name')
@@ -58,7 +65,7 @@ export const POST: APIRoute = async ({ request }) => {
                 return new Response(JSON.stringify({
                     success: false,
                     error: 'Error al obtener suscriptores'
-                }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+                }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
             }
 
             subscribers = dbSubscribers as any[] || [];
@@ -68,7 +75,7 @@ export const POST: APIRoute = async ({ request }) => {
             return new Response(JSON.stringify({
                 success: false,
                 error: 'No hay suscriptores activos'
-            }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+            }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }
 
         console.log(`📧 Sending newsletter to ${subscribers.length} subscribers`);
@@ -103,14 +110,14 @@ export const POST: APIRoute = async ({ request }) => {
             message: `Newsletter enviado a ${sentCount} suscriptores`,
             sentCount,
             errors: errors.length > 0 ? errors : undefined
-        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
     } catch (error) {
         console.error('Newsletter error:', error);
         return new Response(JSON.stringify({
             success: false,
             error: (error as Error).message
-        }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+        }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 };
 
@@ -202,14 +209,14 @@ function generateNewsletterHtml(subject: string, content: string, preview?: stri
                     <div class="divider"></div>
                     
                     <center>
-                        <a href="https://vantage.com" class="button">Visitar la Tienda</a>
+                        <a href="https://nicovantage.victoriafp.online" class="button">Visitar la Tienda</a>
                     </center>
                 </div>
                 <div class="footer">
                     <p>Has recibido este email porque estás suscrito al newsletter de Vantage.</p>
                     <p>
-                        <a href="https://vantage.com/perfil">Gestionar suscripción</a> | 
-                        <a href="https://vantage.com">Visitar web</a>
+                        <a href="https://nicovantage.victoriafp.online/perfil">Gestionar suscripción</a> | 
+                        <a href="https://nicovantage.victoriafp.online">Visitar web</a>
                     </p>
                     <p style="margin-top: 20px;">© 2026 Vantage. Todos los derechos reservados.</p>
                 </div>

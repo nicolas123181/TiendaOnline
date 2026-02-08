@@ -218,10 +218,10 @@ const orderId = Astro.params.id;
                     </div>
                 </div>
 
-                <!-- Invoice Section -->
+                <!-- Invoice Section (hidden until invoice is loaded) -->
                 <div
                     id="factura"
-                    class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl shadow-sm border border-blue-100 overflow-hidden"
+                    class="hidden bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl shadow-sm border border-blue-100 overflow-hidden"
                 >
                     <div class="p-6 border-b border-blue-100">
                         <div class="flex items-center gap-3">
@@ -255,11 +255,11 @@ const orderId = Astro.params.id;
                     </div>
                     <div class="p-6">
                         <p class="text-gray-600 mb-4">
-                            Puedes ver y descargar tu factura para este pedido.
+                            Descarga e imprime tu factura para este pedido.
                         </p>
                         <button
-                            id="view-invoice-btn"
-                            class="w-full inline-flex justify-center items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg hover:shadow-xl"
+                            id="download-invoice-btn"
+                            class="w-full inline-flex justify-center items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             <svg
                                 class="w-5 h-5"
@@ -271,15 +271,11 @@ const orderId = Astro.params.id;
                                     stroke-linecap="round"
                                     stroke-linejoin="round"
                                     stroke-width="2"
-                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
                                 ></path>
                             </svg>
-                            Ver Factura
+                            <span id="download-btn-text">Descargar Factura</span
+                            >
                         </button>
                     </div>
                 </div>
@@ -287,67 +283,6 @@ const orderId = Astro.params.id;
         </div>
     </section>
 </PublicLayout>
-
-<!-- Invoice Modal -->
-<div
-    id="invoice-modal"
-    class="hidden fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-6"
->
-    <div
-        class="bg-white rounded-xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col"
-    >
-        <!-- Header -->
-        <div
-            class="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-white shrink-0"
-        >
-            <h3 class="text-xl font-bold text-gray-900">Factura</h3>
-            <div class="flex items-center gap-3">
-                <button
-                    id="print-invoice-btn"
-                    class="inline-flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
-                >
-                    <svg
-                        class="w-5 h-5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
-                        ></path>
-                    </svg>
-                    <span>Imprimir / Descargar</span>
-                </button>
-                <button
-                    id="close-modal-btn"
-                    class="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                    aria-label="Cerrar"
-                >
-                    <svg
-                        class="w-5 h-5 text-gray-500"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
-                </button>
-            </div>
-        </div>
-
-        <!-- Content -->
-        <div id="invoice-content" class="flex-1 overflow-y-auto bg-gray-100">
-            <!-- Invoice HTML will be loaded here -->
-        </div>
-    </div>
-</div>
 
 <!-- Pasar el orderId como data attribute -->
 <div id="order-data" data-order-id={orderId} class="hidden"></div>
@@ -584,104 +519,58 @@ const orderId = Astro.params.id;
 
     // Invoice functionality
     async function loadInvoiceInfo() {
+        const invoiceSection = document.getElementById("factura");
+
         try {
             const { data: invoice, error } = await supabase
                 .from("invoices")
                 .select("invoice_number, id")
                 .eq("order_id", orderId)
-                .single();
+                .maybeSingle();
 
             if (!error && invoice) {
+                // Show invoice section
+                invoiceSection?.classList.remove("hidden");
+
                 const invoiceNumberEl =
                     document.getElementById("invoice-number");
                 if (invoiceNumberEl) {
                     invoiceNumberEl.textContent = `Factura Nº ${invoice.invoice_number}`;
                 }
+            } else {
+                // No invoice exists - keep section hidden
+                invoiceSection?.classList.add("hidden");
             }
         } catch (error) {
             console.error("Error loading invoice info:", error);
+            invoiceSection?.classList.add("hidden");
         }
     }
 
-    // Modal controls
-    const modal = document.getElementById("invoice-modal");
-    const viewInvoiceBtn = document.getElementById("view-invoice-btn");
-    const closeModalBtn = document.getElementById("close-modal-btn");
-    const printInvoiceBtn = document.getElementById("print-invoice-btn");
-    const invoiceContent = document.getElementById("invoice-content");
+    // Direct download invoice button
+    const downloadInvoiceBtn = document.getElementById("download-invoice-btn");
+    const downloadBtnText = document.getElementById("download-btn-text");
 
-    // Function to open modal
-    function openModal() {
-        // Save current scroll position
-        const scrollY = window.scrollY;
-        document.body.style.top = `-${scrollY}px`;
-        document.body.style.position = "fixed";
-        document.body.style.width = "100%";
-        document.body.style.overflowY = "scroll";
+    downloadInvoiceBtn?.addEventListener("click", async () => {
+        const btn = downloadInvoiceBtn as HTMLButtonElement;
+        const originalText =
+            downloadBtnText?.textContent || "Descargar Factura";
 
-        modal?.classList.remove("hidden");
-    }
-
-    // Function to close modal
-    function closeModal() {
-        // Get the scroll position before closing
-        const scrollY = document.body.style.top;
-
-        // Hide modal
-        modal?.classList.add("hidden");
-
-        // Restore body styles
-        document.body.style.position = "";
-        document.body.style.top = "";
-        document.body.style.width = "";
-        document.body.style.overflowY = "";
-
-        // Restore scroll position
-        window.scrollTo(0, parseInt(scrollY || "0") * -1);
-    }
-
-    viewInvoiceBtn?.addEventListener("click", async () => {
         try {
-            // Show modal immediately with loading state
-            openModal();
-            if (invoiceContent) {
-                invoiceContent.innerHTML =
-                    '<div class="text-center py-8"><div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent"></div><p class="mt-4 text-gray-600">Cargando factura...</p></div>';
-            }
+            // Show loading state
+            btn.disabled = true;
+            if (downloadBtnText) downloadBtnText.textContent = "Generando...";
 
             // Fetch invoice HTML from API
             const response = await fetch(`/api/invoice/${orderId}`);
             if (!response.ok) {
-                throw new Error("Failed to load invoice");
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || "Factura no disponible");
             }
 
             const html = await response.text();
-            if (invoiceContent) {
-                invoiceContent.innerHTML = html;
-            }
-        } catch (error) {
-            console.error("Error loading invoice:", error);
-            if (invoiceContent) {
-                invoiceContent.innerHTML =
-                    '<div class="text-center py-8 text-red-600"><svg class="w-12 h-12 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg><p class="font-semibold">Error al cargar la factura</p><p class="text-sm mt-2">Por favor, inténtalo de nuevo más tarde.</p></div>';
-            }
-        }
-    });
 
-    closeModalBtn?.addEventListener("click", () => {
-        closeModal();
-    });
-
-    // Close modal when clicking outside
-    modal?.addEventListener("click", (e) => {
-        if (e.target === modal) {
-            closeModal();
-        }
-    });
-
-    // Print invoice
-    printInvoiceBtn?.addEventListener("click", () => {
-        if (invoiceContent) {
+            // Open invoice in new window for printing/saving as PDF
             const printWindow = window.open("", "_blank");
             if (printWindow) {
                 printWindow.document.write(`
@@ -689,25 +578,42 @@ const orderId = Astro.params.id;
                     <html>
                     <head>
                         <meta charset="UTF-8">
-                        <title>Factura</title>
+                        <title>Factura - Pedido #${orderId}</title>
                         <style>
                             body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
                             @media print {
                                 body { margin: 0; }
+                                @page { margin: 1cm; }
                             }
                         </style>
                     </head>
                     <body>
-                        ${invoiceContent.innerHTML}
+                        ${html}
                     </body>
                     </html>
                 `);
                 printWindow.document.close();
                 printWindow.focus();
+
+                // Trigger print dialog after a short delay
                 setTimeout(() => {
                     printWindow.print();
-                }, 250);
+                }, 300);
             }
+
+            // Restore button
+            btn.disabled = false;
+            if (downloadBtnText) downloadBtnText.textContent = originalText;
+        } catch (error) {
+            console.error("Error downloading invoice:", error);
+            alert(
+                "❌ " +
+                    (error instanceof Error
+                        ? error.message
+                        : "Error al descargar la factura"),
+            );
+            btn.disabled = false;
+            if (downloadBtnText) downloadBtnText.textContent = originalText;
         }
     });
 

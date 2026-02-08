@@ -9,6 +9,16 @@ export const prerender = false;
 const flashOffersEnabled = await getSetting("flash_offers_enabled");
 const lowStockThreshold = (await getSetting("low_stock_threshold")) || "5";
 
+// Popup configuration
+const popupEnabled = (await getSetting("popup_enabled")) || "true";
+const popupTitle =
+    (await getSetting("popup_title")) || "10% de Descuento Exclusivo";
+const popupMessage =
+    (await getSetting("popup_message")) ||
+    "Suscríbete a nuestra newsletter y recibe un descuento especial en tu primera compra.";
+const popupPromoCode = (await getSetting("popup_promo_code")) || "BIENVENIDO10";
+const popupDiscount = (await getSetting("popup_discount")) || "10";
+
 let success = false;
 let error = "";
 
@@ -62,6 +72,59 @@ if (Astro.request.method === "POST") {
                     success = true;
                 }
             }
+        } else if (action === "popup_toggle") {
+            const popupOn = formData.get("popup_enabled") === "on";
+            const { error: upsertError } = await supabase
+                .from("app_settings")
+                .upsert(
+                    {
+                        key: "popup_enabled",
+                        value: popupOn.toString(),
+                        updated_at: new Date().toISOString(),
+                    },
+                    { onConflict: "key" },
+                );
+
+            if (upsertError) {
+                error = `Error al guardar: ${upsertError.message}`;
+            } else {
+                success = true;
+            }
+        } else if (action === "popup_content") {
+            const title = formData.get("popup_title") as string;
+            const message = formData.get("popup_message") as string;
+            const promoCode = formData.get("popup_promo_code") as string;
+            const discount = formData.get("popup_discount") as string;
+
+            // Guardar todas las configuraciones del popup
+            const settings = [
+                { key: "popup_title", value: title },
+                { key: "popup_message", value: message },
+                { key: "popup_promo_code", value: promoCode.toUpperCase() },
+                { key: "popup_discount", value: discount },
+            ];
+
+            for (const setting of settings) {
+                const { error: upsertError } = await supabase
+                    .from("app_settings")
+                    .upsert(
+                        {
+                            key: setting.key,
+                            value: setting.value,
+                            updated_at: new Date().toISOString(),
+                        },
+                        { onConflict: "key" },
+                    );
+
+                if (upsertError) {
+                    error = `Error al guardar: ${upsertError.message}`;
+                    break;
+                }
+            }
+
+            if (!error) {
+                success = true;
+            }
         }
     } catch (e) {
         error = "Ha ocurrido un error inesperado.";
@@ -70,6 +133,7 @@ if (Astro.request.method === "POST") {
 }
 
 const isFlashOffersEnabled = flashOffersEnabled === "true";
+const isPopupEnabled = popupEnabled === "true";
 const currentThreshold = parseInt(lowStockThreshold) || 5;
 ---
 
@@ -287,6 +351,186 @@ const currentThreshold = parseInt(lowStockThreshold) || 5;
                                     clip-rule="evenodd"></path>
                             </svg>
                             Recibirás un email cuando el stock llegue a este nivel.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Newsletter Popup Configuration -->
+        <div
+            class="bg-surface-primary rounded-2xl p-6 shadow-soft lg:col-span-2"
+        >
+            <div class="flex items-start gap-4">
+                <div class="p-3 bg-purple-100 rounded-xl">
+                    <svg
+                        class="w-6 h-6 text-purple-600"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
+                        ></path>
+                    </svg>
+                </div>
+                <div class="flex-1">
+                    <h2 class="text-lg font-semibold text-brand-navy mb-2">
+                        Popup Newsletter
+                    </h2>
+                    <p class="text-sm text-text-muted mb-4">
+                        Configura el popup que aparece a nuevos visitantes
+                        ofreciendo un código de descuento a cambio de su
+                        suscripción al newsletter.
+                    </p>
+
+                    <!-- Toggle Popup -->
+                    <form method="POST" class="mb-6">
+                        <input
+                            type="hidden"
+                            name="action"
+                            value="popup_toggle"
+                        />
+                        <div
+                            class="flex items-center justify-between p-4 bg-surface-secondary rounded-xl"
+                        >
+                            <div>
+                                <p class="font-medium text-text-primary">
+                                    Popup activo
+                                </p>
+                                <p class="text-sm text-text-muted">
+                                    {
+                                        isPopupEnabled
+                                            ? "Se muestra a nuevos visitantes"
+                                            : "Desactivado"
+                                    }
+                                </p>
+                            </div>
+
+                            <label
+                                class="relative inline-flex items-center cursor-pointer"
+                            >
+                                <input
+                                    type="checkbox"
+                                    name="popup_enabled"
+                                    checked={isPopupEnabled}
+                                    class="sr-only peer"
+                                    onchange="this.form.submit()"
+                                />
+                                <div
+                                    class="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-brand-navy/20 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-1 after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-purple-600"
+                                >
+                                </div>
+                            </label>
+                        </div>
+                    </form>
+
+                    <!-- Popup Content Configuration -->
+                    <form method="POST" class="space-y-4">
+                        <input
+                            type="hidden"
+                            name="action"
+                            value="popup_content"
+                        />
+
+                        <div class="grid md:grid-cols-2 gap-4">
+                            <div>
+                                <label
+                                    class="block text-sm font-medium text-text-primary mb-2"
+                                >
+                                    Título del popup
+                                </label>
+                                <input
+                                    type="text"
+                                    name="popup_title"
+                                    value={popupTitle}
+                                    placeholder="10% de Descuento Exclusivo"
+                                    class="w-full px-4 py-3 rounded-xl border border-border-light bg-surface-secondary text-text-primary"
+                                />
+                            </div>
+
+                            <div class="flex gap-3">
+                                <div class="flex-1">
+                                    <label
+                                        class="block text-sm font-medium text-text-primary mb-2"
+                                    >
+                                        Código promocional
+                                    </label>
+                                    <input
+                                        type="text"
+                                        name="popup_promo_code"
+                                        value={popupPromoCode}
+                                        placeholder="BIENVENIDO10"
+                                        class="w-full px-4 py-3 rounded-xl border border-border-light bg-surface-secondary text-text-primary font-mono uppercase"
+                                    />
+                                </div>
+                                <div class="w-24">
+                                    <label
+                                        class="block text-sm font-medium text-text-primary mb-2"
+                                    >
+                                        % Dto
+                                    </label>
+                                    <input
+                                        type="number"
+                                        name="popup_discount"
+                                        value={popupDiscount}
+                                        min="1"
+                                        max="100"
+                                        class="w-full px-4 py-3 rounded-xl border border-border-light bg-surface-secondary text-text-primary text-center"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label
+                                class="block text-sm font-medium text-text-primary mb-2"
+                            >
+                                Mensaje del popup
+                            </label>
+                            <textarea
+                                name="popup_message"
+                                rows="2"
+                                placeholder="Suscríbete a nuestra newsletter y recibe un descuento especial..."
+                                class="w-full px-4 py-3 rounded-xl border border-border-light bg-surface-secondary text-text-primary resize-none"
+                                >{popupMessage}</textarea
+                            >
+                        </div>
+
+                        <div class="flex items-center gap-4">
+                            <button
+                                type="submit"
+                                class="px-6 py-2.5 bg-brand-navy text-white rounded-lg font-medium hover:bg-brand-navy-light transition-colors"
+                            >
+                                💾 Guardar Configuración
+                            </button>
+                            <p class="text-xs text-text-muted">
+                                Los cambios se aplicarán a nuevos visitantes
+                            </p>
+                        </div>
+                    </form>
+
+                    <div
+                        class="mt-4 p-3 bg-purple-50 rounded-lg border border-purple-200"
+                    >
+                        <p
+                            class="text-xs text-purple-700 flex items-center gap-2"
+                        >
+                            <svg
+                                class="w-4 h-4 shrink-0"
+                                fill="currentColor"
+                                viewBox="0 0 20 20"
+                            >
+                                <path
+                                    fill-rule="evenodd"
+                                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                                    clip-rule="evenodd"></path>
+                            </svg>
+                            El popup aparece después de 5 segundos para visitantes
+                            que no han iniciado sesión.
                         </p>
                     </div>
                 </div>

@@ -49,7 +49,7 @@ export const POST: APIRoute = async ({ request }) => {
             });
         }
 
-        const siteUrl = import.meta.env.PUBLIC_SITE_URL || 'http://localhost:4321';
+        const siteUrl = import.meta.env.PUBLIC_SITE_URL || 'https://nicovantage.victoriafp.online';
         const sentIds: number[] = [];
         const errors: string[] = [];
 

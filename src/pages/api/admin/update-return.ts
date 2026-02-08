@@ -500,7 +500,7 @@ function getRefundEmailHtml(customerName: string, returnNumber: string, amountCe
                     <p>Gracias por tu paciencia y por confiar en Vantage. ¡Esperamos verte pronto de nuevo!</p>
                     
                     <div style="text-align: center; margin-top: 30px;">
-                        <a href="https://vantage.com" style="display: inline-block; background: ${BRAND_COLORS.navy}; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600;">
+                        <a href="https://nicovantage.victoriafp.online" style="display: inline-block; background: ${BRAND_COLORS.navy}; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600;">
                             Seguir Comprando
                         </a>
                     </div>
