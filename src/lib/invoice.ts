@@ -49,7 +49,6 @@ export interface InvoiceData {
     discount?: number;
     taxRate?: number; // por defecto 21%
     paymentMethod?: string;
-    paymentMethod?: string;
     notes?: string;
     type?: 'standard' | 'credit_note';
     originalInvoiceId?: number;

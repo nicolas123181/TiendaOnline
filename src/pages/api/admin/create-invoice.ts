@@ -24,6 +24,7 @@ export const POST: APIRoute = async ({ request }) => {
         // Verificar si ya existe factura
         const existingInvoice = await getInvoiceByOrderId(orderId);
         if (existingInvoice) {
+            console.log(`🧾 Invoice already exists: ${existingInvoice.invoice_number}`);
             return new Response(JSON.stringify({
                 success: true,
                 message: 'Invoice already exists',
@@ -32,6 +33,7 @@ export const POST: APIRoute = async ({ request }) => {
         }
 
         // Obtener datos del pedido
+        console.log(`🧾 Fetching order #${orderId}...`);
         const { data: order, error: orderError } = await supabase
             .from('orders')
             .select(`
@@ -42,11 +44,14 @@ export const POST: APIRoute = async ({ request }) => {
             .single();
 
         if (orderError || !order) {
+            console.error(`❌ Order not found:`, orderError);
             return new Response(JSON.stringify({
                 success: false,
                 error: 'Order not found: ' + (orderError?.message || 'Unknown')
             }), { status: 404, headers: { 'Content-Type': 'application/json' } });
         }
+
+        console.log(`🧾 Order found: status=${order.status}, items=${order.order_items?.length || 0}`);
 
         // Solo crear factura para pedidos pagados
         if (order.status === 'pending' || order.status === 'cancelled') {
@@ -56,23 +61,30 @@ export const POST: APIRoute = async ({ request }) => {
             }), { status: 400, headers: { 'Content-Type': 'application/json' } });
         }
 
-        // Crear factura
-        const items = order.order_items.map((item: any) => ({
+        // Preparar items
+        const items = (order.order_items || []).map((item: any) => ({
             productId: item.product_id,
-            productName: item.product_name,
+            productName: item.product_name || 'Producto',
             productSize: item.size,
-            quantity: item.quantity,
-            unitPrice: item.product_price
+            quantity: item.quantity || 1,
+            unitPrice: item.product_price || 0
         }));
 
-        // Calcular subtotal si no existe
-        const subtotal = order.subtotal || items.reduce((sum: number, item: any) =>
+        console.log(`🧾 Invoice items:`, items);
+
+        // Calcular subtotal si no existe (sumando los items)
+        const calculatedSubtotal = items.reduce((sum: number, item: any) =>
             sum + (item.unitPrice * item.quantity), 0);
 
+        const subtotal = order.subtotal || calculatedSubtotal || order.total;
+
+        console.log(`🧾 Subtotal: ${subtotal}, Total order: ${order.total}`);
+
+        // Crear factura
         const invoice = await createInvoice({
             orderId: order.id,
-            customerName: order.customer_name,
-            customerEmail: order.customer_email,
+            customerName: order.customer_name || 'Cliente',
+            customerEmail: order.customer_email || '',
             customerAddress: order.customer_address,
             customerCity: order.customer_city,
             customerPostalCode: order.customer_postal_code,
@@ -85,9 +97,10 @@ export const POST: APIRoute = async ({ request }) => {
         });
 
         if (!invoice) {
+            console.error(`❌ createInvoice returned null`);
             return new Response(JSON.stringify({
                 success: false,
-                error: 'Failed to create invoice'
+                error: 'Failed to create invoice - createInvoice returned null. Check server logs for details.'
             }), { status: 500, headers: { 'Content-Type': 'application/json' } });
         }
 
