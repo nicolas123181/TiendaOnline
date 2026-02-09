@@ -48,7 +48,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
                     product_id,
                     quantity,
                     size,
-                    product_name
+                    product_name,
+                    product_image
                 )
             `)
             .eq('id', orderId)
@@ -189,7 +190,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
                     from: 'Vantage <onboarding@resend.dev>',
                     to: order.customer_email,
                     subject: `✅ Pedido Cancelado - #${orderId}`,
-                    html: getCancelledEmailHtml(order.customer_name, orderId.toString(), order.total)
+                    html: getCancelledEmailHtml(order.customer_name, orderId.toString(), order.total, order.order_items)
                 });
                 console.log('📧 Email "Cancelado" enviado al cliente');
             } catch (e) {
@@ -205,7 +206,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         setTimeout(async () => {
             try {
                 const { sendCancelledOrderAdminAlert } = await import('../../../lib/email');
-                
+
                 const adminAlertSent = await sendCancelledOrderAdminAlert({
                     orderId: orderId,
                     customerName: order.customer_name,
@@ -217,7 +218,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
                         size: item.size
                     }))
                 });
-                
+
                 if (adminAlertSent) {
                     console.log('📧 Email de alerta al administrador enviado correctamente');
                 } else {
@@ -237,12 +238,12 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         console.error('Cancel order error:', errorMessage);
-        
+
         // Log detallado del error
         if (error instanceof Error) {
             console.error('Error stack:', error.stack);
         }
-        
+
         return new Response(JSON.stringify({
             success: false,
             error: errorMessage || 'Error interno del servidor'
@@ -274,8 +275,23 @@ function getProcessingEmailHtml(name: string, orderId: string): string {
     </html>`;
 }
 
-function getCancelledEmailHtml(name: string, orderId: string, amount: number): string {
+function getCancelledEmailHtml(name: string, orderId: string, amount: number, items?: any[]): string {
     const formattedAmount = new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(amount / 100);
+
+    const itemsHtml = items && items.length > 0 ? items.map(item => {
+        const hasImage = item.product_image && item.product_image.startsWith('http');
+        return `
+        <div style="display: flex; align-items: center; margin-bottom: 10px; padding: 10px; background: #fef2f2; border-radius: 8px;">
+            ${hasImage ? `<img src="${item.product_image}" alt="${item.product_name}" width="50" height="62" style="border-radius: 6px; object-fit: cover; margin-right: 12px; opacity: 0.9;" />` : ''}
+            <div>
+                <span style="color: #1f2937;">${item.product_name}</span>
+                ${item.size ? `<span style="color: #6b7280;"> (${item.size})</span>` : ''}
+                <span style="color: #6b7280;"> × ${item.quantity}</span>
+            </div>
+        </div>
+    `;
+    }).join('') : '';
+
     return `
     <!DOCTYPE html>
     <html>
@@ -287,6 +303,13 @@ function getCancelledEmailHtml(name: string, orderId: string, amount: number): s
             <div style="padding: 40px;">
                 <p>Hola <strong>${name}</strong>,</p>
                 <p>Tu pedido <strong>#${orderId}</strong> ha sido cancelado exitosamente.</p>
+                
+                ${itemsHtml ? `
+                <div style="margin: 25px 0;">
+                    <p style="font-weight: 600; color: #1f2937; margin-bottom: 12px;">Productos cancelados:</p>
+                    ${itemsHtml}
+                </div>
+                ` : ''}
                 
                 <div style="background: #fee2e2; border: 2px solid #fca5a5; border-radius: 12px; padding: 20px; text-align: center; margin: 30px 0;">
                     <p style="margin:0 0 5px 0; color: #991b1b; font-weight: bold;">Reembolso Emitido</p>

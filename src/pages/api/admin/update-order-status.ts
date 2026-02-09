@@ -244,6 +244,7 @@ function getShippingWithTrackingEmailHtml(
                         <span>#${orderId.toString().padStart(5, '0')}</span>
                     </div>
                     
+                    ${trackingNumber ? `
                     <div class="tracking-box">
                         <p class="carrier">📦 Enviado con <strong>${carrierName}</strong></p>
                         <p style="margin: 5px 0; color: #6b7280;">Número de seguimiento:</p>
@@ -255,6 +256,12 @@ function getShippingWithTrackingEmailHtml(
                         </a>
                         ` : ''}
                     </div>
+                    ` : `
+                    <div class="tracking-box" style="background: #f3f4f6; border: 2px solid #e5e7eb;">
+                        <p class="carrier">📦 Tu pedido está en camino</p>
+                        <p style="margin: 10px 0; color: #6b7280;">El transportista te contactará para la entrega.</p>
+                    </div>
+                    `}
                     
                     <div class="info-box">
                         <p style="margin: 0;"><strong>💡 Consejo:</strong> Guarda este número de seguimiento para consultar el estado de tu envío en cualquier momento.</p>

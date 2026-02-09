@@ -186,12 +186,14 @@ export const POST: APIRoute = async ({ request }) => {
 
                             // Restaurar stock por talla si aplica
                             if (item.size) {
-                                await supabase.rpc('increment_product_size_stock', {
+                                const { error: sizeStockError } = await supabase.rpc('increment_product_size_stock', {
                                     p_product_id: orderItem.product_id,
                                     p_size: item.size,
                                     p_quantity: item.quantity
-                                }).catch(async () => {
-                                    // Fallback manual si no existe RPC específico de talla
+                                });
+
+                                // Fallback manual si no existe RPC específico de talla
+                                if (sizeStockError) {
                                     const { data: sizeStock } = await supabase
                                         .from('product_sizes')
                                         .select('stock')
@@ -206,7 +208,7 @@ export const POST: APIRoute = async ({ request }) => {
                                             .eq('product_id', orderItem.product_id)
                                             .eq('size', item.size);
                                     }
-                                });
+                                }
                             }
                         }
                     } catch (stockError) {
@@ -243,7 +245,6 @@ export const POST: APIRoute = async ({ request }) => {
                         customerEmail: returnData.customer_email,
                         items: invoiceItems,
                         subtotal: -Math.abs(finalAmount || 0),
-                        total: -Math.abs(finalAmount || 0), // El total negativo
                         taxRate: originalInvoice.tax_rate,
                         notes: `Devolución ${returnData.return_number} - Reembolso procesado`,
                         type: 'credit_note',

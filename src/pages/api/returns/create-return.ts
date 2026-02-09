@@ -7,6 +7,8 @@ import bwipjs from 'bwip-js';
 const resendApiKey = import.meta.env.RESEND_API_KEY;
 const resend = resendApiKey ? new Resend(resendApiKey) : null;
 
+const SITE_URL = import.meta.env.PUBLIC_SITE_URL || 'https://nicovantage.victoriafp.online';
+
 // Dirección de devoluciones
 const RETURN_ADDRESS = {
     name: 'VANTAGE - Devoluciones',
@@ -73,9 +75,9 @@ async function generateBarcode(text: string): Promise<Buffer> {
             includetext: true,
             textxalign: 'center',
             textsize: 10
-        }, (err: Error | null, png: Buffer) => {
+        }, (err: string | Error, png: Buffer) => {
             if (err) {
-                reject(err);
+                reject(typeof err === 'string' ? new Error(err) : err);
             } else {
                 resolve(png);
             }
@@ -370,7 +372,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
                 product_name: orderItem?.product_name || 'Producto',
                 size: orderItem?.size || '',
                 quantity: item.quantity,
-                price: orderItem?.product_price || 0
+                price: orderItem?.product_price || 0,
+                product_image: orderItem?.product_image || ''
             };
         });
 
@@ -464,9 +467,19 @@ function getCustomerReturnEmailHtml(
     returnNumber: string,
     items: any[]
 ): string {
-    const itemsHtml = items.map(item => `
-        <li style="margin-bottom: 8px;">${item.product_name} ${item.size ? `(${item.size})` : ''} × ${item.quantity}</li>
-    `).join('');
+    const itemsHtml = items.map(item => {
+        const hasImage = item.product_image && item.product_image.startsWith('http');
+        return `
+        <div style="display: flex; align-items: center; margin-bottom: 12px; padding: 12px; background: #f9fafb; border-radius: 8px;">
+            ${hasImage ? `<img src="${item.product_image}" alt="${item.product_name}" width="60" height="75" style="border-radius: 8px; object-fit: cover; margin-right: 15px;" />` : ''}
+            <div>
+                <strong>${item.product_name}</strong>
+                ${item.size ? `<span style="color: #6b7280;"> (${item.size})</span>` : ''}
+                <span style="color: #6b7280;"> × ${item.quantity}</span>
+            </div>
+        </div>
+    `;
+    }).join('');
 
     return `
     <!DOCTYPE html>
@@ -512,10 +525,10 @@ function getCustomerReturnEmailHtml(
                         <p style="margin: 10px 0 0 0; opacity: 0.9; font-size: 14px;">Abre el archivo PDF adjunto, imprímelo y pégalo en tu paquete</p>
                     </div>
 
-                    <p style="font-weight: 600; color: ${BRAND_COLORS.navy}; margin-bottom: 10px;">Productos a devolver:</p>
-                    <ul style="padding-left: 20px; color: #4b5563;">
+                    <p style="font-weight: 600; color: ${BRAND_COLORS.navy}; margin-bottom: 15px;">Productos a devolver:</p>
+                    <div style="margin-bottom: 20px;">
                         ${itemsHtml}
-                    </ul>
+                    </div>
 
                     <div class="steps">
                         <p style="margin: 0 0 15px 0; font-weight: 600;">📋 Pasos a seguir:</p>
@@ -560,9 +573,19 @@ function getAdminReturnEmailHtml(
     reasonCode: string,
     reasonText: string
 ): string {
-    const itemsHtml = items.map(item => `
-        <li>${item.product_name} (${item.size || 'Única'}) × ${item.quantity}</li>
-    `).join('');
+    const itemsHtml = items.map(item => {
+        const hasImage = item.product_image && item.product_image.startsWith('http');
+        return `
+        <div style="display: flex; align-items: center; margin-bottom: 10px; padding: 10px; background: #fffbeb; border-radius: 6px;">
+            ${hasImage ? `<img src="${item.product_image}" alt="${item.product_name}" width="50" height="62" style="border-radius: 6px; object-fit: cover; margin-right: 12px;" />` : ''}
+            <div>
+                <strong>${item.product_name}</strong>
+                ${item.size ? ` (${item.size})` : ' (Única)'}
+                <span style="color: #6b7280;"> × ${item.quantity}</span>
+            </div>
+        </div>
+    `;
+    }).join('');
 
     return `
     <!DOCTYPE html>
@@ -600,7 +623,7 @@ function getAdminReturnEmailHtml(
                     <p>El cliente ha recibido un PDF con la etiqueta para entregar el paquete en Correos.</p>
                     
                     <center style="margin-top: 25px;">
-                        <a href="https://vantage.com/admin/devoluciones" class="button">Ver en Panel Admin</a>
+                        <a href="${SITE_URL}/perfil" class="button">Ver en Panel</a>
                     </center>
                 </div>
             </div>

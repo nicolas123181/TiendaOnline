@@ -115,18 +115,21 @@ if (session) {
                         const accessToken = hashParams.get("access_token");
 
                         if (accessToken) {
-                            const { data, error: setError } =
+                            const { data, error: sessionError } =
                                 await supabase.auth.setSession({
                                     access_token: accessToken,
                                     refresh_token:
                                         hashParams.get("refresh_token") || "",
                                 });
 
-                            if (setError) {
-                                console.error("Set session error:", setError);
+                            if (sessionError) {
+                                console.error(
+                                    "Set session error:",
+                                    sessionError,
+                                );
                                 window.location.href =
                                     "/login?error=" +
-                                    encodeURIComponent(setError.message);
+                                    encodeURIComponent(sessionError.message);
                             } else {
                                 window.location.href = "/perfil";
                             }

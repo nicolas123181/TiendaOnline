@@ -10,10 +10,10 @@ export const prerender = false;
 const products = await getProducts();
 const categories = await getCategories();
 
-// Calcular rango de precios
+// Calcular rango de precios (con defaults si no hay productos)
 const prices = products.map((p) => p.price);
-const minPrice = Math.min(...prices) / 100;
-const maxPrice = Math.max(...prices) / 100;
+const minPrice = prices.length > 0 ? Math.min(...prices) / 100 : 0;
+const maxPrice = prices.length > 0 ? Math.max(...prices) / 100 : 1000;
 ---
 
 <PublicLayout
