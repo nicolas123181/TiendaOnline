@@ -229,18 +229,22 @@ const emails: Record<string, string> = {
             <p style="margin:10px 0 0;color:#92400e">Este pedido está pagado y esperando.</p>
           </div>
           <div style="margin:25px 0">
-            <p><strong>Cliente:</strong> Carlos García</p>
-            <p><strong>Email:</strong> carlos@email.com</p>
-            <p><strong>Productos:</strong> 3 artículo(s)</p>
-            <p><strong style="color:${BRAND.success};font-size:20px">Total: €247,00</strong></p>
+            <table width="100%" style="border-collapse:collapse">
+              <tr><td style="padding:12px 0;border-bottom:1px solid #e5e7eb;color:#6b7280">Cliente</td><td style="padding:12px 0;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:700;color:#111827">Carlos García</td></tr>
+              <tr><td style="padding:12px 0;border-bottom:1px solid #e5e7eb;color:#6b7280">Email</td><td style="padding:12px 0;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:700;color:#111827;word-break:break-word">carlos@email.com</td></tr>
+              <tr><td style="padding:12px 0;border-bottom:1px solid #e5e7eb;color:#6b7280">Productos</td><td style="padding:12px 0;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:700;color:#111827">3 artículo(s)</td></tr>
+              <tr><td style="padding:12px 0;color:#6b7280">Total</td><td style="padding:12px 0;text-align:right;font-weight:700;color:${BRAND.success};font-size:20px">€247,00</td></tr>
+            </table>
           </div>
           <div style="background:#f9fafb;border-radius:12px;padding:20px;margin:25px 0">
             <h3 style="margin:0 0 15px;color:${BRAND.navy};font-size:16px">📦 Productos a Preparar</h3>
-            <div style="background:#fff;border-radius:8px;padding:12px;margin-bottom:10px;display:flex;align-items:center;gap:12px">
-              <div style="width:60px;height:60px;background:#f3f4f6;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:24px">👔</div>
-              <div style="flex:1"><strong>Chaqueta Premium Navy</strong><br><small style="color:#6b7280">Talla: M · Cantidad: 1</small></div>
-              <div style="font-weight:700;color:${BRAND.success}">€149,00</div>
-            </div>
+            <table width="100%" style="background:#fff;border-radius:8px;margin-bottom:10px">
+              <tr>
+                <td style="width:72px;padding:12px;vertical-align:top"><div style="width:60px;height:60px;background:#f3f4f6;border-radius:6px;text-align:center;line-height:60px;font-size:24px">👔</div></td>
+                <td style="padding:12px 8px 12px 0;vertical-align:top"><strong>Chaqueta Premium Navy</strong><br><small style="color:#6b7280">Talla: M · Cantidad: 1</small></td>
+                <td style="width:110px;padding:12px;text-align:right;vertical-align:top;font-weight:700;color:${BRAND.success};white-space:nowrap">€149,00</td>
+              </tr>
+            </table>
           </div>
           <div style="text-align:center"><a href="#" style="display:inline-block;background:${BRAND.navy};color:#fff;padding:16px 40px;border-radius:8px;text-decoration:none;font-weight:bold">Ver Pedido en Admin</a></div>
         </div>

@@ -570,10 +570,10 @@ export async function sendNewOrderAdminAlert(data: NewOrderAlertData): Promise<b
         .content { padding: 40px; }
         .order-box { background: #f0fdf4; border-radius: 12px; padding: 25px; text-align: center; margin: 20px 0; border: 2px solid ${BRAND_COLORS.success}; }
         .order-number { font-size: 36px; font-weight: bold; color: ${BRAND_COLORS.success}; }
-        .info-row { display: flex; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid #e5e7eb; }
+        .info-row { display: table; width: 100%; table-layout: fixed; padding: 16px 0; border-bottom: 1px solid #e5e7eb; }
         .info-row:last-child { border-bottom: none; }
-        .label { color: #6b7280; }
-        .value { font-weight: bold; color: #111827; }
+        .label { color: #6b7280; display: table-cell; width: 35%; padding-right: 20px; vertical-align: top; }
+        .value { font-weight: bold; color: #111827; display: table-cell; text-align: right; vertical-align: top; word-break: break-word; }
         .button { display: inline-block; background: ${BRAND_COLORS.navy}; color: white !important; padding: 16px 40px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; }
         .footer { text-align: center; padding: 30px; background: #f9fafb; color: #6b7280; font-size: 14px; }
         .urgency { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px 20px; border-radius: 0 8px 8px 0; margin: 20px 0; }
@@ -628,21 +628,25 @@ export async function sendNewOrderAdminAlert(data: NewOrderAlertData): Promise<b
             <div style="margin: 25px 0; padding: 20px; background: #f9fafb; border-radius: 12px;">
               <h3 style="margin: 0 0 15px 0; color: ${BRAND_COLORS.navy}; font-size: 16px; font-weight: 600;">📦 Productos a Preparar</h3>
               ${data.items.map(item => `
-                <div style="display: flex; gap: 12px; padding: 12px; background: white; border-radius: 8px; margin-bottom: 10px; align-items: center;">
-                  ${item.image ? `
-                    <img src="${item.image}" alt="${item.productName}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 6px; border: 1px solid #e5e7eb;">
-                  ` : `
-                    <div style="width: 60px; height: 60px; background: #f3f4f6; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 24px;">📦</div>
-                  `}
-                  <div style="flex: 1;">
-                    <div style="font-weight: 600; color: ${BRAND_COLORS.navy}; font-size: 14px;">${item.productName}</div>
-                    ${item.size ? `<div style="font-size: 12px; color: #6b7280; margin-top: 2px;">Talla: ${item.size}</div>` : ''}
-                    <div style="font-size: 12px; color: #9ca3af; margin-top: 2px;">Cantidad: ${item.quantity}</div>
-                  </div>
-                  <div style="text-align: right; font-weight: 700; color: ${BRAND_COLORS.success};">
-                    €${((item.price * item.quantity) / 100).toFixed(2)}
-                  </div>
-                </div>
+                <table width="100%" cellpadding="0" cellspacing="0" style="background: white; border-radius: 8px; margin-bottom: 10px;">
+                  <tr>
+                    <td style="width: 72px; padding: 12px; vertical-align: top;">
+                      ${item.image ? `
+                        <img src="${item.image}" alt="${item.productName}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 6px; border: 1px solid #e5e7eb; display: block;">
+                      ` : `
+                        <div style="width: 60px; height: 60px; background: #f3f4f6; border-radius: 6px; text-align: center; line-height: 60px; font-size: 24px;">📦</div>
+                      `}
+                    </td>
+                    <td style="padding: 12px 8px 12px 0; vertical-align: top;">
+                      <div style="font-weight: 600; color: ${BRAND_COLORS.navy}; font-size: 14px; line-height: 1.4;">${item.productName}</div>
+                      ${item.size ? `<div style="font-size: 12px; color: #6b7280; margin-top: 4px;">Talla: ${item.size}</div>` : ''}
+                      <div style="font-size: 12px; color: #9ca3af; margin-top: 4px;">Cantidad: ${item.quantity}</div>
+                    </td>
+                    <td style="width: 110px; padding: 12px; vertical-align: top; text-align: right; font-weight: 700; color: ${BRAND_COLORS.success}; white-space: nowrap;">
+                      €${((item.price * item.quantity) / 100).toFixed(2)}
+                    </td>
+                  </tr>
+                </table>
               `).join('')}
             </div>
             ` : ''}
@@ -1398,10 +1402,10 @@ export async function sendCancelledOrderAdminAlert(data: CancelledOrderAlertData
         .content { padding: 40px; }
         .order-box { background: #fef2f2; border-radius: 12px; padding: 25px; text-align: center; margin: 20px 0; border: 2px solid ${BRAND_COLORS_EMAIL.red}; }
         .order-number { font-size: 36px; font-weight: bold; color: ${BRAND_COLORS_EMAIL.red}; }
-        .info-row { display: flex; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid #e5e7eb; }
+        .info-row { display: table; width: 100%; table-layout: fixed; padding: 16px 0; border-bottom: 1px solid #e5e7eb; }
         .info-row:last-child { border-bottom: none; }
-        .label { color: #6b7280; }
-        .value { font-weight: bold; color: #111827; }
+        .label { color: #6b7280; display: table-cell; width: 35%; padding-right: 20px; vertical-align: top; }
+        .value { font-weight: bold; color: #111827; display: table-cell; text-align: right; vertical-align: top; word-break: break-word; }
         .alert-box { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px 20px; border-radius: 0 8px 8px 0; margin: 20px 0; }
         .button { display: inline-block; background: ${BRAND_COLORS_EMAIL.navy}; color: white !important; padding: 16px 40px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; }
         .footer { text-align: center; padding: 30px; background: #f9fafb; color: #6b7280; font-size: 14px; }
