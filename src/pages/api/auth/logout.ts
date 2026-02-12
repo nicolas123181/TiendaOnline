@@ -8,6 +8,8 @@ export const POST: APIRoute = async ({ redirect, cookies }) => {
     // Eliminar la cookie de sesión si existe
     cookies.delete('sb-access-token', { path: '/' });
     cookies.delete('sb-refresh-token', { path: '/' });
+    // Eliminar cookie de sesión admin (fuerza re-login al volver)
+    cookies.delete('admin_session', { path: '/admin' });
 
     // Redirigir al inicio de la tienda
     return redirect('/');
@@ -19,6 +21,7 @@ export const GET: APIRoute = async ({ redirect, cookies }) => {
 
     cookies.delete('sb-access-token', { path: '/' });
     cookies.delete('sb-refresh-token', { path: '/' });
+    cookies.delete('admin_session', { path: '/admin' });
 
     return redirect('/');
 };

@@ -291,7 +291,7 @@ function isActive(href: string): boolean {
             </header>
 
             <!-- Page Content -->
-            <main class="p-6 lg:p-8">
+            <main class="p-4 sm:p-6 lg:p-8">
                 <!-- Page Header -->
                 <div class="mb-8">
                     <h1
@@ -320,7 +320,10 @@ function isActive(href: string): boolean {
                     class="flex items-center h-16 px-6 border-b border-brand-navy-light"
                 >
                     <span class="text-xl font-serif font-bold text-white">
-                        Fashion<span class="text-brand-leather">Store</span>
+                        VANTAGE<span
+                            class="text-brand-leather ml-2 text-xs font-sans"
+                            >Admin</span
+                        >
                     </span>
                 </div>
                 <nav class="px-4 py-6 space-y-1">
@@ -422,4 +425,193 @@ function isActive(href: string): boolean {
             }
         });
     </script>
+
+    <style is:global>
+        /* =====================================================
+           ADMIN PANEL - MOBILE RESPONSIVE OVERRIDES
+           Applied globally to ALL admin pages
+           ===================================================== */
+
+        @media (max-width: 768px) {
+            /* ---- LAYOUT ---- */
+            /* Reduce main padding on mobile */
+            .lg\:pl-64 main {
+                padding: 0.75rem !important;
+            }
+
+            /* Page header - smaller title */
+            .lg\:pl-64 main > div:first-child h1 {
+                font-size: 1.25rem !important;
+            }
+
+            /* ---- GRIDS & CARDS ---- */
+            /* Force all stat grids to 2 columns max on mobile */
+            .lg\:pl-64 .grid[class*="lg:grid-cols-4"],
+            .lg\:pl-64 .grid[class*="lg:grid-cols-5"],
+            .lg\:pl-64 .grid[class*="md:grid-cols-3"],
+            .lg\:pl-64 .grid[class*="md:grid-cols-2"] {
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+                gap: 0.5rem !important;
+            }
+
+            /* Single column for 2-panel layouts */
+            .lg\:pl-64
+                .grid[class*="lg:grid-cols-2"]:not([class*="grid-cols-2"]) {
+                grid-template-columns: 1fr !important;
+            }
+
+            /* Reduce card padding */
+            .lg\:pl-64 .rounded-2xl[class*="p-6"],
+            .lg\:pl-64 .rounded-xl[class*="p-6"] {
+                padding: 0.75rem !important;
+            }
+
+            .lg\:pl-64 .rounded-xl[class*="p-4"] {
+                padding: 0.625rem !important;
+            }
+
+            /* ---- TYPOGRAPHY ---- */
+            /* Shrink large stat numbers */
+            .lg\:pl-64 .text-3xl {
+                font-size: 1.25rem !important;
+                line-height: 1.75rem !important;
+            }
+
+            .lg\:pl-64 .text-2xl {
+                font-size: 1.125rem !important;
+                line-height: 1.5rem !important;
+            }
+
+            .lg\:pl-64 .text-xl {
+                font-size: 1rem !important;
+                line-height: 1.5rem !important;
+            }
+
+            .lg\:pl-64 .text-lg {
+                font-size: 0.9375rem !important;
+                line-height: 1.375rem !important;
+            }
+
+            /* ---- ORDER CARDS ---- */
+            /* Stack order card layouts on mobile */
+            .lg\:pl-64 [data-order-id] > .flex.items-start.justify-between {
+                flex-direction: column !important;
+                gap: 0.75rem !important;
+            }
+
+            .lg\:pl-64 [data-order-id] > .flex > .text-right {
+                text-align: left !important;
+                display: flex !important;
+                flex-wrap: wrap !important;
+                align-items: center !important;
+                gap: 0.5rem !important;
+                width: 100% !important;
+            }
+
+            .lg\:pl-64 [data-order-id] > .flex > .text-right > p:first-child {
+                font-size: 1.125rem !important;
+            }
+
+            /* Order card buttons full width */
+            .lg\:pl-64 [data-order-id] button {
+                width: 100% !important;
+                margin-top: 0.5rem !important;
+            }
+
+            /* Order info flex items - wrap on mobile */
+            .lg\:pl-64 [data-order-id] .flex.items-center.gap-3 {
+                flex-wrap: wrap !important;
+                gap: 0.375rem !important;
+            }
+
+            /* Font mono order IDs smaller */
+            .lg\:pl-64 .font-mono.font-bold.text-lg {
+                font-size: 0.875rem !important;
+            }
+
+            /* ---- TABLES ---- */
+            /* Ensure horizontal scroll on tables */
+            .lg\:pl-64 .overflow-x-auto {
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .lg\:pl-64 table {
+                font-size: 0.8125rem !important;
+            }
+
+            .lg\:pl-64 table th,
+            .lg\:pl-64 table td {
+                padding: 0.5rem 0.375rem !important;
+                white-space: nowrap;
+            }
+
+            /* Hide less important table columns on mobile */
+            .lg\:pl-64 table th:nth-child(n + 5),
+            .lg\:pl-64 table td:nth-child(n + 5) {
+                display: none;
+            }
+
+            /* ---- HEADERS & FLEX LAYOUTS ---- */
+            /* Stack header flex items */
+            .lg\:pl-64 .flex.items-center.justify-between {
+                flex-wrap: wrap !important;
+                gap: 0.5rem !important;
+            }
+
+            /* Section headers - allow wrapping */
+            .lg\:pl-64 h2.flex {
+                flex-wrap: wrap !important;
+                font-size: 0.9375rem !important;
+            }
+
+            /* ---- FORMS ---- */
+            /* Full width select on mobile */
+            .lg\:pl-64 select {
+                width: 100% !important;
+            }
+
+            /* ---- CHARTS ---- */
+            /* Reduce chart heights */
+            .lg\:pl-64 canvas {
+                max-height: 180px !important;
+            }
+
+            /* ---- BUTTONS ---- */
+            /* Action links/buttons more tappable */
+            .lg\:pl-64 a[class*="rounded-xl"],
+            .lg\:pl-64 button[class*="rounded-xl"],
+            .lg\:pl-64 button[class*="rounded-lg"] {
+                min-height: 44px;
+            }
+
+            /* ---- SPACING ---- */
+            /* Reduce section margins */
+            .lg\:pl-64 section.mb-10 {
+                margin-bottom: 1.5rem !important;
+            }
+
+            .lg\:pl-64 .mb-8 {
+                margin-bottom: 1rem !important;
+            }
+
+            .lg\:pl-64 .mb-6 {
+                margin-bottom: 0.75rem !important;
+            }
+
+            /* ---- SHIPPING MODAL ---- */
+            .lg\:pl-64 #shipping-modal > div > div {
+                margin: 0.5rem !important;
+                max-height: 95vh;
+                overflow-y: auto;
+            }
+        }
+
+        /* Extra small screens (< 400px) */
+        @media (max-width: 400px) {
+            .lg\:pl-64 .grid[class*="lg:grid-cols-4"],
+            .lg\:pl-64 .grid[class*="lg:grid-cols-5"] {
+                grid-template-columns: 1fr !important;
+            }
+        }
+    </style>
 </BaseLayout>

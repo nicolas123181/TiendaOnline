@@ -32,7 +32,9 @@ function getStockBadgeClass(stock: number): string {
     <!-- DASHBOARD EJECUTIVO - ANALYTICS -->
     <!-- ========================================== -->
     <section class="mb-10">
-        <div class="flex items-center justify-between mb-6">
+        <div
+            class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6"
+        >
             <div>
                 <h2
                     class="text-xl font-bold text-brand-navy flex items-center gap-2"
@@ -68,7 +70,9 @@ function getStockBadgeClass(stock: number): string {
         </div>
 
         <!-- KPIs de Negocio -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div
+            class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 mb-6"
+        >
             <!-- Ventas del Mes -->
             <div
                 class="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl p-6 text-white shadow-lg"
@@ -93,7 +97,12 @@ function getStockBadgeClass(stock: number): string {
                         >Este mes</span
                     >
                 </div>
-                <h3 id="kpi-monthly-sales" class="text-3xl font-bold">--</h3>
+                <h3
+                    id="kpi-monthly-sales"
+                    class="text-2xl sm:text-3xl font-bold"
+                >
+                    --
+                </h3>
                 <p class="text-emerald-100 text-sm mt-1">Ventas Totales</p>
             </div>
 
@@ -121,7 +130,12 @@ function getStockBadgeClass(stock: number): string {
                         >Por enviar</span
                     >
                 </div>
-                <h3 id="kpi-pending-orders" class="text-3xl font-bold">--</h3>
+                <h3
+                    id="kpi-pending-orders"
+                    class="text-2xl sm:text-3xl font-bold"
+                >
+                    --
+                </h3>
                 <p class="text-amber-100 text-sm mt-1">Pedidos Pendientes</p>
             </div>
 
@@ -149,7 +163,10 @@ function getStockBadgeClass(stock: number): string {
                         >⭐ Top</span
                     >
                 </div>
-                <h3 id="kpi-top-product" class="text-xl font-bold truncate">
+                <h3
+                    id="kpi-top-product"
+                    class="text-base sm:text-xl font-bold truncate"
+                >
                     Cargando...
                 </h3>
                 <p
@@ -187,7 +204,7 @@ function getStockBadgeClass(stock: number): string {
                     class="text-sm font-medium text-text-muted">--</span
                 >
             </div>
-            <div class="h-64">
+            <div class="h-48 sm:h-64">
                 <canvas id="salesChart"></canvas>
             </div>
         </div>
@@ -215,9 +232,11 @@ function getStockBadgeClass(stock: number): string {
             </svg>
             Estado del Inventario
         </h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div
+            class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6"
+        >
             <!-- Total Products -->
-            <div class="bg-surface-primary rounded-2xl p-6 shadow-soft">
+            <div class="bg-surface-primary rounded-2xl p-4 sm:p-6 shadow-soft">
                 <div class="flex items-center justify-between mb-4">
                     <div class="p-3 bg-blue-100 rounded-xl">
                         <svg
@@ -240,14 +259,14 @@ function getStockBadgeClass(stock: number): string {
                         Activo
                     </span>
                 </div>
-                <h3 class="text-3xl font-bold text-brand-navy">
+                <h3 class="text-2xl sm:text-3xl font-bold text-brand-navy">
                     {totalProducts}
                 </h3>
                 <p class="text-sm text-text-muted mt-1">Total de productos</p>
             </div>
 
             <!-- Total Stock -->
-            <div class="bg-surface-primary rounded-2xl p-6 shadow-soft">
+            <div class="bg-surface-primary rounded-2xl p-4 sm:p-6 shadow-soft">
                 <div class="flex items-center justify-between mb-4">
                     <div class="p-3 bg-green-100 rounded-xl">
                         <svg
@@ -265,12 +284,14 @@ function getStockBadgeClass(stock: number): string {
                         </svg>
                     </div>
                 </div>
-                <h3 class="text-3xl font-bold text-brand-navy">{totalStock}</h3>
+                <h3 class="text-2xl sm:text-3xl font-bold text-brand-navy">
+                    {totalStock}
+                </h3>
                 <p class="text-sm text-text-muted mt-1">Unidades en stock</p>
             </div>
 
             <!-- Low Stock Alert -->
-            <div class="bg-surface-primary rounded-2xl p-6 shadow-soft">
+            <div class="bg-surface-primary rounded-2xl p-4 sm:p-6 shadow-soft">
                 <div class="flex items-center justify-between mb-4">
                     <div class="p-3 bg-amber-100 rounded-xl">
                         <svg
@@ -295,7 +316,7 @@ function getStockBadgeClass(stock: number): string {
                         )
                     }
                 </div>
-                <h3 class="text-3xl font-bold text-brand-navy">
+                <h3 class="text-2xl sm:text-3xl font-bold text-brand-navy">
                     {lowStockProducts.length}
                 </h3>
                 <p class="text-sm text-text-muted mt-1">
@@ -304,7 +325,7 @@ function getStockBadgeClass(stock: number): string {
             </div>
 
             <!-- Inventory Value -->
-            <div class="bg-surface-primary rounded-2xl p-6 shadow-soft">
+            <div class="bg-surface-primary rounded-2xl p-4 sm:p-6 shadow-soft">
                 <div class="flex items-center justify-between mb-4">
                     <div class="p-3 bg-purple-100 rounded-xl">
                         <svg
@@ -322,7 +343,7 @@ function getStockBadgeClass(stock: number): string {
                         </svg>
                     </div>
                 </div>
-                <h3 class="text-3xl font-bold text-brand-navy">
+                <h3 class="text-xl sm:text-3xl font-bold text-brand-navy">
                     {formatPrice(inventoryValue)}
                 </h3>
                 <p class="text-sm text-text-muted mt-1">Valor del inventario</p>
@@ -331,16 +352,18 @@ function getStockBadgeClass(stock: number): string {
     </section>
 
     <!-- Quick Actions & Alerts -->
-    <div class="grid lg:grid-cols-2 gap-6 mb-8">
+    <div class="grid lg:grid-cols-2 gap-4 sm:gap-6 mb-8">
         <!-- Quick Actions -->
         <div class="bg-surface-primary rounded-2xl p-6 shadow-soft">
             <h2 class="text-lg font-semibold text-brand-navy mb-4">
                 Acciones Rápidas
             </h2>
-            <div class="grid grid-cols-2 lg:grid-cols-3 gap-3">
+            <div
+                class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3"
+            >
                 <a
                     href="/admin/productos/nuevo"
-                    class="flex items-center gap-3 p-4 bg-brand-navy text-white rounded-xl hover:bg-brand-navy-light transition-colors"
+                    class="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-brand-navy text-white rounded-xl hover:bg-brand-navy-light transition-colors"
                 >
                     <svg
                         class="w-5 h-5"
@@ -358,7 +381,7 @@ function getStockBadgeClass(stock: number): string {
                 </a>
                 <a
                     href="/admin/productos"
-                    class="flex items-center gap-3 p-4 bg-surface-tertiary text-brand-navy rounded-xl hover:bg-brand-cream transition-colors"
+                    class="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-surface-tertiary text-brand-navy rounded-xl hover:bg-brand-cream transition-colors"
                 >
                     <svg
                         class="w-5 h-5"
@@ -377,7 +400,7 @@ function getStockBadgeClass(stock: number): string {
                 </a>
                 <a
                     href="/admin/pedidos"
-                    class="flex items-center gap-3 p-4 bg-surface-tertiary text-brand-navy rounded-xl hover:bg-brand-cream transition-colors"
+                    class="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-surface-tertiary text-brand-navy rounded-xl hover:bg-brand-cream transition-colors"
                 >
                     <svg
                         class="w-5 h-5"
@@ -396,7 +419,7 @@ function getStockBadgeClass(stock: number): string {
                 </a>
                 <a
                     href="/admin/categorias"
-                    class="flex items-center gap-3 p-4 bg-surface-tertiary text-brand-navy rounded-xl hover:bg-brand-cream transition-colors"
+                    class="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-surface-tertiary text-brand-navy rounded-xl hover:bg-brand-cream transition-colors"
                 >
                     <svg
                         class="w-5 h-5"
@@ -415,7 +438,7 @@ function getStockBadgeClass(stock: number): string {
                 </a>
                 <a
                     href="/admin/tallas"
-                    class="flex items-center gap-3 p-4 bg-surface-tertiary text-brand-navy rounded-xl hover:bg-brand-cream transition-colors"
+                    class="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-surface-tertiary text-brand-navy rounded-xl hover:bg-brand-cream transition-colors"
                 >
                     <svg
                         class="w-5 h-5"
@@ -597,27 +620,27 @@ function getStockBadgeClass(stock: number): string {
                 <thead class="bg-surface-secondary">
                     <tr>
                         <th
-                            class="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider"
+                            class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider"
                         >
                             Producto
                         </th>
                         <th
-                            class="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider"
+                            class="hidden sm:table-cell px-3 sm:px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider"
                         >
                             Categoría
                         </th>
                         <th
-                            class="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider"
+                            class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider"
                         >
                             Precio
                         </th>
                         <th
-                            class="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider"
+                            class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider"
                         >
                             Stock
                         </th>
                         <th
-                            class="px-6 py-3 text-right text-xs font-medium text-text-muted uppercase tracking-wider"
+                            class="px-3 sm:px-6 py-3 text-right text-xs font-medium text-text-muted uppercase tracking-wider"
                         >
                             Acciones
                         </th>
@@ -627,9 +650,9 @@ function getStockBadgeClass(stock: number): string {
                     {
                         products.slice(0, 5).map((product) => (
                             <tr class="hover:bg-surface-secondary transition-colors">
-                                <td class="px-6 py-4">
-                                    <div class="flex items-center gap-3">
-                                        <div class="w-12 h-12 bg-surface-tertiary rounded-lg overflow-hidden shrink-0">
+                                <td class="px-3 sm:px-6 py-3 sm:py-4">
+                                    <div class="flex items-center gap-2 sm:gap-3">
+                                        <div class="w-10 h-10 sm:w-12 sm:h-12 bg-surface-tertiary rounded-lg overflow-hidden shrink-0">
                                             <img
                                                 src={
                                                     product.images?.[0] ||
@@ -639,8 +662,8 @@ function getStockBadgeClass(stock: number): string {
                                                 class="w-full h-full object-cover"
                                             />
                                         </div>
-                                        <div>
-                                            <p class="font-medium text-brand-navy">
+                                        <div class="min-w-0">
+                                            <p class="font-medium text-brand-navy text-sm sm:text-base truncate">
                                                 {product.name}
                                             </p>
                                             <p class="text-xs text-text-muted">
@@ -649,25 +672,25 @@ function getStockBadgeClass(stock: number): string {
                                         </div>
                                     </div>
                                 </td>
-                                <td class="px-6 py-4">
+                                <td class="hidden sm:table-cell px-3 sm:px-6 py-3 sm:py-4">
                                     <span class="text-sm text-text-secondary">
                                         {product.category?.name ||
                                             "Sin categoría"}
                                     </span>
                                 </td>
-                                <td class="px-6 py-4">
-                                    <span class="font-medium text-brand-navy">
+                                <td class="px-3 sm:px-6 py-3 sm:py-4">
+                                    <span class="font-medium text-brand-navy text-sm">
                                         {formatPrice(product.price)}
                                     </span>
                                 </td>
-                                <td class="px-6 py-4">
+                                <td class="px-3 sm:px-6 py-3 sm:py-4">
                                     <span
-                                        class={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStockBadgeClass(product.stock)}`}
+                                        class={`inline-flex items-center px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-medium ${getStockBadgeClass(product.stock)}`}
                                     >
                                         {product.stock} uds
                                     </span>
                                 </td>
-                                <td class="px-6 py-4 text-right">
+                                <td class="px-3 sm:px-6 py-3 sm:py-4 text-right">
                                     <a
                                         href={`/admin/productos/${product.id}`}
                                         class="text-sm text-brand-leather hover:text-brand-leather-dark transition-colors"

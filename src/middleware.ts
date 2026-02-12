@@ -28,6 +28,15 @@ export const onRequest = defineMiddleware(async (context, next) => {
         }
 
         try {
+            // Verificar cookie de sesión admin (se borra al cerrar el navegador)
+            const cookies = context.request.headers.get('cookie') || '';
+            const hasAdminSession = cookies.split(';').some(c => c.trim().startsWith('admin_session='));
+
+            if (!hasAdminSession) {
+                // No hay cookie de sesión admin, forzar login
+                return context.redirect('/admin/login');
+            }
+
             // Verificar sesión de Supabase
             const { data: { session } } = await supabase.auth.getSession();
 

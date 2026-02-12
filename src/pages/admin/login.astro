@@ -26,8 +26,21 @@ if (Astro.request.method === "POST") {
             if (authError) {
                 error = authError.message || "Credenciales incorrectas.";
             } else if (data.session) {
-                // Redirect to admin dashboard
-                return Astro.redirect("/admin");
+                // Set admin session cookie (session cookie - expires when browser closes)
+                // This ensures admin must always log in when opening the browser
+                const headers = new Headers();
+                headers.append(
+                    "Set-Cookie",
+                    "admin_session=active; Path=/admin; HttpOnly; SameSite=Lax",
+                );
+                return new Response(null, {
+                    status: 302,
+                    headers: {
+                        Location: "/admin",
+                        "Set-Cookie":
+                            "admin_session=active; Path=/admin; HttpOnly; SameSite=Lax",
+                    },
+                });
             } else {
                 error =
                     "No se pudo iniciar sesión. Por favor intenta de nuevo.";
@@ -39,11 +52,7 @@ if (Astro.request.method === "POST") {
     }
 }
 
-// Verificar si ya hay sesión
-const session = await supabase.auth.getSession();
-if (session.data.session) {
-    return Astro.redirect("/admin");
-}
+// No auto-redirect even if session exists — admin must always log in explicitly
 
 const isConfigured = isSupabaseConfigured;
 ---

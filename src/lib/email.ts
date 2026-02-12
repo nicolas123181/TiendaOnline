@@ -145,25 +145,25 @@ export async function sendOrderConfirmationEmail(data: OrderEmailData) {
                       <td style="padding: 20px;">
                         <table width="100%" cellpadding="0" cellspacing="0">
                           <tr>
-                            <td style="padding: 8px 0; color: #6b7280;">Subtotal:</td>
-                            <td style="padding: 8px 0; text-align: right; font-weight: 600;">€${(data.subtotal / 100).toFixed(2)}</td>
+                            <td style="padding: 12px 0; color: #6b7280;">Subtotal:</td>
+                            <td style="padding: 12px 0; text-align: right; font-weight: 600;">€${(data.subtotal / 100).toFixed(2)}</td>
                           </tr>
                           <tr>
-                            <td style="padding: 8px 0; color: #6b7280;">Envío:</td>
-                            <td style="padding: 8px 0; text-align: right; font-weight: 600;">${data.shipping === 0 ? 'GRATIS' : '€' + (data.shipping / 100).toFixed(2)}</td>
+                            <td style="padding: 12px 0; color: #6b7280;">Envío:</td>
+                            <td style="padding: 12px 0; text-align: right; font-weight: 600;">${data.shipping === 0 ? 'GRATIS' : '€' + (data.shipping / 100).toFixed(2)}</td>
                           </tr>
                           ${data.discount ? `
                           <tr>
-                            <td style="padding: 8px 0; color: #16a34a;">Descuento:</td>
-                            <td style="padding: 8px 0; text-align: right; font-weight: 600; color: #16a34a;">-€${(data.discount / 100).toFixed(2)}</td>
+                            <td style="padding: 12px 0; color: #16a34a;">Descuento:</td>
+                            <td style="padding: 12px 0; text-align: right; font-weight: 600; color: #16a34a;">-€${(data.discount / 100).toFixed(2)}</td>
                           </tr>
                           ` : ''}
                           <tr>
                             <td colspan="2" style="padding: 15px 0 0 0; border-top: 2px solid #e5e7eb;"></td>
                           </tr>
                           <tr>
-                            <td style="padding: 8px 0; font-size: 18px; font-weight: 700; color: ${BRAND_COLORS.navy};">Total:</td>
-                            <td style="padding: 8px 0; text-align: right; font-size: 24px; font-weight: 700; color: ${BRAND_COLORS.navy};">€${(data.total / 100).toFixed(2)}</td>
+                            <td style="padding: 12px 0; font-size: 18px; font-weight: 700; color: ${BRAND_COLORS.navy};">Total:</td>
+                            <td style="padding: 12px 0; text-align: right; font-size: 24px; font-weight: 700; color: ${BRAND_COLORS.navy};">€${(data.total / 100).toFixed(2)}</td>
                           </tr>
                         </table>
                       </td>
@@ -185,7 +185,7 @@ export async function sendOrderConfirmationEmail(data: OrderEmailData) {
                   <table width="100%" cellpadding="0" cellspacing="0">
                     <tr>
                       <td align="center">
-                        <a href="${siteUrl}/perfil" style="display: block; background-color: ${BRAND_COLORS.navy}; color: #ffffff; padding: 18px 30px; text-decoration: none; border-radius: 12px; font-weight: 700; font-size: 18px; text-align: center;">Ver Mis Pedidos</a>
+                        <a href="${siteUrl}/perfil" style="display: block; background-color: ${BRAND_COLORS.navy}; color: #ffffff !important; padding: 18px 30px; text-decoration: none; border-radius: 12px; font-weight: 700; font-size: 18px; text-align: center;">Ver Mis Pedidos</a>
                       </td>
                     </tr>
                   </table>
@@ -198,7 +198,7 @@ export async function sendOrderConfirmationEmail(data: OrderEmailData) {
                         <div style="font-size: 40px; margin-bottom: 10px;">📄</div>
                         <h3 style="color: ${BRAND_COLORS.navy}; font-size: 18px; font-weight: 700; margin: 0 0 8px 0;">Tu Factura Está Lista</h3>
                         <p style="color: #0369a1; font-size: 15px; margin: 0 0 20px 0; font-weight: 600;">Factura #${data.invoiceNumber}</p>
-                        <a href="${siteUrl}/pedido/${data.orderNumber}#factura" style="display: inline-block; background-color: #0284c7; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 16px; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);">
+                        <a href="${siteUrl}/pedido/${data.orderNumber}#factura" style="display: inline-block; background-color: #0284c7; color: #ffffff !important; padding: 14px 28px; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 16px; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);">
                           Ver Detalles y Factura
                         </a>
                         <p style="color: #64748b; font-size: 13px; margin: 15px 0 0 0;">
@@ -342,7 +342,7 @@ export async function sendShippingNotificationEmail(data: {
                   <table width="100%" cellpadding="0" cellspacing="0">
                     <tr>
                       <td align="center">
-                        <a href="${siteUrl}/perfil" style="display: block; background-color: #3b82f6; color: #ffffff; padding: 18px 30px; text-decoration: none; border-radius: 12px; font-weight: 700; font-size: 18px; text-align: center;">Rastrear Pedido</a>
+                        <a href="${siteUrl}/perfil" style="display: block; background-color: #3b82f6; color: #ffffff !important; padding: 18px 30px; text-decoration: none; border-radius: 12px; font-weight: 700; font-size: 18px; text-align: center;">Rastrear Pedido</a>
                       </td>
                     </tr>
                   </table>
@@ -473,7 +473,7 @@ export async function sendDeliveryConfirmationEmail(data: {
                   <table width="100%" cellpadding="0" cellspacing="0">
                     <tr>
                       <td align="center">
-                        <a href="${siteUrl}" style="display: block; background-color: ${BRAND_COLORS.navy}; color: #ffffff; padding: 18px 30px; text-decoration: none; border-radius: 12px; font-weight: 700; font-size: 18px; text-align: center;">Seguir Comprando</a>
+                        <a href="${siteUrl}" style="display: block; background-color: ${BRAND_COLORS.navy}; color: #ffffff !important; padding: 18px 30px; text-decoration: none; border-radius: 12px; font-weight: 700; font-size: 18px; text-align: center;">Seguir Comprando</a>
                       </td>
                     </tr>
                   </table>
@@ -570,11 +570,11 @@ export async function sendNewOrderAdminAlert(data: NewOrderAlertData): Promise<b
         .content { padding: 40px; }
         .order-box { background: #f0fdf4; border-radius: 12px; padding: 25px; text-align: center; margin: 20px 0; border: 2px solid ${BRAND_COLORS.success}; }
         .order-number { font-size: 36px; font-weight: bold; color: ${BRAND_COLORS.success}; }
-        .info-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #e5e7eb; }
+        .info-row { display: flex; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid #e5e7eb; }
         .info-row:last-child { border-bottom: none; }
         .label { color: #6b7280; }
         .value { font-weight: bold; color: #111827; }
-        .button { display: inline-block; background: ${BRAND_COLORS.navy}; color: white; padding: 16px 40px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; }
+        .button { display: inline-block; background: ${BRAND_COLORS.navy}; color: white !important; padding: 16px 40px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; }
         .footer { text-align: center; padding: 30px; background: #f9fafb; color: #6b7280; font-size: 14px; }
         .urgency { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px 20px; border-radius: 0 8px 8px 0; margin: 20px 0; }
       </style>
@@ -757,7 +757,7 @@ export async function sendLowStockAlert(products: LowStockProduct[]): Promise<bo
                   </p>
                 </td>
                 <td width="100" style="text-align: right; vertical-align: middle; padding-left: 15px;">
-                  <a href="${siteUrl}/admin/productos/${p.id}" style="background-color: ${BRAND_COLORS.navy}; color: white; padding: 10px 18px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 600; display: inline-block;">Gestionar</a>
+                  <a href="${siteUrl}/admin/productos/${p.id}" style="background-color: ${BRAND_COLORS.navy}; color: white !important; padding: 10px 18px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 600; display: inline-block;">Gestionar</a>
                 </td>
               </tr>
             </table>
@@ -822,7 +822,7 @@ export async function sendLowStockAlert(products: LowStockProduct[]): Promise<bo
                   <table width="100%" cellpadding="0" cellspacing="0">
                     <tr>
                       <td align="center">
-                        <a href="${siteUrl}/admin/productos" style="display: block; background-color: ${BRAND_COLORS.navy}; color: #ffffff; padding: 18px 30px; text-decoration: none; border-radius: 12px; font-weight: 700; font-size: 18px; text-align: center;">Ir al Panel de Productos</a>
+                        <a href="${siteUrl}/admin/productos" style="display: block; background-color: ${BRAND_COLORS.navy}; color: #ffffff !important; padding: 18px 30px; text-decoration: none; border-radius: 12px; font-weight: 700; font-size: 18px; text-align: center;">Ir al Panel de Productos</a>
                       </td>
                     </tr>
                   </table>
@@ -917,7 +917,7 @@ export async function sendOutOfStockAlert(products: OutOfStockProduct[]): Promis
               </tr>
               <tr>
                 <td ${hasValidImage ? 'colspan="2"' : ''} style="padding-top: 15px;">
-                  <a href="${siteUrl}/admin/productos/${p.id}" style="background-color: #dc2626; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 600; display: inline-block; width: 100%; text-align: center; box-sizing: border-box;">Reponer Stock</a>
+                  <a href="${siteUrl}/admin/productos/${p.id}" style="background-color: #dc2626; color: white !important; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 600; display: inline-block; width: 100%; text-align: center; box-sizing: border-box;">Reponer Stock</a>
                 </td>
               </tr>
             </table>
@@ -982,7 +982,7 @@ export async function sendOutOfStockAlert(products: OutOfStockProduct[]): Promis
                   <table width="100%" cellpadding="0" cellspacing="0">
                     <tr>
                       <td align="center">
-                        <a href="${siteUrl}/admin/productos" style="display: block; background-color: #dc2626; color: #ffffff; padding: 18px 30px; text-decoration: none; border-radius: 12px; font-weight: 700; font-size: 18px; text-align: center;">Gestionar Inventario Ahora</a>
+                        <a href="${siteUrl}/admin/productos" style="display: block; background-color: #dc2626; color: #ffffff !important; padding: 18px 30px; text-decoration: none; border-radius: 12px; font-weight: 700; font-size: 18px; text-align: center;">Gestionar Inventario Ahora</a>
                       </td>
                     </tr>
                   </table>
@@ -1141,7 +1141,7 @@ export async function sendWishlistLowStockEmail(data: WishlistLowStockEmailData)
                   <table width="100%" cellpadding="0" cellspacing="0">
                     <tr>
                       <td align="center">
-                        <a href="${productUrl}" style="display: block; background-color: ${BRAND_COLORS.navy}; color: #ffffff; padding: 18px 30px; text-decoration: none; border-radius: 12px; font-weight: 700; font-size: 18px; text-align: center;">Ver Producto</a>
+                        <a href="${productUrl}" style="display: block; background-color: ${BRAND_COLORS.navy}; color: #ffffff !important; padding: 18px 30px; text-decoration: none; border-radius: 12px; font-weight: 700; font-size: 18px; text-align: center;">Ver Producto</a>
                       </td>
                     </tr>
                   </table>
@@ -1296,7 +1296,7 @@ export async function sendWishlistSaleEmail(data: WishlistSaleEmailData): Promis
                   <table width="100%" cellpadding="0" cellspacing="0">
                     <tr>
                       <td align="center">
-                        <a href="${productUrl}" style="display: block; background-color: #dc2626; color: #ffffff; padding: 18px 30px; text-decoration: none; border-radius: 12px; font-weight: 700; font-size: 18px; text-align: center;">Comprar con Descuento</a>
+                        <a href="${productUrl}" style="display: block; background-color: #dc2626; color: #ffffff !important; padding: 18px 30px; text-decoration: none; border-radius: 12px; font-weight: 700; font-size: 18px; text-align: center;">Comprar con Descuento</a>
                       </td>
                     </tr>
                   </table>
@@ -1398,12 +1398,12 @@ export async function sendCancelledOrderAdminAlert(data: CancelledOrderAlertData
         .content { padding: 40px; }
         .order-box { background: #fef2f2; border-radius: 12px; padding: 25px; text-align: center; margin: 20px 0; border: 2px solid ${BRAND_COLORS_EMAIL.red}; }
         .order-number { font-size: 36px; font-weight: bold; color: ${BRAND_COLORS_EMAIL.red}; }
-        .info-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #e5e7eb; }
+        .info-row { display: flex; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid #e5e7eb; }
         .info-row:last-child { border-bottom: none; }
         .label { color: #6b7280; }
         .value { font-weight: bold; color: #111827; }
         .alert-box { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px 20px; border-radius: 0 8px 8px 0; margin: 20px 0; }
-        .button { display: inline-block; background: ${BRAND_COLORS_EMAIL.navy}; color: white; padding: 16px 40px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; }
+        .button { display: inline-block; background: ${BRAND_COLORS_EMAIL.navy}; color: white !important; padding: 16px 40px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; }
         .footer { text-align: center; padding: 30px; background: #f9fafb; color: #6b7280; font-size: 14px; }
       </style>
     </head>
