@@ -3,7 +3,8 @@
  * Generación de facturas y PDFs premium
  */
 
-import { supabase, isSupabaseConfigured } from './supabase';
+import { supabase, isSupabaseConfigured, getServiceSupabase } from './supabase';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 // Configuración de la empresa (puede moverse a variables de entorno)
 export const COMPANY_INFO = {
@@ -76,34 +77,49 @@ export interface Invoice {
 /**
  * Genera un número de factura único
  */
-export async function generateInvoiceNumber(): Promise<string> {
+export async function generateInvoiceNumber(dbClient?: SupabaseClient): Promise<string> {
     if (!isSupabaseConfigured) {
         const timestamp = Date.now().toString().slice(-5);
         return `VNT-${new Date().getFullYear()}-${timestamp}`;
     }
 
     try {
-        const { data, error } = await supabase.rpc('generate_invoice_number');
+        // Usar el cliente proporcionado o service role para evitar problemas de permisos con anon
+        let db: SupabaseClient;
+        if (dbClient) {
+            db = dbClient;
+        } else {
+            try {
+                db = getServiceSupabase();
+            } catch {
+                db = supabase;
+            }
+        }
+
+        const { data, error } = await db.rpc('generate_invoice_number');
 
         if (error) {
             console.error('Error generating invoice number:', error);
-            // Fallback: generar número basado en timestamp
+            // Fallback: generar número basado en timestamp + random para evitar colisiones
             const timestamp = Date.now().toString().slice(-5);
-            return `VNT-${new Date().getFullYear()}-${timestamp}`;
+            const random = Math.floor(Math.random() * 100).toString().padStart(2, '0');
+            return `VNT-${new Date().getFullYear()}-${timestamp}${random}`;
         }
 
         return data;
     } catch (e) {
         console.error('Error in generateInvoiceNumber:', e);
         const timestamp = Date.now().toString().slice(-5);
-        return `VNT-${new Date().getFullYear()}-${timestamp}`;
+        const random = Math.floor(Math.random() * 100).toString().padStart(2, '0');
+        return `VNT-${new Date().getFullYear()}-${timestamp}${random}`;
     }
 }
 
 /**
  * Crea una factura en la base de datos
+ * Usa service role para bypasear RLS (operación server-side de confianza)
  */
-export async function createInvoice(data: InvoiceData): Promise<Invoice | null> {
+export async function createInvoice(data: InvoiceData, dbClient?: SupabaseClient): Promise<Invoice | null> {
     console.log('📋 createInvoice called with orderId:', data.orderId);
 
     if (!isSupabaseConfigured) {
@@ -111,10 +127,23 @@ export async function createInvoice(data: InvoiceData): Promise<Invoice | null> 
         return null;
     }
 
+    // Usar el cliente proporcionado, o intentar service role, o fallback a anónimo
+    let db: SupabaseClient;
+    if (dbClient) {
+        db = dbClient;
+    } else {
+        try {
+            db = getServiceSupabase();
+        } catch (e) {
+            console.warn('⚠️ Service role not available, using anonymous client for invoice');
+            db = supabase;
+        }
+    }
+
     try {
-        // Generar número de factura
+        // Generar número de factura (usar el mismo cliente db para permisos)
         console.log('📋 Generating invoice number...');
-        const invoiceNumber = await generateInvoiceNumber();
+        const invoiceNumber = await generateInvoiceNumber(db);
         console.log('📋 Invoice number generated:', invoiceNumber);
 
         // Calcular impuestos (IVA YA INCLUIDO en el precio)
@@ -138,38 +167,69 @@ export async function createInvoice(data: InvoiceData): Promise<Invoice | null> 
             total
         });
 
-        // Crear factura
-        const { data: invoice, error } = await supabase
+        // Campos base (siempre presentes en la tabla)
+        const invoiceRecord: Record<string, any> = {
+            invoice_number: invoiceNumber,
+            order_id: data.orderId,
+            customer_name: data.customerName,
+            customer_email: data.customerEmail,
+            customer_address: data.customerAddress,
+            customer_city: data.customerCity,
+            customer_postal_code: data.customerPostalCode,
+            customer_phone: data.customerPhone,
+            company_name: COMPANY_INFO.name,
+            company_address: `${COMPANY_INFO.address}, ${COMPANY_INFO.city}`,
+            company_nif: COMPANY_INFO.nif,
+            company_email: COMPANY_INFO.email,
+            company_phone: COMPANY_INFO.phone,
+            subtotal: data.subtotal,
+            shipping_cost: data.shippingCost || 0,
+            discount: data.discount || 0,
+            tax_rate: taxRate,
+            tax_amount: taxAmount,
+            total: total,
+            payment_method: data.paymentMethod || 'Tarjeta de crédito',
+            payment_status: 'paid',
+            status: 'issued',
+            notes: data.notes,
+            type: data.type || 'standard',
+            original_invoice_id: data.originalInvoiceId
+        };
+
+        // Primer intento con todas las columnas
+        let invoice: any = null;
+        let error: any = null;
+
+        const result1 = await db
             .from('invoices')
-            .insert({
-                invoice_number: invoiceNumber,
-                order_id: data.orderId,
-                customer_name: data.customerName,
-                customer_email: data.customerEmail,
-                customer_address: data.customerAddress,
-                customer_city: data.customerCity,
-                customer_postal_code: data.customerPostalCode,
-                customer_phone: data.customerPhone,
-                company_name: COMPANY_INFO.name,
-                company_address: `${COMPANY_INFO.address}, ${COMPANY_INFO.city}`,
-                company_nif: COMPANY_INFO.nif,
-                company_email: COMPANY_INFO.email,
-                company_phone: COMPANY_INFO.phone,
-                subtotal: data.subtotal,
-                shipping_cost: data.shippingCost || 0,
-                discount: data.discount || 0,
-                tax_rate: taxRate,
-                tax_amount: taxAmount,
-                total: total,
-                payment_method: data.paymentMethod || 'Tarjeta de crédito',
-                payment_status: 'paid',
-                status: 'issued',
-                notes: data.notes,
-                type: data.type || 'standard',
-                original_invoice_id: data.originalInvoiceId
-            })
+            .insert(invoiceRecord)
             .select()
             .single();
+
+        invoice = result1.data;
+        error = result1.error;
+
+        // Si falla por columnas inexistentes (type/original_invoice_id), reintentar sin ellas
+        if (error && (error.message?.includes('column') || error.code === '42703' || error.message?.includes('type'))) {
+            console.warn('⚠️ Columnas type/original_invoice_id no encontradas, reintentando sin ellas...');
+            console.warn('⚠️ Ejecuta sql/fix_invoices_missing_columns.sql en Supabase para añadirlas.');
+            
+            // Eliminar columnas opcionales que pueden no existir
+            delete invoiceRecord.type;
+            delete invoiceRecord.original_invoice_id;
+
+            // Regenerar invoice number por si el anterior fue consumido
+            invoiceRecord.invoice_number = await generateInvoiceNumber(db);
+
+            const result2 = await db
+                .from('invoices')
+                .insert(invoiceRecord)
+                .select()
+                .single();
+
+            invoice = result2.data;
+            error = result2.error;
+        }
 
         if (error) {
             console.error('❌ Error inserting invoice:', error.message, error.details, error.hint);
@@ -191,7 +251,7 @@ export async function createInvoice(data: InvoiceData): Promise<Invoice | null> 
             line_total: item.unitPrice * item.quantity
         }));
 
-        const { error: itemsError } = await supabase
+        const { error: itemsError } = await db
             .from('invoice_items')
             .insert(invoiceItems);
 
@@ -211,12 +271,24 @@ export async function createInvoice(data: InvoiceData): Promise<Invoice | null> 
 }
 
 /**
+ * Helper: obtener cliente Supabase con service role (fallback a anon)
+ */
+function getDbClient(): SupabaseClient {
+    try {
+        return getServiceSupabase();
+    } catch {
+        return supabase;
+    }
+}
+
+/**
  * Obtiene una factura por ID
  */
 export async function getInvoiceById(id: number): Promise<Invoice | null> {
     if (!isSupabaseConfigured) return null;
 
-    const { data, error } = await supabase
+    const db = getDbClient();
+    const { data, error } = await db
         .from('invoices')
         .select('*')
         .eq('id', id)
@@ -236,7 +308,8 @@ export async function getInvoiceById(id: number): Promise<Invoice | null> {
 export async function getInvoiceByNumber(invoiceNumber: string): Promise<Invoice | null> {
     if (!isSupabaseConfigured) return null;
 
-    const { data, error } = await supabase
+    const db = getDbClient();
+    const { data, error } = await db
         .from('invoices')
         .select('*')
         .eq('invoice_number', invoiceNumber)
@@ -256,7 +329,8 @@ export async function getInvoiceByNumber(invoiceNumber: string): Promise<Invoice
 export async function getInvoiceByOrderId(orderId: number): Promise<Invoice | null> {
     if (!isSupabaseConfigured) return null;
 
-    const { data, error } = await supabase
+    const db = getDbClient();
+    const { data, error } = await db
         .from('invoices')
         .select('*')
         .eq('order_id', orderId)
@@ -275,7 +349,8 @@ export async function getInvoiceByOrderId(orderId: number): Promise<Invoice | nu
 export async function getInvoiceItems(invoiceId: number): Promise<any[]> {
     if (!isSupabaseConfigured) return [];
 
-    const { data, error } = await supabase
+    const db = getDbClient();
+    const { data, error } = await db
         .from('invoice_items')
         .select('*')
         .eq('invoice_id', invoiceId);
@@ -649,7 +724,8 @@ export function generateInvoiceHTML(invoice: any, items: any[]): string {
 export async function updateInvoiceStatus(invoiceId: number, status: string): Promise<boolean> {
     if (!isSupabaseConfigured) return false;
 
-    const { error } = await supabase
+    const db = getDbClient();
+    const { error } = await db
         .from('invoices')
         .update({ status })
         .eq('id', invoiceId);
@@ -668,7 +744,8 @@ export async function updateInvoiceStatus(invoiceId: number, status: string): Pr
 export async function updateInvoicePdfUrl(invoiceId: number, pdfUrl: string): Promise<boolean> {
     if (!isSupabaseConfigured) return false;
 
-    const { error } = await supabase
+    const db = getDbClient();
+    const { error } = await db
         .from('invoices')
         .update({
             pdf_url: pdfUrl,

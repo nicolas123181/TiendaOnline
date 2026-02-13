@@ -59,11 +59,11 @@ CREATE POLICY "orders_insert_public" ON orders
 CREATE POLICY "orders_select_all" ON orders
   FOR SELECT USING (true);
 
--- Permitir UPDATE solo para cambiar el estado a "paid" y agregar el payment intent
-CREATE POLICY "orders_update_to_paid" ON orders
+-- Permitir UPDATE para cambios de estado legítimos
+CREATE POLICY "orders_update_status" ON orders
   FOR UPDATE 
   USING (true)
-  WITH CHECK (status = 'paid' OR status = 'pending');
+  WITH CHECK (status IN ('pending', 'paid', 'ready_for_pickup', 'shipped', 'delivered', 'cancelled'));
 
 -- ============================================================================
 -- TABLA: ORDER_ITEMS
@@ -74,6 +74,28 @@ CREATE POLICY "order_items_select_public" ON order_items
 
 CREATE POLICY "order_items_insert_public" ON order_items
   FOR INSERT WITH CHECK (true);
+
+-- ============================================================================
+-- TABLA: INVOICES / INVOICE_ITEMS
+-- Política: Permitir todas las operaciones (gestionado vía service role en backend)
+-- ============================================================================
+ALTER TABLE invoices ENABLE ROW LEVEL SECURITY;
+ALTER TABLE invoice_items ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "invoices_select_authenticated" ON invoices;
+DROP POLICY IF EXISTS "invoices_insert_authenticated" ON invoices;
+DROP POLICY IF EXISTS "invoices_all_authenticated" ON invoices;
+DROP POLICY IF EXISTS "invoice_items_select_authenticated" ON invoice_items;
+DROP POLICY IF EXISTS "invoice_items_insert_authenticated" ON invoice_items;
+DROP POLICY IF EXISTS "invoice_items_all_authenticated" ON invoice_items;
+DROP POLICY IF EXISTS "invoices_all_public" ON invoices;
+DROP POLICY IF EXISTS "invoice_items_all_public" ON invoice_items;
+
+CREATE POLICY "invoices_all_public" ON invoices
+  FOR ALL USING (true) WITH CHECK (true);
+
+CREATE POLICY "invoice_items_all_public" ON invoice_items
+  FOR ALL USING (true) WITH CHECK (true);
 
 -- ============================================================================
 -- TABLA: CUSTOMERS

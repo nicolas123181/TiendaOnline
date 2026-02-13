@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { supabase } from '../../lib/supabase';
+import { supabase, getServiceSupabase } from '../../lib/supabase';
 import {
     sendOrderConfirmationEmail,
     sendNewOrderAdminAlert,
@@ -84,6 +84,37 @@ export const POST: APIRoute = async ({ request }) => {
             discount
         } = orderData;
 
+        // Usar service role para bypasear RLS (esta operación es server-side de confianza)
+        let db;
+        try {
+            db = getServiceSupabase();
+        } catch (e) {
+            // Fallback al cliente anónimo si service role no está configurado
+            console.warn('⚠️ Service role not configured, falling back to anonymous client');
+            db = supabase;
+        }
+
+        // ==========================================
+        // IDEMPOTENCIA: Verificar si ya existe un pedido con este paymentIntentId
+        // Evita crear pedidos duplicados al refrescar la página de éxito
+        // ==========================================
+        if (paymentIntentId) {
+            const { data: existingOrder } = await db
+                .from('orders')
+                .select('id')
+                .eq('stripe_payment_intent_id', paymentIntentId)
+                .maybeSingle();
+
+            if (existingOrder) {
+                console.log(`⚠️ Order already exists for payment ${paymentIntentId}: #${existingOrder.id}`);
+                return new Response(JSON.stringify({
+                    success: true,
+                    message: 'Pedido ya existente',
+                    orderId: existingOrder.id,
+                }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+            }
+        }
+
         // ==========================================
         // CREAR LA ORDEN (ya pagada)
         // ==========================================
@@ -93,7 +124,7 @@ export const POST: APIRoute = async ({ request }) => {
         // La tabla original solo tiene: customer_email, customer_name, customer_address, 
         // customer_city, customer_postal_code, customer_phone, status, total, 
         // stripe_payment_intent_id, created_at, updated_at
-        const { data: order, error: orderError } = await supabase
+        const { data: order, error: orderError } = await db
             .from('orders')
             .insert({
                 customer_name: customerName,
@@ -131,7 +162,7 @@ export const POST: APIRoute = async ({ request }) => {
             size: item.size || null,
         }));
 
-        const { error: itemsError } = await supabase
+        const { error: itemsError } = await db
             .from('order_items')
             .insert(orderItems);
 
@@ -193,7 +224,7 @@ export const POST: APIRoute = async ({ request }) => {
             console.log(`📦 Processing item: ${item.name} (ID: ${item.id}), Size: ${item.size || 'N/A'}, Qty: ${item.quantity}`);
 
             // Obtener información del producto
-            const { data: product, error: productError } = await supabase
+            const { data: product, error: productError } = await db
                 .from('products')
                 .select('id, name, stock, slug, images')
                 .eq('id', item.id)
@@ -212,7 +243,7 @@ export const POST: APIRoute = async ({ request }) => {
                 console.log(`📏 Looking for size ${item.size} for product ${product.name} (ID: ${item.id})`);
 
                 // Obtener stock actual de la talla
-                const { data: sizeData, error: sizeError } = await supabase
+                const { data: sizeData, error: sizeError } = await db
                     .from('product_sizes')
                     .select('id, stock')
                     .eq('product_id', item.id)
@@ -229,7 +260,7 @@ export const POST: APIRoute = async ({ request }) => {
                     const newStock = Math.max(0, product.stock - item.quantity);
                     console.log(`📦 Updating product stock: ${product.stock} -> ${newStock}`);
 
-                    const { error: productUpdateError } = await supabase
+                    const { error: productUpdateError } = await db
                         .from('products')
                         .update({ stock: newStock, updated_at: new Date().toISOString() })
                         .eq('id', item.id);
@@ -245,7 +276,7 @@ export const POST: APIRoute = async ({ request }) => {
                     const newSizeStock = Math.max(0, sizeData.stock - item.quantity);
                     console.log(`📏 Updating size stock: ${sizeData.stock} -> ${newSizeStock}`);
 
-                    const { error: updateError } = await supabase
+                    const { error: updateError } = await db
                         .from('product_sizes')
                         .update({ stock: newSizeStock })
                         .eq('id', sizeData.id);
@@ -280,7 +311,7 @@ export const POST: APIRoute = async ({ request }) => {
                 // Producto sin talla - decrementar stock general
                 const newStock = Math.max(0, product.stock - item.quantity);
 
-                const { error: updateError } = await supabase
+                const { error: updateError } = await db
                     .from('products')
                     .update({
                         stock: newStock,

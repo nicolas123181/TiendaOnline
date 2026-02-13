@@ -1,5 +1,5 @@
 import type { APIRoute } from "astro";
-import { supabase } from "../../../lib/supabase";
+import { getServiceSupabase, supabase } from "../../../lib/supabase";
 import { generateInvoiceHTML } from "../../../lib/invoice";
 
 export const GET: APIRoute = async ({ params }) => {
@@ -12,13 +12,21 @@ export const GET: APIRoute = async ({ params }) => {
     return new Response(JSON.stringify({ error: "Invalid Order ID format" }), { status: 400, headers: { "Content-Type": "application/json" } });
   }
   try {
+    // Usar service role para garantizar acceso (bypassa RLS)
+    let db;
+    try {
+      db = getServiceSupabase();
+    } catch {
+      db = supabase;
+    }
+
     console.log("Loading invoice for order ID:", orderId);
-    const { data: invoice, error: invoiceError } = await supabase.from("invoices").select("*").eq("order_id", orderId).single();
+    const { data: invoice, error: invoiceError } = await db.from("invoices").select("*").eq("order_id", orderId).single();
     if (invoiceError || !invoice) {
       console.error("Invoice not found:", invoiceError);
       return new Response(JSON.stringify({ error: "Invoice not found" }), { status: 404, headers: { "Content-Type": "application/json" } });
     }
-    const { data: items, error: itemsError } = await supabase.from("invoice_items").select("*").eq("invoice_id", invoice.id);
+    const { data: items, error: itemsError } = await db.from("invoice_items").select("*").eq("invoice_id", invoice.id);
     if (itemsError) {
       console.error("Error loading items:", itemsError);
       return new Response(JSON.stringify({ error: "Error loading items" }), { status: 500, headers: { "Content-Type": "application/json" } });

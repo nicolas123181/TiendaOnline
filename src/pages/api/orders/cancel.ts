@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { createServerClient } from '../../../lib/supabase';
+import { createServerClient, getServiceSupabase } from '../../../lib/supabase';
 import { Resend } from 'resend';
 import Stripe from 'stripe';
 
@@ -38,8 +38,18 @@ export const POST: APIRoute = async ({ request, cookies }) => {
             }), { status: 401 });
         }
 
-        // Obtener pedido con items (usando authClient que ya sabemos que tiene sesión válida)
-        const { data: order, error: orderError } = await authClient
+        // Usar service role para operaciones de base de datos
+        // (evita problemas de RLS con tokens expirados o políticas restrictivas)
+        let serviceDb;
+        try {
+            serviceDb = getServiceSupabase();
+        } catch (e) {
+            // Fallback al authClient si service role no está configurado
+            serviceDb = authClient;
+        }
+
+        // Obtener pedido con items
+        const { data: order, error: orderError } = await serviceDb
             .from('orders')
             .select(`
                 *,
@@ -48,8 +58,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
                     product_id,
                     quantity,
                     size,
-                    product_name,
-                    product_image
+                    product_name
                 )
             `)
             .eq('id', orderId)
@@ -130,7 +139,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
             }
 
             // Stock general RPC
-            const { error: rpcError } = await authClient.rpc('increment_stock', {
+            const { error: rpcError } = await serviceDb.rpc('increment_stock', {
                 product_id_param: item.product_id,
                 quantity_param: item.quantity
             });
@@ -141,7 +150,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
             // Stock por talla
             if (item.size) {
-                const { data: sizeStock, error: fetchError } = await authClient
+                const { data: sizeStock, error: fetchError } = await serviceDb
                     .from('product_sizes')
                     .select('stock')
                     .eq('product_id', item.product_id)
@@ -156,7 +165,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
                     throw new Error(`Product size not found for product ${item.product_id} and size ${item.size}`);
                 }
 
-                const { error: updateError } = await authClient
+                const { error: updateError } = await serviceDb
                     .from('product_sizes')
                     .update({ stock: sizeStock.stock + item.quantity })
                     .eq('product_id', item.product_id)
@@ -171,7 +180,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         // ============================================
         // 3. ACTUALIZAR ESTADO PEDIDO
         // ============================================
-        const { error: updateError } = await authClient
+        const { error: updateError } = await serviceDb
             .from('orders')
             .update({
                 status: 'cancelled',
