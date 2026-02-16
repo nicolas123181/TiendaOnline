@@ -178,30 +178,30 @@ function getStatusBadge(status: string): { text: string; class: string } {
                                 const status = getStatusBadge(invoice.status);
                                 return (
                                     <tr>
-                                        <td>
+                                        <td data-label="Nº Factura">
                                             <span class="invoice-number">{invoice.invoice_number}</span>
                                         </td>
-                                        <td>
+                                        <td data-label="Cliente">
                                             <div class="customer-info">
                                                 <span class="customer-name">{invoice.customer_name}</span>
                                                 <span class="customer-email">{invoice.customer_email}</span>
                                             </div>
                                         </td>
-                                        <td>
+                                        <td data-label="Fecha">
                                             <span class="date">{formatDate(invoice.issue_date)}</span>
                                         </td>
-                                        <td>
+                                        <td data-label="Pedido">
                                             <a href={`/admin/pedidos/${invoice.order_id}`} class="order-link">
                                                 #{invoice.order_id}
                                             </a>
                                         </td>
-                                        <td>
+                                        <td data-label="Total">
                                             <span class="total-amount">{formatPrice(invoice.total)}</span>
                                         </td>
-                                        <td>
+                                        <td data-label="Estado">
                                             <span class={`status-badge ${status.class}`}>{status.text}</span>
                                         </td>
-                                        <td>
+                                        <td data-label="">
                                             <div class="actions">
                                                 <a
                                                     href={`/admin/facturas/${invoice.id}`}
@@ -419,6 +419,7 @@ function getStatusBadge(status: string): { text: string; class: string } {
 
     .invoices-table {
         width: 100%;
+        min-width: 900px;
         border-collapse: collapse;
     }
 
@@ -540,22 +541,178 @@ function getStatusBadge(status: string): { text: string; class: string } {
     }
 
     @media (max-width: 768px) {
+        .page-header h1 {
+            font-size: 1.35rem;
+        }
+
+        .page-header p {
+            font-size: 0.85rem;
+        }
+
+        .stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
+        }
+
+        .stat-card {
+            padding: 0.85rem;
+            gap: 0.6rem;
+        }
+
+        .stat-icon {
+            width: 38px;
+            height: 38px;
+            font-size: 1.1rem;
+            border-radius: 8px;
+        }
+
+        .stat-value {
+            font-size: 1.1rem;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+        }
+
+        .card {
+            padding: 1rem;
+        }
+
+        .search-section {
+            padding: 0.75rem 1rem;
+        }
+
         .search-form {
             flex-direction: column;
         }
 
-        .search-input-wrapper,
-        .filter-select {
+        .search-input-wrapper {
+            min-width: unset;
             width: 100%;
         }
 
-        .actions {
+        .filter-select {
+            width: 100%;
+            min-width: unset;
+        }
+
+        .search-form .btn {
+            width: 100%;
+            justify-content: center;
+        }
+
+        /* ---- TABLE → CARD LAYOUT ---- */
+        .table-wrapper {
+            overflow-x: visible;
+        }
+
+        .invoices-table {
+            min-width: unset;
+        }
+
+        .invoices-table thead {
+            display: none;
+        }
+
+        .invoices-table tbody {
+            display: flex;
             flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .invoices-table tr {
+            display: flex;
+            flex-direction: column;
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 0.875rem;
+            gap: 0.25rem;
+        }
+
+        .invoices-table td {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.3rem 0 !important;
+            border: none !important;
+            font-size: 0.85rem;
+        }
+
+        .invoices-table td::before {
+            content: attr(data-label);
+            font-weight: 600;
+            color: #374151;
+            font-size: 0.75rem;
+            flex-shrink: 0;
+            margin-right: 0.5rem;
+        }
+
+        .invoices-table td:first-child {
+            border-bottom: 1px solid #e5e7eb !important;
+            padding-bottom: 0.5rem !important;
+            margin-bottom: 0.25rem;
+        }
+
+        .invoices-table td:last-child {
+            border-top: 1px solid #e5e7eb !important;
+            padding-top: 0.5rem !important;
+            margin-top: 0.25rem;
+            justify-content: flex-end;
+        }
+
+        .customer-info {
+            text-align: right;
+        }
+
+        .customer-email {
+            word-break: break-all;
+        }
+
+        .actions {
+            gap: 0.5rem;
+        }
+
+        .actions .btn-sm {
+            font-size: 0.8rem;
+            padding: 0.5rem 0.75rem;
+            min-height: 36px;
         }
 
         .pagination {
             flex-direction: column;
-            gap: 1rem;
+            gap: 0.75rem;
+            text-align: center;
+        }
+
+        .pagination-info {
+            font-size: 0.8rem;
+        }
+
+        .empty-state {
+            padding: 2rem 1rem;
+        }
+
+        .empty-icon {
+            font-size: 2.5rem;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem;
+        }
+
+        .stat-card {
+            flex-direction: column;
+            text-align: center;
+            padding: 0.75rem 0.5rem;
+            gap: 0.35rem;
+        }
+
+        .stat-value {
+            font-size: 1rem;
         }
     }
 </style>

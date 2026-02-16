@@ -1329,9 +1329,21 @@ export const prerender = false;
             submitBtn.textContent = "Procesando...";
 
             try {
+                // Obtener el token de acceso del usuario autenticado
+                // para que el endpoint create-return pueda consultar orders con auth
+                const { data: { session: currentSession } } = await supabase.auth.getSession();
+                const accessToken = currentSession?.access_token;
+
+                const fetchHeaders: Record<string, string> = {
+                    "Content-Type": "application/json",
+                };
+                if (accessToken) {
+                    fetchHeaders["Authorization"] = `Bearer ${accessToken}`;
+                }
+
                 const response = await fetch("/api/returns/create-return", {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: fetchHeaders,
                     body: JSON.stringify({
                         orderId: parseInt(orderId),
                         items: selectedItems,

@@ -512,12 +512,33 @@ const categoriesWithCount =
     }
 
     @media (max-width: 768px) {
+        .page-header h1 {
+            font-size: 1.35rem;
+        }
+
+        .page-header p {
+            font-size: 0.85rem;
+        }
+
         .form-row {
             flex-direction: column;
         }
 
         .categories-grid {
             grid-template-columns: 1fr;
+        }
+
+        .card {
+            padding: 1rem;
+        }
+
+        .card h2 {
+            font-size: 1.05rem;
+        }
+
+        .modal-content {
+            width: 95%;
+            padding: 1.25rem;
         }
     }
 </style>

@@ -180,3 +180,54 @@ const statusColors: Record<string, string> = {
         )}
     </div>
 </AdminLayout>
+
+<style>
+    /* Forzar scroll horizontal para que no se pierdan columnas */
+    table {
+        min-width: 900px;
+    }
+
+    @media (max-width: 768px) {
+        /* Reducir padding de celdas de tabla */
+        table th,
+        table td {
+            padding: 0.4rem 0.3rem !important;
+            font-size: 0.7rem !important;
+        }
+
+        table th {
+            font-size: 0.6rem !important;
+            white-space: nowrap !important;
+        }
+
+        /* Reducir tamaño de badges y botones */
+        table .inline-block {
+            font-size: 0.65rem !important;
+            padding: 0.2rem 0.4rem !important;
+        }
+
+        /* Reducir acciones */
+        table td:last-child .flex {
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        table td:last-child a {
+            font-size: 0.75rem !important;
+            padding: 0.4rem 0.6rem !important;
+            min-height: 32px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+        }
+
+        table td:last-child select {
+            font-size: 0.7rem !important;
+            padding: 0.4rem 0.5rem !important;
+            min-height: 32px !important;
+        }
+
+        table td:last-child {
+            min-width: 100px !important;
+        }
+    }
+</style>

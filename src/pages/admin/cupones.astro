@@ -310,12 +310,12 @@ function getCouponStatus(coupon: any): { text: string; class: string } {
                                                 : ""
                                         }
                                     >
-                                        <td>
+                                        <td data-label="Código">
                                             <span class="coupon-code">
                                                 {coupon.code}
                                             </span>
                                         </td>
-                                        <td>
+                                        <td data-label="Descuento">
                                             <span class="discount-value">
                                                 {formatDiscount(
                                                     coupon.discount_type,
@@ -329,12 +329,12 @@ function getCouponStatus(coupon: any): { text: string; class: string } {
                                                     : "de descuento"}
                                             </span>
                                         </td>
-                                        <td>
+                                        <td data-label="Mínimo">
                                             {coupon.min_purchase > 0
                                                 ? `${(coupon.min_purchase / 100).toFixed(0)}€`
                                                 : "—"}
                                         </td>
-                                        <td>
+                                        <td data-label="Usos">
                                             <div class="uses-info">
                                                 <span>{uses}</span>
                                                 {coupon.max_uses && (
@@ -353,7 +353,7 @@ function getCouponStatus(coupon: any): { text: string; class: string } {
                                                 </div>
                                             )}
                                         </td>
-                                        <td>
+                                        <td data-label="Validez">
                                             <div class="dates">
                                                 {coupon.start_date ||
                                                 coupon.end_date ? (
@@ -373,14 +373,14 @@ function getCouponStatus(coupon: any): { text: string; class: string } {
                                                 )}
                                             </div>
                                         </td>
-                                        <td>
+                                        <td data-label="Estado">
                                             <span
                                                 class={`status-badge ${status.class}`}
                                             >
                                                 {status.text}
                                             </span>
                                         </td>
-                                        <td class="actions-cell">
+                                        <td class="actions-cell" data-label="">
                                             <form
                                                 method="POST"
                                                 style="display: inline;"
@@ -636,6 +636,7 @@ function getCouponStatus(coupon: any): { text: string; class: string } {
 
     .coupons-table {
         width: 100%;
+        min-width: 900px;
         border-collapse: collapse;
     }
 
@@ -794,12 +795,110 @@ function getCouponStatus(coupon: any): { text: string; class: string } {
     }
 
     @media (max-width: 768px) {
+        .page-header h1 {
+            font-size: 1.35rem;
+        }
+
+        .page-header p {
+            font-size: 0.85rem;
+        }
+
         .form-grid {
             grid-template-columns: 1fr;
         }
 
-        .actions-cell {
+        .info-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .card {
+            padding: 1rem;
+        }
+
+        /* ---- TABLE → CARD LAYOUT ---- */
+        .coupons-table-wrapper {
+            overflow-x: visible;
+        }
+
+        .coupons-table {
+            min-width: unset;
+        }
+
+        .coupons-table thead {
+            display: none;
+        }
+
+        .coupons-table tbody {
+            display: flex;
             flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .coupons-table tr {
+            display: flex;
+            flex-direction: column;
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 0.875rem;
+            gap: 0.25rem;
+        }
+
+        .coupons-table tr.row-inactive {
+            opacity: 0.6;
+        }
+
+        .coupons-table td {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.3rem 0 !important;
+            border: none !important;
+            font-size: 0.85rem;
+        }
+
+        .coupons-table td::before {
+            content: attr(data-label);
+            font-weight: 600;
+            color: #374151;
+            font-size: 0.75rem;
+            flex-shrink: 0;
+            margin-right: 0.5rem;
+        }
+
+        .coupons-table td:first-child {
+            border-bottom: 1px solid #e5e7eb !important;
+            padding-bottom: 0.5rem !important;
+            margin-bottom: 0.25rem;
+        }
+
+        .actions-cell {
+            flex-direction: row;
+            flex-wrap: wrap;
+            gap: 0.35rem;
+            border-top: 1px solid #e5e7eb !important;
+            padding-top: 0.5rem !important;
+            margin-top: 0.25rem;
+            justify-content: flex-end !important;
+        }
+
+        .actions-cell .btn-sm {
+            font-size: 0.8rem;
+            padding: 0.5rem 0.6rem;
+            white-space: nowrap;
+            min-height: 36px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .coupon-code {
+            font-size: 0.95rem;
+            padding: 0.2rem 0.5rem;
+        }
+
+        .empty-state {
+            padding: 2rem 1rem;
         }
     }
 </style>

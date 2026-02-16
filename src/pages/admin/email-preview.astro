@@ -6,6 +6,7 @@ export const prerender = false;
 <html lang="es">
     <head>
         <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Preview Emails - Vantage</title>
         <style>
             body {
@@ -27,11 +28,13 @@ export const prerender = false;
                 margin-bottom: 30px;
             }
             .nav button {
-                padding: 10px 20px;
+                padding: 8px 14px;
                 border: none;
                 border-radius: 8px;
                 cursor: pointer;
                 font-weight: 600;
+                font-size: 0.8rem;
+                min-height: 44px;
             }
             .nav button.active {
                 background: #b8860b;
@@ -51,7 +54,8 @@ export const prerender = false;
             }
             iframe {
                 width: 100%;
-                height: 900px;
+                height: 70vh;
+                min-height: 400px;
                 border: none;
             }
             .email-title {
@@ -92,18 +96,18 @@ export const prerender = false;
                 id="emailFrame"
                 src="/api/email-preview?type=order-confirmation"></iframe>
         </div>
-        <script>
-            document.querySelectorAll(".nav button").forEach((btn) => {
-                btn.addEventListener("click", () => {
+        <script is:inline>
+            document.querySelectorAll(".nav button").forEach(function(btn) {
+                btn.addEventListener("click", function() {
                     document
                         .querySelectorAll(".nav button")
-                        .forEach((b) => b.classList.remove("active"));
+                        .forEach(function(b) { b.classList.remove("active"); });
                     btn.classList.add("active");
-                    const type = btn.dataset.email;
-                    document.getElementById("emailFrame").src =
-                        "/api/email-preview?type=" + type;
-                    document.getElementById("emailTitle").textContent =
-                        "Email: " + btn.textContent;
+                    var type = btn.dataset.email;
+                    var frame = document.getElementById("emailFrame");
+                    var title = document.getElementById("emailTitle");
+                    if (frame) frame.src = "/api/email-preview?type=" + type;
+                    if (title) title.textContent = "Email: " + btn.textContent;
                 });
             });
         </script>

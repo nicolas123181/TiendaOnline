@@ -97,6 +97,7 @@ export const POST: APIRoute = async ({ request }) => {
         // ==========================================
         // IDEMPOTENCIA: Verificar si ya existe un pedido con este paymentIntentId
         // Evita crear pedidos duplicados al refrescar la página de éxito
+        // Usa upsert-style: intenta insertar y maneja conflicto por stripe_payment_intent_id
         // ==========================================
         if (paymentIntentId) {
             const { data: existingOrder } = await db
@@ -113,6 +114,9 @@ export const POST: APIRoute = async ({ request }) => {
                     orderId: existingOrder.id,
                 }), { status: 200, headers: { 'Content-Type': 'application/json' } });
             }
+        } else {
+            // Sin paymentIntentId no podemos garantizar idempotencia
+            console.warn('⚠️ No paymentIntentId provided — cannot guarantee idempotency');
         }
 
         // ==========================================
@@ -141,6 +145,24 @@ export const POST: APIRoute = async ({ request }) => {
             .single();
 
         if (orderError || !order) {
+            // Si el error es por duplicado (constraint unique), intentar recuperar el pedido existente
+            if (orderError?.code === '23505' && paymentIntentId) {
+                console.log(`⚠️ Duplicate insert detected for payment ${paymentIntentId}, fetching existing order...`);
+                const { data: existingOrder } = await db
+                    .from('orders')
+                    .select('id')
+                    .eq('stripe_payment_intent_id', paymentIntentId)
+                    .maybeSingle();
+
+                if (existingOrder) {
+                    return new Response(JSON.stringify({
+                        success: true,
+                        message: 'Pedido ya existente',
+                        orderId: existingOrder.id,
+                    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+                }
+            }
+
             console.error('❌ Error creating order:', orderError);
             return new Response(JSON.stringify({
                 success: false,

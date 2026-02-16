@@ -126,12 +126,12 @@ const enrichedProducts = products.map((p) => ({
 
     <!-- Products Table -->
     <div class="bg-surface-primary rounded-2xl shadow-soft overflow-hidden">
-        <div class="overflow-x-auto">
-            <table class="w-full" id="products-table">
+        <div class="products-table-wrapper">
+            <table class="w-full products-table" id="products-table">
                 <thead class="bg-surface-secondary">
                     <tr>
                         <th
-                            class="px-6 py-4 text-left text-xs font-medium text-text-muted uppercase tracking-wider"
+                            class="px-6 py-4 text-left text-xs font-medium text-text-muted uppercase tracking-wider hidden sm:table-cell"
                         >
                             <input
                                 type="checkbox"
@@ -180,14 +180,14 @@ const enrichedProducts = products.map((p) => ({
                                 data-category={product.category_id}
                                 data-stock={product.stock}
                             >
-                                <td class="px-6 py-4">
+                                <td class="px-6 py-4 product-checkbox-cell" data-label="">
                                     <input
                                         type="checkbox"
                                         class="product-checkbox w-4 h-4 rounded border-border-medium text-brand-navy focus:ring-brand-navy"
                                         value={product.id}
                                     />
                                 </td>
-                                <td class="px-6 py-4">
+                                <td class="px-6 py-4 product-name-cell" data-label="Producto">
                                     <div class="flex items-center gap-4">
                                         <div class="w-14 h-14 bg-surface-tertiary rounded-xl overflow-hidden flex-shrink-0">
                                             <img
@@ -212,18 +212,18 @@ const enrichedProducts = products.map((p) => ({
                                         </div>
                                     </div>
                                 </td>
-                                <td class="px-6 py-4">
+                                <td class="px-6 py-4" data-label="Categoría">
                                     <span class="inline-flex items-center px-3 py-1 rounded-lg bg-surface-tertiary text-sm text-text-secondary">
                                         {product.category?.name ||
                                             "Sin categoría"}
                                     </span>
                                 </td>
-                                <td class="px-6 py-4">
+                                <td class="px-6 py-4" data-label="Precio">
                                     <span class="font-semibold text-brand-navy">
                                         {formatPrice(product.price)}
                                     </span>
                                 </td>
-                                <td class="px-6 py-4">
+                                <td class="px-6 py-4" data-label="Stock">
                                     <div class="flex items-center gap-2">
                                         <span class="font-medium text-text-primary">
                                             {product.stock}
@@ -243,7 +243,7 @@ const enrichedProducts = products.map((p) => ({
                                         )}
                                     </div>
                                 </td>
-                                <td class="px-6 py-4">
+                                <td class="px-6 py-4" data-label="Estado">
                                     {product.isInStock ? (
                                         <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-status-success-bg text-status-success">
                                             Disponible
@@ -258,7 +258,7 @@ const enrichedProducts = products.map((p) => ({
                                         </span>
                                     )}
                                 </td>
-                                <td class="px-6 py-4">
+                                <td class="px-6 py-4 product-actions-cell" data-label="Acciones">
                                     <div class="flex items-center justify-end gap-2">
                                         <a
                                             href={`/productos/${product.slug}`}
@@ -457,3 +457,76 @@ const enrichedProducts = products.map((p) => ({
         });
     });
 </script>
+
+<style>
+    /* Responsive Products Table */
+    @media (max-width: 768px) {
+        .products-table thead {
+            display: none;
+        }
+        .products-table tbody {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            padding: 1rem;
+        }
+        .products-table tbody tr {
+            display: flex;
+            flex-direction: column;
+            background: var(--surface-primary, #fff);
+            border: 1px solid var(--border-light, #e5e7eb);
+            border-radius: 12px;
+            padding: 0;
+            overflow: hidden;
+        }
+        .products-table tbody td {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border-light, #f3f4f6);
+        }
+        .products-table tbody td:last-child {
+            border-bottom: none;
+        }
+        .products-table tbody td::before {
+            content: attr(data-label);
+            font-weight: 600;
+            font-size: 0.8rem;
+            color: var(--text-muted, #6b7280);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            flex-shrink: 0;
+            margin-right: 1rem;
+        }
+        .product-checkbox-cell {
+            display: none !important;
+        }
+        .product-name-cell {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        .product-name-cell::before {
+            display: none;
+        }
+        .product-actions-cell {
+            justify-content: flex-end;
+        }
+        .product-actions-cell::before {
+            display: none;
+        }
+        .product-actions-cell > div {
+            justify-content: flex-end;
+            width: 100%;
+        }
+    }
+    @media (max-width: 480px) {
+        .products-table tbody {
+            padding: 0.5rem;
+        }
+        .products-table tbody td {
+            padding: 0.6rem 0.75rem;
+            font-size: 0.875rem;
+        }
+    }
+</style>

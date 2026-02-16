@@ -329,6 +329,15 @@ const salePriceInEuros = product.sale_price
                         />
                     </div>
 
+                    <div class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <p class="text-sm text-blue-800 flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span><strong>Arrastra las imágenes</strong> para reordenar. La primera imagen será la principal.</span>
+                        </p>
+                    </div>
+
                     <div
                         id="image-previews"
                         class="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6"
@@ -337,17 +346,24 @@ const salePriceInEuros = product.sale_price
                             product.images?.map(
                                 (url: string, index: number) => (
                                     <div
-                                        class="relative aspect-square rounded-xl overflow-hidden bg-surface-tertiary group image-preview"
+                                        class="relative aspect-square rounded-xl overflow-hidden bg-surface-tertiary group image-preview cursor-move"
                                         data-url={url}
+                                        draggable="true"
                                     >
+                                        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors pointer-events-none"></div>
+                                        <div class="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                                            <svg class="w-5 h-5 text-white drop-shadow-lg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16" />
+                                            </svg>
+                                        </div>
                                         <img
                                             src={url}
                                             alt={`Imagen ${index + 1}`}
-                                            class="w-full h-full object-cover"
+                                            class="w-full h-full object-cover pointer-events-none"
                                         />
                                         <button
                                             type="button"
-                                            class="remove-image absolute top-2 right-2 p-1.5 bg-status-error text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                                            class="remove-image absolute top-2 right-2 p-1.5 bg-status-error text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-10"
                                         >
                                             <svg
                                                 class="w-4 h-4"
@@ -364,8 +380,8 @@ const salePriceInEuros = product.sale_price
                                             </svg>
                                         </button>
                                         {index === 0 && (
-                                            <span class="absolute bottom-2 left-2 px-2 py-1 bg-brand-navy text-white text-xs rounded">
-                                                Principal
+                                            <span class="principal-label absolute bottom-2 left-2 px-2 py-1 bg-brand-navy text-white text-xs rounded font-semibold">
+                                                ⭐ Principal
                                             </span>
                                         )}
                                     </div>
@@ -860,16 +876,23 @@ const salePriceInEuros = product.sale_price
 
         const div = document.createElement("div");
         div.className =
-            "relative aspect-square rounded-xl overflow-hidden bg-surface-tertiary group image-preview";
+            "relative aspect-square rounded-xl overflow-hidden bg-surface-tertiary group image-preview cursor-move";
         div.setAttribute("data-url", url);
+        div.setAttribute("draggable", "true");
         div.innerHTML = `
-            <img src="${url}" alt="Imagen ${index + 1}" class="w-full h-full object-cover" />
-            <button type="button" class="remove-image absolute top-2 right-2 p-1.5 bg-status-error text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
+            <div class="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors pointer-events-none"></div>
+            <div class="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                <svg class="w-5 h-5 text-white drop-shadow-lg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16" />
+                </svg>
+            </div>
+            <img src="${url}" alt="Imagen ${index + 1}" class="w-full h-full object-cover pointer-events-none" />
+            <button type="button" class="remove-image absolute top-2 right-2 p-1.5 bg-status-error text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-10">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
             </button>
-            ${index === 0 ? '<span class="principal-label absolute bottom-2 left-2 px-2 py-1 bg-brand-navy text-white text-xs rounded">Principal</span>' : ""}
+            ${index === 0 ? '<span class="principal-label absolute bottom-2 left-2 px-2 py-1 bg-brand-navy text-white text-xs rounded font-semibold">⭐ Principal</span>' : ""}
         `;
 
         const removeBtn = div.querySelector(".remove-image");
@@ -879,6 +902,9 @@ const salePriceInEuros = product.sale_price
             imagesInput.value = JSON.stringify(uploadedImages);
             updatePreviewLabels();
         });
+
+        // Añadir drag & drop
+        setupImageDragAndDrop(div);
 
         previewsContainer.appendChild(div);
     }
@@ -890,14 +916,113 @@ const salePriceInEuros = product.sale_price
             if (index === 0 && !existingLabel) {
                 const label = document.createElement("span");
                 label.className =
-                    "principal-label absolute bottom-2 left-2 px-2 py-1 bg-brand-navy text-white text-xs rounded";
-                label.textContent = "Principal";
+                    "principal-label absolute bottom-2 left-2 px-2 py-1 bg-brand-navy text-white text-xs rounded font-semibold";
+                label.textContent = "⭐ Principal";
                 preview.appendChild(label);
             } else if (index !== 0 && existingLabel) {
                 existingLabel.remove();
             }
         });
     }
+
+    // ====== DRAG & DROP PARA REORDENAR IMÁGENES ======
+    let draggedElement = null;
+    let draggedIndex = -1;
+
+    function setupImageDragAndDrop(imageDiv) {
+        imageDiv.addEventListener('dragstart', handleDragStart);
+        imageDiv.addEventListener('dragend', handleDragEnd);
+        imageDiv.addEventListener('dragover', handleDragOver);
+        imageDiv.addEventListener('drop', handleDrop);
+        imageDiv.addEventListener('dragenter', handleDragEnter);
+        imageDiv.addEventListener('dragleave', handleDragLeave);
+    }
+
+    function handleDragStart(e) {
+        draggedElement = e.target.closest('.image-preview');
+        const previews = Array.from(previewsContainer?.querySelectorAll('.image-preview') || []);
+        draggedIndex = previews.indexOf(draggedElement);
+        
+        draggedElement.style.opacity = '0.4';
+        e.dataTransfer.effectAllowed = 'move';
+    }
+
+    function handleDragEnd(e) {
+        if (draggedElement) {
+            draggedElement.style.opacity = '';
+        }
+        
+        // Limpiar estilos de todos los elementos
+        const previews = previewsContainer?.querySelectorAll('.image-preview');
+        previews?.forEach(preview => {
+            preview.classList.remove('border-2', 'border-brand-navy', 'scale-105');
+        });
+        
+        draggedElement = null;
+        draggedIndex = -1;
+    }
+
+    function handleDragOver(e) {
+        if (e.preventDefault) {
+            e.preventDefault();
+        }
+        e.dataTransfer.dropEffect = 'move';
+        return false;
+    }
+
+    function handleDragEnter(e) {
+        const targetElement = e.target.closest('.image-preview');
+        if (targetElement && targetElement !== draggedElement) {
+            targetElement.classList.add('border-2', 'border-brand-navy', 'scale-105');
+        }
+    }
+
+    function handleDragLeave(e) {
+        const targetElement = e.target.closest('.image-preview');
+        if (targetElement && !targetElement.contains(e.relatedTarget)) {
+            targetElement.classList.remove('border-2', 'border-brand-navy', 'scale-105');
+        }
+    }
+
+    function handleDrop(e) {
+        if (e.stopPropagation) {
+            e.stopPropagation();
+        }
+        e.preventDefault();
+        
+        const targetElement = e.target.closest('.image-preview');
+        if (!targetElement || !draggedElement || targetElement === draggedElement) {
+            return false;
+        }
+        
+        const previews = Array.from(previewsContainer?.querySelectorAll('.image-preview') || []);
+        const targetIndex = previews.indexOf(targetElement);
+        
+        // Reordenar array de imágenes
+        const [movedItem] = uploadedImages.splice(draggedIndex, 1);
+        uploadedImages.splice(targetIndex, 0, movedItem);
+        
+        // Actualizar input hidden
+        imagesInput.value = JSON.stringify(uploadedImages);
+        
+        // Reordenar elementos en el DOM
+        if (draggedIndex < targetIndex) {
+            targetElement.parentNode.insertBefore(draggedElement, targetElement.nextSibling);
+        } else {
+            targetElement.parentNode.insertBefore(draggedElement, targetElement);
+        }
+        
+        // Actualizar etiquetas
+        updatePreviewLabels();
+        
+        return false;
+    }
+
+    // Configurar drag & drop en imágenes existentes
+    const existingPreviews = previewsContainer?.querySelectorAll('.image-preview');
+    existingPreviews?.forEach(preview => {
+        setupImageDragAndDrop(preview);
+    });
 
     // Delete confirmation
     deleteBtn?.addEventListener("click", (e) => {
@@ -975,3 +1100,16 @@ const salePriceInEuros = product.sale_price
     // Inicializar
     updateSizesStock();
 </script>
+
+<style>
+    @media (max-width: 768px) {
+        /* Breadcrumb wrapping */
+        nav.flex {
+            flex-wrap: wrap;
+        }
+        /* Sale price section stacks */
+        .grid.grid-cols-2 {
+            grid-template-columns: 1fr !important;
+        }
+    }
+</style>

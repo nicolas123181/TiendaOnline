@@ -37,13 +37,13 @@ function getStockBadgeClass(stock: number): string {
         >
             <div>
                 <h2
-                    class="text-xl font-bold text-brand-navy flex items-center gap-2"
+                    class="text-lg sm:text-xl font-bold text-brand-navy flex items-center gap-2"
                 >
                     <span
-                        class="w-8 h-8 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-lg flex items-center justify-center"
+                        class="w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-lg flex items-center justify-center"
                     >
                         <svg
-                            class="w-5 h-5 text-white"
+                            class="w-4 h-4 sm:w-5 sm:h-5 text-white"
                             fill="none"
                             viewBox="0 0 24 24"
                             stroke="currentColor"
@@ -58,12 +58,12 @@ function getStockBadgeClass(stock: number): string {
                     </span>
                     Dashboard Ejecutivo
                 </h2>
-                <p class="text-sm text-text-muted mt-1">
+                <p class="text-xs sm:text-sm text-text-muted mt-1">
                     Métricas clave para tomar decisiones rápidas
                 </p>
             </div>
             <span
-                class="text-xs text-text-muted bg-surface-tertiary px-3 py-1 rounded-full"
+                class="text-xs text-text-muted bg-surface-tertiary px-3 py-1 rounded-full self-start sm:self-auto"
             >
                 Actualizado ahora
             </span>
@@ -71,16 +71,16 @@ function getStockBadgeClass(stock: number): string {
 
         <!-- KPIs de Negocio -->
         <div
-            class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 mb-6"
+            class="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 mb-6"
         >
             <!-- Ventas del Mes -->
             <div
-                class="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl p-6 text-white shadow-lg"
+                class="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl p-5 sm:p-6 text-white shadow-lg"
             >
-                <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center justify-between mb-3 sm:mb-4">
                     <div class="p-2 bg-white/20 rounded-lg">
                         <svg
-                            class="w-6 h-6"
+                            class="w-5 h-5 sm:w-6 sm:h-6"
                             fill="none"
                             viewBox="0 0 24 24"
                             stroke="currentColor"
@@ -99,21 +99,21 @@ function getStockBadgeClass(stock: number): string {
                 </div>
                 <h3
                     id="kpi-monthly-sales"
-                    class="text-2xl sm:text-3xl font-bold"
+                    class="text-2xl sm:text-3xl font-bold mb-1"
                 >
                     --
                 </h3>
-                <p class="text-emerald-100 text-sm mt-1">Ventas Totales</p>
+                <p class="text-emerald-100 text-xs sm:text-sm">Ventas Totales</p>
             </div>
 
             <!-- Pedidos Pendientes -->
             <div
-                class="bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl p-6 text-white shadow-lg"
+                class="bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl p-5 sm:p-6 text-white shadow-lg"
             >
-                <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center justify-between mb-3 sm:mb-4">
                     <div class="p-2 bg-white/20 rounded-lg">
                         <svg
-                            class="w-6 h-6"
+                            class="w-5 h-5 sm:w-6 sm:h-6"
                             fill="none"
                             viewBox="0 0 24 24"
                             stroke="currentColor"
@@ -132,21 +132,21 @@ function getStockBadgeClass(stock: number): string {
                 </div>
                 <h3
                     id="kpi-pending-orders"
-                    class="text-2xl sm:text-3xl font-bold"
+                    class="text-2xl sm:text-3xl font-bold mb-1"
                 >
                     --
                 </h3>
-                <p class="text-amber-100 text-sm mt-1">Pedidos Pendientes</p>
+                <p class="text-amber-100 text-xs sm:text-sm">Pedidos Pendientes</p>
             </div>
 
             <!-- Producto Más Vendido -->
             <div
-                class="bg-gradient-to-br from-purple-500 to-indigo-600 rounded-2xl p-6 text-white shadow-lg"
+                class="bg-gradient-to-br from-purple-500 to-indigo-600 rounded-2xl p-5 sm:p-6 text-white shadow-lg"
             >
-                <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center justify-between mb-3 sm:mb-4">
                     <div class="p-2 bg-white/20 rounded-lg">
                         <svg
-                            class="w-6 h-6"
+                            class="w-5 h-5 sm:w-6 sm:h-6"
                             fill="none"
                             viewBox="0 0 24 24"
                             stroke="currentColor"
@@ -165,13 +165,13 @@ function getStockBadgeClass(stock: number): string {
                 </div>
                 <h3
                     id="kpi-top-product"
-                    class="text-base sm:text-xl font-bold truncate"
+                    class="text-base sm:text-xl font-bold truncate mb-1"
                 >
                     Cargando...
                 </h3>
                 <p
                     id="kpi-top-product-sold"
-                    class="text-purple-100 text-sm mt-1"
+                    class="text-purple-100 text-xs sm:text-sm"
                 >
                     Producto Más Vendido
                 </p>
@@ -179,13 +179,13 @@ function getStockBadgeClass(stock: number): string {
         </div>
 
         <!-- Gráfico de Ventas -->
-        <div class="bg-surface-primary rounded-2xl p-6 shadow-soft">
-            <div class="flex items-center justify-between mb-6">
+        <div class="bg-surface-primary rounded-2xl p-4 sm:p-6 shadow-soft">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4 sm:mb-6">
                 <h3
-                    class="font-semibold text-brand-navy flex items-center gap-2"
+                    class="font-semibold text-brand-navy flex items-center gap-2 text-sm sm:text-base"
                 >
                     <svg
-                        class="w-5 h-5 text-brand-leather"
+                        class="w-4 h-4 sm:w-5 sm:h-5 text-brand-leather"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
@@ -201,10 +201,10 @@ function getStockBadgeClass(stock: number): string {
                 </h3>
                 <span
                     id="chart-total"
-                    class="text-sm font-medium text-text-muted">--</span
+                    class="text-xs sm:text-sm font-medium text-text-muted">--</span
                 >
             </div>
-            <div class="h-48 sm:h-64">
+            <div class="h-56 sm:h-64">
                 <canvas id="salesChart"></canvas>
             </div>
         </div>
@@ -215,10 +215,10 @@ function getStockBadgeClass(stock: number): string {
     <!-- ========================================== -->
     <section class="mb-8">
         <h2
-            class="text-lg font-semibold text-brand-navy mb-4 flex items-center gap-2"
+            class="text-base sm:text-lg font-semibold text-brand-navy mb-4 flex items-center gap-2"
         >
             <svg
-                class="w-5 h-5 text-text-muted"
+                class="w-4 h-4 sm:w-5 sm:h-5 text-text-muted"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -233,7 +233,7 @@ function getStockBadgeClass(stock: number): string {
             Estado del Inventario
         </h2>
         <div
-            class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6"
+            class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6"
         >
             <!-- Total Products -->
             <div class="bg-surface-primary rounded-2xl p-4 sm:p-6 shadow-soft">
@@ -354,19 +354,19 @@ function getStockBadgeClass(stock: number): string {
     <!-- Quick Actions & Alerts -->
     <div class="grid lg:grid-cols-2 gap-4 sm:gap-6 mb-8">
         <!-- Quick Actions -->
-        <div class="bg-surface-primary rounded-2xl p-6 shadow-soft">
-            <h2 class="text-lg font-semibold text-brand-navy mb-4">
+        <div class="bg-surface-primary rounded-2xl p-4 sm:p-6 shadow-soft">
+            <h2 class="text-base sm:text-lg font-semibold text-brand-navy mb-4">
                 Acciones Rápidas
             </h2>
             <div
-                class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3"
+                id="quick-actions-grid" class="grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3"
             >
                 <a
                     href="/admin/productos/nuevo"
-                    class="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-brand-navy text-white rounded-xl hover:bg-brand-navy-light transition-colors"
+                    class="flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-2 sm:gap-3 p-3 sm:p-4 bg-brand-navy text-white rounded-xl hover:bg-brand-navy-light transition-colors"
                 >
                     <svg
-                        class="w-5 h-5"
+                        class="w-5 h-5 shrink-0"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
@@ -377,14 +377,14 @@ function getStockBadgeClass(stock: number): string {
                             stroke-width="2"
                             d="M12 4v16m8-8H4"></path>
                     </svg>
-                    <span class="font-medium text-sm">Nuevo Producto</span>
+                    <span class="font-medium text-xs sm:text-sm text-center sm:text-left">Nuevo Producto</span>
                 </a>
                 <a
                     href="/admin/productos"
-                    class="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-surface-tertiary text-brand-navy rounded-xl hover:bg-brand-cream transition-colors"
+                    class="flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-2 sm:gap-3 p-3 sm:p-4 bg-surface-tertiary text-brand-navy rounded-xl hover:bg-brand-cream transition-colors"
                 >
                     <svg
-                        class="w-5 h-5"
+                        class="w-5 h-5 shrink-0"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
@@ -396,14 +396,14 @@ function getStockBadgeClass(stock: number): string {
                             d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
                         ></path>
                     </svg>
-                    <span class="font-medium text-sm">Productos</span>
+                    <span class="font-medium text-xs sm:text-sm text-center sm:text-left">Productos</span>
                 </a>
                 <a
                     href="/admin/pedidos"
-                    class="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-surface-tertiary text-brand-navy rounded-xl hover:bg-brand-cream transition-colors"
+                    class="flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-2 sm:gap-3 p-3 sm:p-4 bg-surface-tertiary text-brand-navy rounded-xl hover:bg-brand-cream transition-colors"
                 >
                     <svg
-                        class="w-5 h-5"
+                        class="w-5 h-5 shrink-0"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
@@ -415,14 +415,14 @@ function getStockBadgeClass(stock: number): string {
                             d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
                         ></path>
                     </svg>
-                    <span class="font-medium text-sm">Pedidos</span>
+                    <span class="font-medium text-xs sm:text-sm text-center sm:text-left">Pedidos</span>
                 </a>
                 <a
                     href="/admin/categorias"
-                    class="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-surface-tertiary text-brand-navy rounded-xl hover:bg-brand-cream transition-colors"
+                    class="flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-2 sm:gap-3 p-3 sm:p-4 bg-surface-tertiary text-brand-navy rounded-xl hover:bg-brand-cream transition-colors"
                 >
                     <svg
-                        class="w-5 h-5"
+                        class="w-5 h-5 shrink-0"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
@@ -434,14 +434,14 @@ function getStockBadgeClass(stock: number): string {
                             d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
                         ></path>
                     </svg>
-                    <span class="font-medium text-sm">Categorías</span>
+                    <span class="font-medium text-xs sm:text-sm text-center sm:text-left">Categorías</span>
                 </a>
                 <a
                     href="/admin/tallas"
-                    class="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-surface-tertiary text-brand-navy rounded-xl hover:bg-brand-cream transition-colors"
+                    class="flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-2 sm:gap-3 p-3 sm:p-4 bg-surface-tertiary text-brand-navy rounded-xl hover:bg-brand-cream transition-colors"
                 >
                     <svg
-                        class="w-5 h-5"
+                        class="w-5 h-5 shrink-0"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
@@ -453,14 +453,14 @@ function getStockBadgeClass(stock: number): string {
                             d="M6 6L3 9m0 0l3 3m-3-3h18M18 18l3-3m0 0l-3-3m3 3H3"
                         ></path>
                     </svg>
-                    <span class="font-medium text-sm">Tallas</span>
+                    <span class="font-medium text-xs sm:text-sm text-center sm:text-left">Tallas</span>
                 </a>
                 <a
                     href="/admin/newsletter"
-                    class="flex items-center gap-3 p-4 bg-surface-tertiary text-brand-navy rounded-xl hover:bg-brand-cream transition-colors"
+                    class="flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-2 sm:gap-3 p-3 sm:p-4 bg-surface-tertiary text-brand-navy rounded-xl hover:bg-brand-cream transition-colors"
                 >
                     <svg
-                        class="w-5 h-5"
+                        class="w-5 h-5 shrink-0"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
@@ -472,14 +472,14 @@ function getStockBadgeClass(stock: number): string {
                             d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
                         ></path>
                     </svg>
-                    <span class="font-medium text-sm">Newsletter</span>
+                    <span class="font-medium text-xs sm:text-sm text-center sm:text-left">Newsletter</span>
                 </a>
             </div>
         </div>
 
         <!-- Low Stock Alerts -->
-        <div class="bg-surface-primary rounded-2xl p-6 shadow-soft">
-            <h2 class="text-lg font-semibold text-brand-navy mb-4">
+        <div class="bg-surface-primary rounded-2xl p-4 sm:p-6 shadow-soft">
+            <h2 class="text-base sm:text-lg font-semibold text-brand-navy mb-4">
                 Alertas de Stock
             </h2>
 
@@ -601,46 +601,46 @@ function getStockBadgeClass(stock: number): string {
 
     <!-- Recent Products -->
     <div class="bg-surface-primary rounded-2xl shadow-soft overflow-hidden">
-        <div class="p-6 border-b border-border-light">
+        <div class="p-4 sm:p-6 border-b border-border-light">
             <div class="flex items-center justify-between">
-                <h2 class="text-lg font-semibold text-brand-navy">
+                <h2 class="text-base sm:text-lg font-semibold text-brand-navy">
                     Productos Recientes
                 </h2>
                 <a
                     href="/admin/productos"
-                    class="text-sm text-brand-leather hover:text-brand-leather-dark transition-colors"
+                    class="text-xs sm:text-sm text-brand-leather hover:text-brand-leather-dark transition-colors"
                 >
                     Ver todos →
                 </a>
             </div>
         </div>
 
-        <div class="overflow-x-auto">
-            <table class="w-full">
+        <div class="dashboard-table-wrapper">
+            <table class="w-full dashboard-products-table">
                 <thead class="bg-surface-secondary">
                     <tr>
                         <th
-                            class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider"
+                            class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider whitespace-nowrap"
                         >
                             Producto
                         </th>
                         <th
-                            class="hidden sm:table-cell px-3 sm:px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider"
+                            class="hidden md:table-cell px-3 sm:px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider whitespace-nowrap"
                         >
                             Categoría
                         </th>
                         <th
-                            class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider"
+                            class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider whitespace-nowrap"
                         >
                             Precio
                         </th>
                         <th
-                            class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider"
+                            class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider whitespace-nowrap"
                         >
                             Stock
                         </th>
                         <th
-                            class="px-3 sm:px-6 py-3 text-right text-xs font-medium text-text-muted uppercase tracking-wider"
+                            class="px-3 sm:px-6 py-3 text-right text-xs font-medium text-text-muted uppercase tracking-wider whitespace-nowrap"
                         >
                             Acciones
                         </th>
@@ -672,25 +672,25 @@ function getStockBadgeClass(stock: number): string {
                                         </div>
                                     </div>
                                 </td>
-                                <td class="hidden sm:table-cell px-3 sm:px-6 py-3 sm:py-4">
-                                    <span class="text-sm text-text-secondary">
+                                <td class="hidden md:table-cell px-3 sm:px-6 py-3 sm:py-4" data-label="Categoría">
+                                    <span class="text-sm text-text-secondary whitespace-nowrap">
                                         {product.category?.name ||
                                             "Sin categoría"}
                                     </span>
                                 </td>
-                                <td class="px-3 sm:px-6 py-3 sm:py-4">
-                                    <span class="font-medium text-brand-navy text-sm">
+                                <td class="px-3 sm:px-6 py-3 sm:py-4" data-label="Precio">
+                                    <span class="font-medium text-brand-navy text-sm whitespace-nowrap">
                                         {formatPrice(product.price)}
                                     </span>
                                 </td>
-                                <td class="px-3 sm:px-6 py-3 sm:py-4">
+                                <td class="px-3 sm:px-6 py-3 sm:py-4" data-label="Stock">
                                     <span
                                         class={`inline-flex items-center px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-medium ${getStockBadgeClass(product.stock)}`}
                                     >
                                         {product.stock} uds
                                     </span>
                                 </td>
-                                <td class="px-3 sm:px-6 py-3 sm:py-4 text-right">
+                                <td class="px-3 sm:px-6 py-3 sm:py-4 text-right dashboard-actions-cell" data-label="">
                                     <a
                                         href={`/admin/productos/${product.id}`}
                                         class="text-sm text-brand-leather hover:text-brand-leather-dark transition-colors"
@@ -921,3 +921,67 @@ function getStockBadgeClass(stock: number): string {
     // Cargar al inicializar
     loadAnalytics();
 </script>
+
+<style is:global>
+    /* Dashboard: botones de acción siempre horizontales */
+    #quick-actions-grid a {
+        flex-direction: row !important;
+        justify-content: flex-start !important;
+    }
+    #quick-actions-grid a span {
+        text-align: left !important;
+    }
+
+    /* Dashboard products table - mobile card layout */
+    @media (max-width: 768px) {
+        .dashboard-products-table thead {
+            display: none;
+        }
+        .dashboard-products-table tbody {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            padding: 0.75rem;
+        }
+        .dashboard-products-table tbody tr {
+            display: flex;
+            flex-direction: column;
+            border: 1px solid var(--border-light, #e5e7eb);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .dashboard-products-table tbody td {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.6rem 1rem;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        .dashboard-products-table tbody td:last-child {
+            border-bottom: none;
+        }
+        .dashboard-products-table tbody td::before {
+            content: attr(data-label);
+            font-weight: 600;
+            font-size: 0.75rem;
+            color: var(--text-muted, #6b7280);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            flex-shrink: 0;
+            margin-right: 0.75rem;
+        }
+        .dashboard-products-table tbody td:first-child::before {
+            display: none;
+        }
+        .dashboard-actions-cell::before {
+            display: none;
+        }
+        .dashboard-actions-cell {
+            justify-content: flex-end;
+        }
+        /* Show category column on mobile in card mode */
+        .dashboard-products-table .hidden.md\:table-cell {
+            display: flex !important;
+        }
+    }
+</style>

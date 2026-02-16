@@ -471,3 +471,19 @@ const availableStatusChanges = nextStatusOptions[order.status] || [];
         </div>
     </div>
 </AdminLayout>
+<style>
+    @media (max-width: 768px) {
+        /* Order item cards: stack info on mobile */
+        .bg-gray-50.rounded-xl {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        .bg-gray-50.rounded-xl .text-right {
+            text-align: left;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            margin-top: 0.25rem;
+        }
+    }
+</style>

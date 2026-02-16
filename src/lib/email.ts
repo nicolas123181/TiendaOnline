@@ -211,7 +211,7 @@ export async function sendOrderConfirmationEmail(data: OrderEmailData) {
 
                   <p style="color: #6b7280; font-size: 15px; text-align: center; margin: 30px 0 0 0; line-height: 1.6;">
                     Recibirás un email cuando tu pedido sea enviado.<br>
-                    ¿Preguntas? <a href="${siteUrl}/contacto" style="color: ${BRAND_COLORS.navy}; text-decoration: underline;">Contáctanos</a>
+                    ¿Preguntas? <a href="${siteUrl}/sobre-nosotros" style="color: ${BRAND_COLORS.navy}; text-decoration: underline;">Contáctanos</a>
                   </p>
                 </td>
               </tr>
@@ -349,7 +349,7 @@ export async function sendShippingNotificationEmail(data: {
 
                   <p style="color: #6b7280; font-size: 15px; text-align: center; margin: 30px 0 0 0; line-height: 1.6;">
                     Te avisaremos cuando llegue a su destino.<br>
-                    ¿Preguntas? <a href="${siteUrl}/contacto" style="color: ${BRAND_COLORS.navy}; text-decoration: underline;">Contáctanos</a>
+                    ¿Preguntas? <a href="${siteUrl}/sobre-nosotros" style="color: ${BRAND_COLORS.navy}; text-decoration: underline;">Contáctanos</a>
                   </p>
                 </td>
               </tr>
@@ -480,7 +480,7 @@ export async function sendDeliveryConfirmationEmail(data: {
 
                   <p style="color: #6b7280; font-size: 15px; text-align: center; margin: 30px 0 0 0; line-height: 1.6;">
                     ¡Gracias por confiar en Vantage! 💙<br>
-                    <a href="${siteUrl}/contacto" style="color: ${BRAND_COLORS.navy}; text-decoration: underline;">Contactar Soporte</a>
+                    <a href="${siteUrl}/sobre-nosotros" style="color: ${BRAND_COLORS.navy}; text-decoration: underline;">Contactar Soporte</a>
                   </p>
                 </td>
               </tr>

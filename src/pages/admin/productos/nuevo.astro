@@ -238,6 +238,16 @@ if (Astro.request.method === "POST") {
                         />
                     </div>
 
+                    <!-- Tip de reorden -->
+                    <div id="reorder-tip" class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg hidden">
+                        <p class="text-sm text-blue-800 flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span><strong>Arrastra las imágenes</strong> para reordenar. La primera imagen será la principal.</span>
+                        </p>
+                    </div>
+
                     <!-- Image Previews -->
                     <div
                         id="image-previews"
@@ -508,28 +518,36 @@ if (Astro.request.method === "POST") {
     function updatePreviews() {
         if (!previewsContainer) return;
 
+        const reorderTip = document.getElementById('reorder-tip');
+        const hasImages = uploadedImages.length > 0;
+        
+        previewsContainer.classList.toggle('hidden', !hasImages);
+        reorderTip?.classList.toggle('hidden', !hasImages);
         previewsContainer.innerHTML = "";
-        previewsContainer.classList.toggle(
-            "hidden",
-            uploadedImages.length === 0,
-        );
 
         uploadedImages.forEach((url, index) => {
             const div = document.createElement("div");
             div.className =
-                "relative aspect-square rounded-xl overflow-hidden bg-surface-tertiary group";
+                "relative aspect-square rounded-xl overflow-hidden bg-surface-tertiary group cursor-move";
+            div.setAttribute('draggable', 'true');
             div.innerHTML = `
-        <img src="${url}" alt="Preview ${index + 1}" class="w-full h-full object-cover" />
+        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors pointer-events-none"></div>
+        <div class="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+            <svg class="w-5 h-5 text-white drop-shadow-lg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16" />
+            </svg>
+        </div>
+        <img src="${url}" alt="Preview ${index + 1}" class="w-full h-full object-cover pointer-events-none" />
         <button 
           type="button"
-          class="absolute top-2 right-2 p-1.5 bg-status-error text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+          class="absolute top-2 right-2 p-1.5 bg-status-error text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-10"
           data-index="${index}"
         >
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
-        ${index === 0 ? '<span class="absolute bottom-2 left-2 px-2 py-1 bg-brand-navy text-white text-xs rounded">Principal</span>' : ""}
+        ${index === 0 ? '<span class="absolute bottom-2 left-2 px-2 py-1 bg-brand-navy text-white text-xs rounded font-semibold">⭐ Principal</span>' : ""}
       `;
 
             const removeBtn = div.querySelector("button");
@@ -539,7 +557,94 @@ if (Astro.request.method === "POST") {
                 imagesInput.value = JSON.stringify(uploadedImages);
             });
 
+            // Configurar drag & drop
+            setupImageDragAndDrop(div);
+
             previewsContainer.appendChild(div);
         });
+    }
+
+    // ====== DRAG & DROP PARA REORDENAR IMÁGENES ======
+    let draggedElement: HTMLElement | null = null;
+    let draggedIndex = -1;
+
+    function setupImageDragAndDrop(imageDiv: HTMLElement) {
+        imageDiv.addEventListener('dragstart', handleDragStart);
+        imageDiv.addEventListener('dragend', handleDragEnd);
+        imageDiv.addEventListener('dragover', handleDragOver);
+        imageDiv.addEventListener('drop', handleDrop);
+        imageDiv.addEventListener('dragenter', handleDragEnter);
+        imageDiv.addEventListener('dragleave', handleDragLeave);
+    }
+
+    function handleDragStart(e: DragEvent) {
+        draggedElement = (e.target as HTMLElement).closest('.cursor-move');
+        if (!draggedElement || !previewsContainer) return;
+        
+        const previews = Array.from(previewsContainer.querySelectorAll('.cursor-move'));
+        draggedIndex = previews.indexOf(draggedElement);
+        
+        draggedElement.style.opacity = '0.4';
+        if (e.dataTransfer) {
+            e.dataTransfer.effectAllowed = 'move';
+        }
+    }
+
+    function handleDragEnd(e: DragEvent) {
+        if (draggedElement) {
+            draggedElement.style.opacity = '';
+        }
+        
+        // Limpiar estilos de todos los elementos
+        const previews = previewsContainer?.querySelectorAll('.cursor-move');
+        previews?.forEach(preview => {
+            preview.classList.remove('border-2', 'border-brand-navy', 'scale-105');
+        });
+        
+        draggedElement = null;
+        draggedIndex = -1;
+    }
+
+    function handleDragOver(e: DragEvent) {
+        e.preventDefault();
+        if (e.dataTransfer) {
+            e.dataTransfer.dropEffect = 'move';
+        }
+    }
+
+    function handleDragEnter(e: DragEvent) {
+        const targetElement = (e.target as HTMLElement).closest('.cursor-move');
+        if (targetElement && targetElement !== draggedElement) {
+            targetElement.classList.add('border-2', 'border-brand-navy', 'scale-105');
+        }
+    }
+
+    function handleDragLeave(e: DragEvent) {
+        const targetElement = (e.target as HTMLElement).closest('.cursor-move');
+        const relatedTarget = e.relatedTarget as Node;
+        if (targetElement && !targetElement.contains(relatedTarget)) {
+            targetElement.classList.remove('border-2', 'border-brand-navy', 'scale-105');
+        }
+    }
+
+    function handleDrop(e: DragEvent) {
+        e.stopPropagation();
+        e.preventDefault();
+        
+        const targetElement = (e.target as HTMLElement).closest('.cursor-move');
+        if (!targetElement || !draggedElement || !previewsContainer || targetElement === draggedElement) {
+            return;
+        }
+        
+        const previews = Array.from(previewsContainer.querySelectorAll('.cursor-move'));
+        const targetIndex = previews.indexOf(targetElement);
+        
+        // Reordenar array de imágenes
+        const [movedItem] = uploadedImages.splice(draggedIndex, 1);
+        uploadedImages.splice(targetIndex, 0, movedItem);
+        
+        // Actualizar input hidden y vista
+        imagesInput.value = JSON.stringify(uploadedImages);
+        updatePreviews();
     }
 </script>
