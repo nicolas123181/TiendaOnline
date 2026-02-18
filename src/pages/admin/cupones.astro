@@ -413,7 +413,8 @@ function getCouponStatus(coupon: any): { text: string; class: string } {
                                                 <form
                                                     method="POST"
                                                     style="display: inline;"
-                                                    onsubmit="return confirm('¿Seguro que deseas eliminar este cupón?')"
+                                                    class="confirm-submit-form"
+                                                    data-confirm-message="¿Seguro que deseas eliminar este cupón?"
                                                 >
                                                     <input
                                                         type="hidden"
@@ -933,5 +934,31 @@ function getCouponStatus(coupon: any): { text: string; class: string } {
             discountValue.removeAttribute("max");
             discountValue.placeholder = "Ej: 10";
         }
+    });
+
+    document.querySelectorAll(".confirm-submit-form").forEach((formEl) => {
+        const form = formEl as HTMLFormElement;
+        form.addEventListener("submit", async (e) => {
+            if (form.dataset.confirmed === "true") {
+                delete form.dataset.confirmed;
+                return;
+            }
+
+            e.preventDefault();
+            const message =
+                form.getAttribute("data-confirm-message") ||
+                "¿Confirmar esta acción?";
+
+            const confirmed =
+                (await (window as any).vantageConfirm?.(message, {
+                    title: "Confirmar eliminación",
+                    confirmText: "Eliminar",
+                })) ?? confirm(message);
+
+            if (confirmed) {
+                form.dataset.confirmed = "true";
+                form.submit();
+            }
+        });
     });
 </script>

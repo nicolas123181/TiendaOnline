@@ -77,7 +77,6 @@ if (Astro.request.method === "POST") {
     } catch (e) {
         error =
             "Ha ocurrido un error inesperado. Por favor, inténtalo de nuevo.";
-        console.error(e);
     }
 }
 ---
@@ -485,7 +484,6 @@ if (Astro.request.method === "POST") {
             updatePreviews();
             imagesInput.value = JSON.stringify(uploadedImages);
         } catch (error) {
-            console.error("Error uploading image:", error);
             alert(
                 `Error al subir ${file.name}: ${error instanceof Error ? error.message : "Error desconocido"}`,
             );

@@ -268,7 +268,8 @@ const categoriesWithCount =
                                     <form
                                         method="POST"
                                         style="display: inline;"
-                                        onsubmit="return confirm('¿Seguro que deseas eliminar esta categoría?')"
+                                        class="confirm-submit-form"
+                                        data-confirm-message="¿Seguro que deseas eliminar esta categoría?"
                                     >
                                         <input
                                             type="hidden"
@@ -662,6 +663,32 @@ const categoriesWithCount =
         });
     });
 
+    document.querySelectorAll(".confirm-submit-form").forEach((formEl) => {
+        const form = formEl as HTMLFormElement;
+        form.addEventListener("submit", async (e) => {
+            if (form.dataset.confirmed === "true") {
+                delete form.dataset.confirmed;
+                return;
+            }
+
+            e.preventDefault();
+            const message =
+                form.getAttribute("data-confirm-message") ||
+                "¿Confirmar esta acción?";
+
+            const confirmed =
+                (await (window as any).vantageConfirm?.(message, {
+                    title: "Confirmar eliminación",
+                    confirmText: "Eliminar",
+                })) ?? confirm(message);
+
+            if (confirmed) {
+                form.dataset.confirmed = "true";
+                form.submit();
+            }
+        });
+    });
+
     // ---- Overlay de carga (bloquea toda interacción) ----
     function showUploadingIndicator() {
         const indicator = document.createElement("div");
@@ -740,7 +767,6 @@ const categoriesWithCount =
             renderPreview(previewEl, payload.url || "");
         } catch (err: unknown) {
             const error = err instanceof Error ? err : new Error(String(err));
-            console.error("Upload error:", error);
             if (previewEl) previewEl.textContent = "Error";
             alert("Error al subir la imagen: " + (error.message || "Error desconocido"));
         } finally {

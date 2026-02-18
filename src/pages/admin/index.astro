@@ -772,7 +772,10 @@ function getStockBadgeClass(stock: number): string {
                 alert("[Error] " + (result.error || "Error desconocido"));
             }
         } catch (error) {
-            console.error("Error checking stock:", error);
+            (window as any).vantageNotify?.(
+                "Error al verificar el inventario.",
+                "error",
+            );
             alert("[Error] Error al verificar el inventario");
         } finally {
             btn.disabled = false;
@@ -800,7 +803,10 @@ function getStockBadgeClass(stock: number): string {
             const data = await response.json();
 
             if (!data.success) {
-                console.error("Error loading analytics:", data.error);
+                (window as any).vantageNotify?.(
+                    "No se pudieron cargar las analíticas del dashboard.",
+                    "warning",
+                );
                 return;
             }
 
@@ -919,7 +925,10 @@ function getStockBadgeClass(stock: number): string {
                 }
             }
         } catch (error) {
-            console.error("Error loading analytics:", error);
+            (window as any).vantageNotify?.(
+                "Error de conexión al cargar analíticas.",
+                "error",
+            );
         }
     }
 

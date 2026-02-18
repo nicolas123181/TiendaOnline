@@ -104,14 +104,14 @@ export const prerender = false;
                 .order('created_at', { ascending: false });
 
             if (wishlistError) {
-                console.error('Error loading wishlist:', wishlistError);
+                (window as any).vantageNotify?.('No se pudieron cargar tus favoritos.', 'error');
                 renderError();
                 return;
             }
 
             renderWishlist(wishlistData || []);
         } catch (error) {
-            console.error('Error loading wishlist:', error);
+            (window as any).vantageNotify?.('Error de conexión al cargar favoritos.', 'error');
             renderError();
         }
     }
@@ -264,11 +264,11 @@ export const prerender = false;
                 }
             } else {
                 button.classList.remove('opacity-50', 'pointer-events-none');
-                alert('Error al eliminar de favoritos');
+                (window as any).vantageNotify?.('No se pudo eliminar de favoritos.', 'error');
             }
         } catch (e) {
             button.classList.remove('opacity-50', 'pointer-events-none');
-            alert('Error de conexión');
+            (window as any).vantageNotify?.('Error de conexión. Inténtalo de nuevo.', 'error');
         }
     }
 

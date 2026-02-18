@@ -194,8 +194,10 @@ const error = Astro.url.searchParams.get("error");
         });
 
         if (error) {
-            console.error("Google register error:", error);
-            alert("Error al registrarse con Google");
+            (window as any).vantageNotify?.(
+                "No se pudo iniciar el registro con Google. Inténtalo de nuevo.",
+                "error",
+            );
         }
     });
 
@@ -213,7 +215,10 @@ const error = Astro.url.searchParams.get("error");
         const confirmPassword = formData.get("confirmPassword") as string;
 
         if (password !== confirmPassword) {
-            alert("Las contraseñas no coinciden");
+            (window as any).vantageNotify?.(
+                "Las contraseñas no coinciden.",
+                "warning",
+            );
             return;
         }
 
@@ -253,7 +258,10 @@ const error = Astro.url.searchParams.get("error");
                 window.location.href = "/perfil";
             }
         } catch (error: any) {
-            alert(error.message || "Error al crear cuenta");
+            (window as any).vantageNotify?.(
+                error.message || "No se pudo crear la cuenta. Inténtalo de nuevo.",
+                "error",
+            );
             submitBtn.disabled = false;
             submitBtn.textContent = "Crear Cuenta";
         }

@@ -192,7 +192,10 @@ export const prerender = false;
                 window.location.href = "/login";
             }, 2000);
         } catch (error: any) {
-            console.error("Reset password error:", error);
+            (window as any).vantageNotify?.(
+                "No se pudo actualizar la contraseña. Inténtalo de nuevo.",
+                "error",
+            );
             errorMessage.textContent =
                 error.message || "Error al restablecer la contraseña";
             errorMessage.classList.remove("hidden");

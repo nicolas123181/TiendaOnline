@@ -450,7 +450,14 @@ const enrichedProducts = products.map((p) => ({
             const id = btn.getAttribute("data-id");
             const name = btn.getAttribute("data-name");
 
-            if (confirm(`¿Estás seguro de que quieres eliminar "${name}"?`)) {
+            const confirmMessage = `¿Estás seguro de que quieres eliminar "${name}"?`;
+            const confirmed =
+                (await (window as any).vantageConfirm?.(confirmMessage, {
+                    title: "Eliminar producto",
+                    confirmText: "Eliminar",
+                })) ?? confirm(confirmMessage);
+
+            if (confirmed) {
                 // Aquí iría la lógica de eliminación con Supabase
                 alert("Funcionalidad de eliminación - Implementar con API");
             }

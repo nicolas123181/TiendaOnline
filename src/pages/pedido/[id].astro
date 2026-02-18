@@ -370,7 +370,10 @@ const orderId = Astro.params.id;
                 .single();
 
             if (error || !order) {
-                console.error("Order error:", error);
+                (window as any).vantageNotify?.(
+                    "No pudimos encontrar ese pedido.",
+                    "warning",
+                );
                 loadingState?.classList.add("hidden");
                 notFoundState?.classList.remove("hidden");
                 return;
@@ -496,10 +499,6 @@ const orderId = Astro.params.id;
                 "cancel-order-section",
             );
             if (cancelSection) {
-                console.log(
-                    "Checking order status for cancellation:",
-                    order.status,
-                );
                 if (order.status === "paid") {
                     cancelSection.classList.remove("hidden");
                 } else {
@@ -510,7 +509,10 @@ const orderId = Astro.params.id;
             // Load invoice info
             await loadInvoiceInfo();
         } catch (error) {
-            console.error("Error loading order:", error);
+            (window as any).vantageNotify?.(
+                "No se pudo cargar la información del pedido.",
+                "error",
+            );
             loadingState?.classList.add("hidden");
             notFoundState?.classList.remove("hidden");
         }
@@ -533,7 +535,10 @@ const orderId = Astro.params.id;
                 }
             }
         } catch (error) {
-            console.error("Error loading invoice info:", error);
+            (window as any).vantageNotify?.(
+                "No se pudo cargar la información de la factura.",
+                "warning",
+            );
         }
     }
 
@@ -548,10 +553,14 @@ const orderId = Astro.params.id;
     // Handler del botón de cancelación
     const cancelOrderBtn = document.getElementById("cancel-order-btn");
     cancelOrderBtn?.addEventListener("click", async () => {
-        const confirmed = confirm(
-            "⚠️ ¿Estás seguro de que deseas cancelar este pedido?\n\n" +
-                "Esta acción no se puede deshacer. El stock de los productos será restaurado automáticamente.",
-        );
+        const confirmMessage =
+            "¿Estás seguro de que deseas cancelar este pedido?\n\n" +
+            "Esta acción no se puede deshacer. El stock de los productos será restaurado automáticamente.";
+        const confirmed =
+            (await (window as any).vantageConfirm?.(confirmMessage, {
+                title: "Cancelar pedido",
+                confirmText: "Sí, cancelar",
+            })) ?? confirm(confirmMessage);
 
         if (!confirmed) return;
 
@@ -581,33 +590,38 @@ const orderId = Astro.params.id;
                     result = JSON.parse(text);
                 } catch (e) {
                     // If not JSON, it might be an HTML error page (404/500)
-                    console.error("Non-JSON response:", text);
                     throw new Error(
                         `Server returned non-JSON response: ${response.status} ${response.statusText}`,
                     );
                 }
 
                 if (result.success) {
-                    alert("✅ " + result.message);
+                    (window as any).vantageNotify?.(
+                        result.message || "Pedido cancelado correctamente.",
+                        "success",
+                    );
                     window.location.reload();
                 } else {
-                    alert(
-                        "❌ " + (result.error || "Error al cancelar el pedido"),
+                    (window as any).vantageNotify?.(
+                        result.error || "No se pudo cancelar el pedido.",
+                        "error",
                     );
                     btn.disabled = false;
                     btn.innerHTML = originalText;
                 }
             } catch (error) {
-                console.error("Cancel parsing error:", error);
-                alert(
-                    `❌ Error del servidor (${response.status}): No se pudo procesar la respuesta.`,
+                (window as any).vantageNotify?.(
+                    `Error del servidor (${response.status}). Inténtalo de nuevo.`,
+                    "error",
                 );
                 btn.disabled = false;
                 btn.innerHTML = originalText;
             }
         } catch (error) {
-            console.error("Cancel order error:", error);
-            alert("❌ Error de conexión. Inténtalo de nuevo.");
+            (window as any).vantageNotify?.(
+                "Error de conexión. Inténtalo de nuevo.",
+                "error",
+            );
             btn.disabled = false;
             btn.innerHTML = originalText;
         }

@@ -175,7 +175,6 @@ if (Astro.request.method === "POST") {
         }
     } catch (e) {
         error = "Ha ocurrido un error inesperado.";
-        console.error(e);
     }
 }
 
@@ -842,7 +841,6 @@ const salePriceInEuros = product.sale_price
             imagesInput.value = JSON.stringify(uploadedImages);
             addImagePreview(result.url, uploadedImages.length - 1);
         } catch (error) {
-            console.error("Error uploading image:", error);
             alert(
                 `Error al subir ${file.name}: ${error instanceof Error ? error.message : "Error desconocido"}`,
             );
@@ -1025,13 +1023,25 @@ const salePriceInEuros = product.sale_price
     });
 
     // Delete confirmation
-    deleteBtn?.addEventListener("click", (e) => {
-        if (
-            !confirm(
-                "¿Estás seguro de que quieres eliminar este producto? Esta acción no se puede deshacer.",
-            )
-        ) {
-            e.preventDefault();
+    deleteBtn?.addEventListener("click", async (e) => {
+        e.preventDefault();
+        const confirmMessage =
+            "¿Estás seguro de que quieres eliminar este producto? Esta acción no se puede deshacer.";
+        const confirmFn = window.vantageConfirm;
+
+        const confirmed =
+            typeof confirmFn === "function"
+                ? await confirmFn(confirmMessage, {
+                      title: "Eliminar producto",
+                      confirmText: "Eliminar",
+                  })
+                : confirm(confirmMessage);
+
+        if (confirmed) {
+            const deleteForm = deleteBtn.closest("form");
+            if (deleteForm instanceof HTMLFormElement) {
+                deleteForm.submit();
+            }
         }
     });
 

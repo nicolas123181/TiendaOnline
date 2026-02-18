@@ -30,8 +30,6 @@ if (sessionId) {
                 try {
                     const orderData = JSON.parse(orderDataStr);
                     
-                    console.log(`💳 Payment confirmed, creating order...`);
-                    
                     const confirmResponse = await fetch(`${Astro.url.origin}/api/confirm-payment`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -45,19 +43,15 @@ if (sessionId) {
                     
                     if (confirmResult.success) {
                         orderId = confirmResult.orderId?.toString() || '';
-                        console.log(`✅ Order created: #${orderId}`);
-                    } else {
-                        console.error('❌ Error creating order:', confirmResult.error);
                     }
                 } catch (e) {
-                    console.error('❌ Error parsing order data:', e);
+                    paymentStatus = 'error';
                 }
             }
         } else {
             paymentStatus = 'pending';
         }
     } catch (error) {
-        console.error('Error retrieving session:', error);
         paymentStatus = 'error';
     }
 }

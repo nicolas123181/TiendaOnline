@@ -59,6 +59,193 @@ const canonicalURL = new URL(
   </head>
   <body class="font-sans text-text-primary bg-surface-primary antialiased">
     <slot />
+    <script is:inline>
+      (() => {
+        if (typeof window === "undefined") return;
+
+        const ensureContainer = () => {
+          let container = document.getElementById("vantage-toast-container");
+          if (!container) {
+            container = document.createElement("div");
+            container.id = "vantage-toast-container";
+            container.setAttribute("aria-live", "polite");
+            container.setAttribute("aria-atomic", "true");
+            document.body.appendChild(container);
+          }
+          return container;
+        };
+
+        const normalizeMessage = (message) => {
+          const raw = String(message || "").trim();
+          const lowered = raw.toLowerCase();
+
+          if (!raw) return "No se pudo completar la acción.";
+          if (lowered.includes("failed to fetch") || lowered.includes("network")) {
+            return "No hay conexión en este momento. Revisa internet e inténtalo de nuevo.";
+          }
+          if (lowered.includes("non-json") || lowered.includes("unexpected token")) {
+            return "El servidor devolvió una respuesta no válida. Inténtalo de nuevo en unos segundos.";
+          }
+          if (lowered.includes("jwt") || lowered.includes("unauthorized") || lowered.includes("forbidden")) {
+            return "Tu sesión ha caducado o no tienes permisos. Vuelve a iniciar sesión.";
+          }
+          return raw;
+        };
+
+        const inferType = (message, requestedType) => {
+          if (requestedType) return requestedType;
+          const msg = String(message || "").toLowerCase();
+          if (msg.includes("✅") || msg.includes("éxito") || msg.includes("correctamente") || msg.includes("completado")) return "success";
+          if (msg.includes("⚠") || msg.includes("aviso") || msg.includes("atención")) return "warning";
+          if (msg.includes("❌") || msg.includes("error") || msg.includes("fall") || msg.includes("invalid")) return "error";
+          return "info";
+        };
+
+        const showToast = (message, type = "info", options = {}) => {
+          const container = ensureContainer();
+          const safeType = inferType(message, type);
+          const duration = Math.max(2500, Number(options.duration || 5000));
+          const cleanMessage = normalizeMessage(message);
+
+          const toast = document.createElement("div");
+          toast.className = `vantage-toast vantage-toast--${safeType}`;
+
+          const icon = document.createElement("span");
+          icon.className = "vantage-toast__icon";
+          icon.textContent =
+            safeType === "success"
+              ? "✓"
+              : safeType === "error"
+                ? "!"
+                : safeType === "warning"
+                  ? "⚠"
+                  : "i";
+
+          const text = document.createElement("span");
+          text.className = "vantage-toast__text";
+          text.textContent = cleanMessage;
+
+          const closeBtn = document.createElement("button");
+          closeBtn.className = "vantage-toast__close";
+          closeBtn.type = "button";
+          closeBtn.setAttribute("aria-label", "Cerrar mensaje");
+          closeBtn.textContent = "×";
+
+          const progress = document.createElement("span");
+          progress.className = "vantage-toast__progress";
+
+          toast.appendChild(icon);
+          toast.appendChild(text);
+          toast.appendChild(closeBtn);
+          toast.appendChild(progress);
+          container.appendChild(toast);
+
+          const removeToast = () => {
+            toast.classList.remove("is-visible");
+            toast.classList.add("is-leaving");
+            setTimeout(() => toast.remove(), 220);
+          };
+
+          closeBtn.addEventListener("click", removeToast);
+
+          requestAnimationFrame(() => {
+            toast.classList.add("is-visible");
+            progress.style.transitionDuration = `${duration}ms`;
+            requestAnimationFrame(() => {
+              progress.style.transform = "scaleX(0)";
+            });
+          });
+
+          setTimeout(removeToast, duration);
+        };
+
+        window.vantageNotify = (message, type, options) => {
+          showToast(message, type, options);
+        };
+        window.showClientMessage = window.vantageNotify;
+
+        const ensureConfirmModal = () => {
+          let overlay = document.getElementById("vantage-confirm-overlay");
+          if (overlay) return overlay;
+
+          overlay = document.createElement("div");
+          overlay.id = "vantage-confirm-overlay";
+          overlay.className = "vantage-confirm-overlay";
+          overlay.innerHTML = `
+            <div class="vantage-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="vantage-confirm-title">
+              <h3 id="vantage-confirm-title" class="vantage-confirm-title">Confirmar acción</h3>
+              <p class="vantage-confirm-message" id="vantage-confirm-message"></p>
+              <div class="vantage-confirm-actions">
+                <button type="button" class="vantage-confirm-btn vantage-confirm-cancel" id="vantage-confirm-cancel">Cancelar</button>
+                <button type="button" class="vantage-confirm-btn vantage-confirm-ok" id="vantage-confirm-ok">Confirmar</button>
+              </div>
+            </div>
+          `;
+          document.body.appendChild(overlay);
+          return overlay;
+        };
+
+        window.vantageConfirm = (message, options = {}) => {
+          return new Promise((resolve) => {
+            const overlay = ensureConfirmModal();
+            const messageEl = overlay.querySelector("#vantage-confirm-message");
+            const titleEl = overlay.querySelector("#vantage-confirm-title");
+            const cancelBtn = overlay.querySelector("#vantage-confirm-cancel");
+            const okBtn = overlay.querySelector("#vantage-confirm-ok");
+
+            if (messageEl) messageEl.textContent = normalizeMessage(message);
+            if (titleEl && options.title) titleEl.textContent = String(options.title);
+            if (okBtn && options.confirmText) okBtn.textContent = String(options.confirmText);
+            if (cancelBtn && options.cancelText) cancelBtn.textContent = String(options.cancelText);
+
+            overlay.classList.add("is-open");
+            document.body.classList.add("vantage-modal-open");
+            setTimeout(() => okBtn?.focus(), 20);
+
+            const close = (result) => {
+              overlay.classList.remove("is-open");
+              document.body.classList.remove("vantage-modal-open");
+              overlay.removeEventListener("click", onOverlayClick);
+              document.removeEventListener("keydown", onKeydown);
+              cancelBtn?.removeEventListener("click", onCancel);
+              okBtn?.removeEventListener("click", onConfirm);
+
+              if (titleEl) titleEl.textContent = "Confirmar acción";
+              if (okBtn) okBtn.textContent = "Confirmar";
+              if (cancelBtn) cancelBtn.textContent = "Cancelar";
+              resolve(result);
+            };
+
+            const onCancel = () => close(false);
+            const onConfirm = () => close(true);
+            const onOverlayClick = (event) => {
+              if (event.target === overlay) close(false);
+            };
+            const onKeydown = (event) => {
+              if (event.key === "Escape") close(false);
+            };
+
+            cancelBtn?.addEventListener("click", onCancel);
+            okBtn?.addEventListener("click", onConfirm);
+            overlay.addEventListener("click", onOverlayClick);
+            document.addEventListener("keydown", onKeydown);
+          });
+        };
+
+        const nativeAlert = window.alert.bind(window);
+        window.alert = (message) => {
+          try {
+            showToast(message, inferType(message), { duration: 5500 });
+          } catch {
+            nativeAlert(message);
+          }
+        };
+
+        window.addEventListener("unhandledrejection", () => {
+          showToast("Se produjo un error inesperado. Inténtalo de nuevo.", "error");
+        });
+      })();
+    </script>
   </body>
 </html>
 
@@ -108,5 +295,189 @@ const canonicalURL = new URL(
   img {
     max-width: 100%;
     height: auto;
+  }
+
+  #vantage-toast-container {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    width: min(92vw, 420px);
+    pointer-events: none;
+  }
+
+  .vantage-toast {
+    position: relative;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 0.7rem;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-left-width: 4px;
+    border-radius: 12px;
+    padding: 0.8rem 0.9rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+    color: #111827;
+    transform: translateY(-10px) scale(0.98);
+    opacity: 0;
+    transition: transform 0.22s ease, opacity 0.22s ease;
+    overflow: hidden;
+    pointer-events: auto;
+  }
+
+  .vantage-toast.is-visible {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+
+  .vantage-toast.is-leaving {
+    transform: translateY(-6px) scale(0.98);
+    opacity: 0;
+  }
+
+  .vantage-toast--success { border-left-color: #10b981; }
+  .vantage-toast--error { border-left-color: #ef4444; }
+  .vantage-toast--warning { border-left-color: #f59e0b; }
+  .vantage-toast--info { border-left-color: #3b82f6; }
+
+  .vantage-toast__icon {
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.8rem;
+    background: #f3f4f6;
+    color: #111827;
+  }
+
+  .vantage-toast--success .vantage-toast__icon { background: #d1fae5; color: #065f46; }
+  .vantage-toast--error .vantage-toast__icon { background: #fee2e2; color: #991b1b; }
+  .vantage-toast--warning .vantage-toast__icon { background: #fef3c7; color: #92400e; }
+  .vantage-toast--info .vantage-toast__icon { background: #dbeafe; color: #1e40af; }
+
+  .vantage-toast__text {
+    font-size: 0.9rem;
+    line-height: 1.35;
+  }
+
+  .vantage-toast__close {
+    border: 0;
+    background: transparent;
+    color: #6b7280;
+    font-size: 1.15rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0.1rem 0.2rem;
+  }
+
+  .vantage-toast__close:hover {
+    color: #111827;
+  }
+
+  .vantage-toast__progress {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    height: 3px;
+    background: rgba(17, 24, 39, 0.12);
+    transform-origin: left center;
+    transform: scaleX(1);
+    transition-property: transform;
+    transition-timing-function: linear;
+  }
+
+  @media (max-width: 640px) {
+    #vantage-toast-container {
+      top: 0.75rem;
+      right: 0.75rem;
+      left: 0.75rem;
+      width: auto;
+    }
+  }
+
+  .vantage-modal-open {
+    overflow: hidden;
+  }
+
+  .vantage-confirm-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    z-index: 10000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+  }
+
+  .vantage-confirm-overlay.is-open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .vantage-confirm-dialog {
+    width: min(92vw, 430px);
+    background: #ffffff;
+    border-radius: 14px;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.2);
+    padding: 1rem;
+    transform: translateY(10px) scale(0.98);
+    transition: transform 0.2s ease;
+  }
+
+  .vantage-confirm-overlay.is-open .vantage-confirm-dialog {
+    transform: translateY(0) scale(1);
+  }
+
+  .vantage-confirm-title {
+    margin: 0;
+    color: #111827;
+    font-size: 1.05rem;
+    font-weight: 700;
+  }
+
+  .vantage-confirm-message {
+    margin: 0.6rem 0 0;
+    color: #374151;
+    white-space: pre-line;
+    line-height: 1.45;
+    font-size: 0.94rem;
+  }
+
+  .vantage-confirm-actions {
+    margin-top: 1rem;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.6rem;
+  }
+
+  .vantage-confirm-btn {
+    border: 0;
+    border-radius: 10px;
+    padding: 0.55rem 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .vantage-confirm-cancel {
+    background: #f3f4f6;
+    color: #374151;
+  }
+
+  .vantage-confirm-ok {
+    background: #1a2744;
+    color: #ffffff;
   }
 </style>

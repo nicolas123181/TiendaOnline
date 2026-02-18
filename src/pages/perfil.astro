@@ -611,8 +611,6 @@ export const prerender = false;
                     error,
                 } = await supabase.auth.getSession();
 
-                console.log("Session check:", session ? "Found" : "Not found");
-
                 if (!session) {
                     loadingState?.classList.add("hidden");
                     notLoggedState?.classList.remove("hidden");
@@ -645,7 +643,10 @@ export const prerender = false;
                 // Load orders
                 await loadOrders(userEmail);
             } catch (error) {
-                console.error("Error loading profile:", error);
+                (window as any).vantageNotify?.(
+                    "No se pudo cargar tu perfil en este momento.",
+                    "error",
+                );
                 loadingState?.classList.add("hidden");
                 notLoggedState?.classList.remove("hidden");
             }
@@ -665,7 +666,10 @@ export const prerender = false;
                     document.getElementById("orders-summary")!;
 
                 if (error) {
-                    console.error("Error loading orders:", error);
+                    (window as any).vantageNotify?.(
+                        "No se pudieron cargar tus pedidos.",
+                        "error",
+                    );
                     ordersContainer.innerHTML =
                         '<div class="p-6 text-center text-red-600">Error al cargar pedidos</div>';
                     return;
@@ -842,7 +846,10 @@ export const prerender = false;
                     })
                     .join("");
             } catch (error) {
-                console.error("Error loading orders:", error);
+                (window as any).vantageNotify?.(
+                    "No se pudieron cargar tus pedidos.",
+                    "error",
+                );
             }
         }
 
@@ -944,7 +951,10 @@ export const prerender = false;
                         );
                 }
             } catch (error) {
-                console.error("Error loading shipping address:", error);
+                (window as any).vantageNotify?.(
+                    "No se pudo cargar la dirección de envío.",
+                    "warning",
+                );
                 container.innerHTML = `
                 <div class="text-center py-6 text-red-600">
                     <p>Error al cargar la dirección de envío</p>
@@ -1090,9 +1100,9 @@ export const prerender = false;
 
                 await loadShippingAddress();
             } catch (error) {
-                console.error("Error saving shipping address:", error);
-                alert(
-                    "Error al guardar la dirección. Por favor, intenta de nuevo.",
+                (window as any).vantageNotify?.(
+                    "No se pudo guardar la dirección. Inténtalo de nuevo.",
+                    "error",
                 );
             }
         }
@@ -1183,7 +1193,10 @@ export const prerender = false;
                     messageEl!.classList.remove("hidden");
                     setTimeout(() => messageEl!.classList.add("hidden"), 5000);
                 } catch (error) {
-                    console.error("Newsletter error:", error);
+                    (window as any).vantageNotify?.(
+                        "No se pudo actualizar la suscripción al newsletter.",
+                        "error",
+                    );
                     toggle.checked = !toggle.checked;
                     messageEl!.textContent =
                         "Error al actualizar la suscripción";
@@ -1316,12 +1329,18 @@ export const prerender = false;
                 });
 
             if (selectedItems.length === 0) {
-                alert("Selecciona al menos un producto para devolver");
+                (window as any).vantageNotify?.(
+                    "Selecciona al menos un producto para devolver.",
+                    "warning",
+                );
                 return;
             }
 
             if (!reason) {
-                alert("Selecciona un motivo para la devolución");
+                (window as any).vantageNotify?.(
+                    "Selecciona un motivo para la devolución.",
+                    "warning",
+                );
                 return;
             }
 
@@ -1356,15 +1375,19 @@ export const prerender = false;
 
                 if (result.success) {
                     returnModal?.classList.add("hidden");
-                    alert(
-                        `✅ ${result.message}\n\nNúmero de devolución: ${result.returnNumber}`,
+                    (window as any).vantageNotify?.(
+                        `${result.message} · Nº devolución: ${result.returnNumber}`,
+                        "success",
                     );
                     window.location.reload();
                 } else {
                     throw new Error(result.error);
                 }
             } catch (error) {
-                alert("Error: " + (error as Error).message);
+                (window as any).vantageNotify?.(
+                    (error as Error).message || "No se pudo procesar la devolución.",
+                    "error",
+                );
             } finally {
                 submitBtn.disabled = false;
                 submitBtn.textContent = "Solicitar Devolución";

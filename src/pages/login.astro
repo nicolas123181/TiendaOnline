@@ -242,6 +242,7 @@ const message = Astro.url.searchParams.get("message");
     function showError(message: string) {
         errorContainer.textContent = message;
         errorContainer.classList.remove("hidden");
+        (window as any).vantageNotify?.(message, "error");
     }
 
     function hideError() {
@@ -289,10 +290,8 @@ const message = Astro.url.searchParams.get("message");
             // También hacer login en el cliente para que Supabase tenga la sesión
             await supabase.auth.signInWithPassword({ email, password });
 
-            console.log("Login successful, redirecting...");
             window.location.href = result.redirectTo || returnTo;
         } catch (error: any) {
-            console.error("Login error:", error);
             showError(error.message || "Error al iniciar sesión");
             submitBtn.disabled = false;
             submitBtn.textContent = "Iniciar Sesión";

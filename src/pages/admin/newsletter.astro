@@ -362,11 +362,15 @@ Puedes incluir:
                 form.querySelector("#content") as HTMLTextAreaElement
             ).value;
 
-            if (
-                !confirm(
-                    `¿Estás seguro de enviar este newsletter?\n\nAsunto: ${subject}\n\nEsta acción no se puede deshacer.`,
-                )
-            ) {
+            const confirmMessage =
+                `¿Estás seguro de enviar este newsletter?\n\nAsunto: ${subject}\n\nEsta acción no se puede deshacer.`;
+            const confirmed =
+                (await (window as any).vantageConfirm?.(confirmMessage, {
+                    title: "Confirmar envío",
+                    confirmText: "Enviar",
+                })) ?? confirm(confirmMessage);
+
+            if (!confirmed) {
                 return;
             }
 

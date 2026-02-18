@@ -12,7 +12,6 @@ const {
 } = await supabase.auth.getSession();
 
 if (error) {
-    console.error("Auth callback error:", error);
     return Astro.redirect("/login?error=" + encodeURIComponent(error.message));
 }
 
@@ -98,14 +97,12 @@ if (session) {
                     } = await supabase.auth.getSession();
 
                     if (error) {
-                        console.error("Session error:", error);
                         window.location.href =
                             "/login?error=" + encodeURIComponent(error.message);
                         return;
                     }
 
                     if (session) {
-                        console.log("Session found, redirecting to profile");
                         window.location.href = "/perfil";
                     } else {
                         // Intentar obtener sesión del hash
@@ -123,10 +120,6 @@ if (session) {
                                 });
 
                             if (sessionError) {
-                                console.error(
-                                    "Set session error:",
-                                    sessionError,
-                                );
                                 window.location.href =
                                     "/login?error=" +
                                     encodeURIComponent(sessionError.message);
@@ -134,14 +127,10 @@ if (session) {
                                 window.location.href = "/perfil";
                             }
                         } else {
-                            console.log(
-                                "No session found, redirecting to login",
-                            );
                             window.location.href = "/login";
                         }
                     }
                 } catch (err) {
-                    console.error("Callback error:", err);
                     window.location.href =
                         "/login?error=" +
                         encodeURIComponent("Error de autenticación");
