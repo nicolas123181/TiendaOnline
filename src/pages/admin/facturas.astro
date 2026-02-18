@@ -21,9 +21,18 @@ let query = supabase
 
 // Aplicar filtros
 if (searchQuery) {
-    query = query.or(
-        `invoice_number.ilike.%${searchQuery}%,customer_name.ilike.%${searchQuery}%,customer_email.ilike.%${searchQuery}%`
-    );
+    const normalizedSearch = searchQuery.trim().replace(/^#/, "");
+    const filters = [
+        `invoice_number.ilike.%${searchQuery}%`,
+        `customer_name.ilike.%${searchQuery}%`,
+        `customer_email.ilike.%${searchQuery}%`,
+    ];
+
+    if (/^\d+$/.test(normalizedSearch)) {
+        filters.push(`order_id.eq.${normalizedSearch}`);
+    }
+
+    query = query.or(filters.join(","));
 }
 
 if (statusFilter) {
@@ -127,7 +136,7 @@ function getStatusBadge(status: string): { text: string; class: string } {
                 <input
                     type="text"
                     name="q"
-                    placeholder="Buscar por nº factura, cliente o email..."
+                    placeholder="Buscar por nº factura, nº pedido, cliente o email..."
                     value={searchQuery}
                     class="search-input"
                 />

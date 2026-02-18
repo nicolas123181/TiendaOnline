@@ -1,6 +1,6 @@
 ---
 import AdminLayout from "../../layouts/AdminLayout.astro";
-import { getProducts, getCategories } from "../../lib/supabase";
+import { getProducts, getCategories, supabase } from "../../lib/supabase";
 import { formatPrice } from "../../lib/utils";
 
 // SSR protegido
@@ -15,6 +15,11 @@ const totalStock = products.reduce((sum, p) => sum + p.stock, 0);
 const lowStockProducts = products.filter((p) => p.stock > 0 && p.stock < 6);
 const outOfStockProducts = products.filter((p) => p.stock < 1);
 const featuredProducts = products.filter((p) => p.featured);
+
+const { count: lowStockSizesCount } = await supabase
+    .from("product_sizes")
+    .select("id", { count: "exact", head: true })
+    .lt("stock", 5);
 
 // Valor total del inventario
 const inventoryValue = products.reduce((sum, p) => sum + p.price * p.stock, 0);
@@ -309,7 +314,7 @@ function getStockBadgeClass(stock: number): string {
                         </svg>
                     </div>
                     {
-                        lowStockProducts.length > 0 && (
+                        (lowStockSizesCount || 0) > 0 && (
                             <span class="text-xs font-medium text-status-warning bg-status-warning-bg px-2 py-1 rounded-full">
                                 Atención
                             </span>
@@ -317,10 +322,10 @@ function getStockBadgeClass(stock: number): string {
                     }
                 </div>
                 <h3 class="text-2xl sm:text-3xl font-bold text-brand-navy">
-                    {lowStockProducts.length}
+                    {lowStockSizesCount || 0}
                 </h3>
                 <p class="text-sm text-text-muted mt-1">
-                    Productos con bajo stock
+                    Tallas con bajo stock
                 </p>
             </div>
 

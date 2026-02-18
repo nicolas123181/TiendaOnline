@@ -121,8 +121,8 @@ const { data: lowStockSizes } = await supabase
                                 <tr
                                     class={
                                         item.stock === 0
-                                            ? "critical"
-                                            : "warning"
+                                            ? "low-stock-critical"
+                                            : "low-stock-warning"
                                     }
                                 >
                                     <td class="product-cell" data-label="Producto">
@@ -138,8 +138,8 @@ const { data: lowStockSizes } = await supabase
                                                 "Producto desconocido"}
                                         </span>
                                     </td>
-                                    <td data-label="Talla">
-                                        <span class="size-badge">
+                                    <td data-label="Talla" class="size-cell">
+                                        <span class="low-stock-size-badge">
                                             {item.size}
                                         </span>
                                     </td>
@@ -164,7 +164,7 @@ const { data: lowStockSizes } = await supabase
                                             </span>
                                         )}
                                     </td>
-                                    <td data-label="">
+                                    <td data-label="Acción">
                                         <a
                                             href={`/admin/productos/${item.product?.id}`}
                                             class="btn btn-sm btn-primary"
@@ -335,11 +335,11 @@ const { data: lowStockSizes } = await supabase
         vertical-align: middle;
     }
 
-    .low-stock-table tr.critical {
+    .low-stock-table tr.low-stock-critical {
         background: #fef2f2;
     }
 
-    .low-stock-table tr.warning {
+    .low-stock-table tr.low-stock-warning {
         background: #fffbeb;
     }
 
@@ -356,9 +356,13 @@ const { data: lowStockSizes } = await supabase
         border-radius: 6px;
     }
 
-    .size-badge {
-        background: var(--navy);
-        color: white;
+    .size-cell {
+        color: #111827 !important;
+    }
+
+    .low-stock-size-badge {
+        background: #e5e7eb;
+        color: #111827 !important;
         padding: 0.35rem 0.75rem;
         border-radius: 6px;
         font-size: 0.85rem;
@@ -404,8 +408,8 @@ const { data: lowStockSizes } = await supabase
     }
 
     .btn-primary {
-        background: var(--navy);
-        color: white;
+        background: #1a2744;
+        color: #ffffff;
     }
 
     .btn-primary:hover {
@@ -530,12 +534,12 @@ const { data: lowStockSizes } = await supabase
             gap: 0.25rem;
         }
 
-        .low-stock-table tr.critical {
+        .low-stock-table tr.low-stock-critical {
             background: #fef2f2;
             border-color: #fecaca;
         }
 
-        .low-stock-table tr.warning {
+        .low-stock-table tr.low-stock-warning {
             background: #fffbeb;
             border-color: #fed7aa;
         }
