@@ -23,22 +23,6 @@ const saleProducts = products.filter((p) => p.is_on_sale && p.sale_price);
 
 // Productos más recientes
 const latestProducts = products.slice(0, 8);
-
-// Imágenes específicas para cada categoría - Moda Masculina Premium
-const categoryImages: Record<string, string> = {
-  camisas:
-    "https://images.unsplash.com/photo-1620012253295-c15cc3e65df4?w=800&q=80",
-  camisetas:
-    "https://images.unsplash.com/photo-1581655353564-df123a1eb820?w=800&q=80",
-  pantalones:
-    "https://images.unsplash.com/photo-1473966968600-fa801b869a1a?w=800&q=80",
-  trajes:
-    "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=800&q=80",
-  chalecos:
-    "https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=800&q=80",
-  abrigos:
-    "https://images.unsplash.com/photo-1539533018447-63fcce2678e3?w=800&q=80",
-};
 ---
 
 <PublicLayout
@@ -269,7 +253,8 @@ const categoryImages: Record<string, string> = {
             >
               <img
                 src={
-                  categoryImages[category.slug] ||
+                  category.image_url ||
+                  category.image ||
                   "https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=800&q=80"
                 }
                 alt={category.name}

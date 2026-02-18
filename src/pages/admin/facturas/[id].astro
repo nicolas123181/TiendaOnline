@@ -109,7 +109,7 @@ const status = getStatusBadge(invoice.status);
                 <a href="/admin/facturas" class="back-link">
                     ← Volver a facturas
                 </a>
-                <h1>🧾 Factura {invoice.invoice_number}</h1>
+                <h1><svg class="w-6 h-6 inline -mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/></svg> Factura {invoice.invoice_number}</h1>
                 <div class="header-meta">
                     <span class={`status-badge ${status.class}`}
                         >{status.text}</span
@@ -121,7 +121,7 @@ const status = getStatusBadge(invoice.status);
                         href={`/admin/pedidos/${invoice.order_id}`}
                         class="order-link"
                     >
-                        📦 Ver Pedido #{invoice.order_id}
+                        <svg class="w-4 h-4 inline -mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg> Ver Pedido #{invoice.order_id}
                     </a>
                 </div>
             </div>
@@ -131,15 +131,15 @@ const status = getStatusBadge(invoice.status);
                     target="_blank"
                     class="btn btn-primary"
                 >
-                    📥 Descargar PDF
+                    <svg class="w-4 h-4 inline -mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg> Descargar PDF
                 </a>
             </div>
         </div>
     </div>
 
-    {updateMessage && <div class="alert alert-success">✅ {updateMessage}</div>}
+    {updateMessage && <div class="alert alert-success"><svg class="w-4 h-4 inline -mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> {updateMessage}</div>}
 
-    {updateError && <div class="alert alert-error">❌ {updateError}</div>}
+    {updateError && <div class="alert alert-error"><svg class="w-4 h-4 inline -mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> {updateError}</div>}
 
     <div class="content-grid">
         <!-- Vista Previa de la Factura -->
@@ -421,14 +421,14 @@ const status = getStatusBadge(invoice.status);
                         </div>
                     </div>
                     <p class="readonly-note">
-                        ℹ️ Los datos del cliente y los importes no son editables
+                        <svg class="w-4 h-4 inline -mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> Los datos del cliente y los importes no son editables
                         para mantener la integridad de la factura.
                     </p>
                 </div>
 
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary">
-                        💾 Guardar Cambios
+                        <svg class="w-4 h-4 inline -mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg> Guardar Cambios
                     </button>
                 </div>
             </form>

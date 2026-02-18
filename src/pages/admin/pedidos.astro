@@ -196,7 +196,7 @@ const totalReady =
                 <p class="text-xl sm:text-3xl font-bold text-red-600">
                     {expressOrders.filter((o) => o.status === "paid").length}
                 </p>
-                <p class="text-xs sm:text-sm text-gray-600">⚡ Express Pendientes</p>
+                <p class="text-xs sm:text-sm text-gray-600 flex items-center gap-1"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg> Express Pendientes</p>
             </div>
             <div
                 class="bg-white rounded-xl p-3 sm:p-4 shadow-sm border border-blue-100"
@@ -204,7 +204,7 @@ const totalReady =
                 <p class="text-xl sm:text-3xl font-bold text-blue-600">
                     {standardOrders.filter((o) => o.status === "paid").length}
                 </p>
-                <p class="text-xs sm:text-sm text-gray-600">📦 Estándar Pendientes</p>
+                <p class="text-xs sm:text-sm text-gray-600 flex items-center gap-1"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg> Estándar Pendientes</p>
             </div>
             <div
                 class="bg-white rounded-xl p-3 sm:p-4 shadow-sm border border-orange-100"
@@ -212,7 +212,7 @@ const totalReady =
                 <p class="text-xl sm:text-3xl font-bold text-orange-600">
                     {pickupOrders.filter((o) => o.status === "paid").length}
                 </p>
-                <p class="text-xs sm:text-sm text-gray-600">🏪 Recogida Pendientes</p>
+                <p class="text-xs sm:text-sm text-gray-600 flex items-center gap-1"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4"/></svg> Recogida Pendientes</p>
             </div>
             <div
                 class="bg-white rounded-xl p-3 sm:p-4 shadow-sm border border-purple-100"
@@ -220,7 +220,7 @@ const totalReady =
                 <p class="text-xl sm:text-3xl font-bold text-purple-600">
                     {orders.filter((o) => o.status === "shipped").length}
                 </p>
-                <p class="text-xs sm:text-sm text-gray-600">🚚 En Camino</p>
+                <p class="text-xs sm:text-sm text-gray-600 flex items-center gap-1"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10l2-1 2 1 2-1 2 1m0 0V6m0 10l2-1 2 1 2-1 2 1V6a1 1 0 00-1-1h-4a1 1 0 00-1 1"/></svg> En Camino</p>
             </div>
             <div
                 class="bg-white rounded-xl p-3 sm:p-4 shadow-sm border border-green-100"
@@ -228,7 +228,7 @@ const totalReady =
                 <p class="text-xl sm:text-3xl font-bold text-green-600">
                     {deliveredOrders.length}
                 </p>
-                <p class="text-xs sm:text-sm text-gray-600">✅ Entregados Hoy</p>
+                <p class="text-xs sm:text-sm text-gray-600 flex items-center gap-1"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> Entregados Hoy</p>
             </div>
         </div>
     </div>
@@ -271,7 +271,7 @@ const totalReady =
         >
             <span
                 class="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center"
-                >⚡</span
+                ><svg class="w-4 h-4 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg></span
             >
             Envío Express (24-48h)
             <span class="text-sm font-normal text-gray-500"
@@ -301,7 +301,7 @@ const totalReady =
                                         {index === 0 &&
                                             order.status === "paid" && (
                                                 <span class="text-xs px-2 py-1 bg-red-600 text-white rounded font-bold animate-pulse">
-                                                    🔥 MÁS URGENTE
+                                                    <svg class="w-3 h-3 inline" fill="currentColor" viewBox="0 0 24 24"><path d="M12 23c-1.1 0-1.99-.89-1.99-1.99h3.98c0 1.1-.89 1.99-1.99 1.99zm8.25-5H3.75c-.69 0-1.25-.56-1.25-1.25 0-.39.18-.75.47-.99L5 14.14V9c0-3.47 2.33-6.39 5.5-7.27V1.5C10.5.67 11.17 0 12 0s1.5.67 1.5 1.5v.23C16.67 2.61 19 5.53 19 9v5.14l2.03 1.62c.29.24.47.6.47.99 0 .69-.56 1.25-1.25 1.25z"/></svg> MÁS URGENTE
                                                 </span>
                                             )}
                                         <span class="font-mono font-bold text-lg text-blue-900">
@@ -334,8 +334,9 @@ const totalReady =
                                     </p>
 
                                     <div class="mt-2 text-sm text-gray-700 bg-red-50 rounded-lg p-3">
-                                        <p class="font-medium">
-                                            📍 {order.customer_address}
+                                        <p class="font-medium flex items-center gap-1">
+                                            <svg class="w-4 h-4 text-red-500 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                                            {order.customer_address}
                                         </p>
                                         <p>
                                             {order.customer_postal_code}{" "}
@@ -382,7 +383,7 @@ const totalReady =
                                             data-name={order.customer_name}
                                             data-type="shipping"
                                         >
-                                            ✓ Listo
+                                            <svg class="w-4 h-4 inline -mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Listo
                                         </button>
                                     )}
                                     {order.status === "shipped" && (
@@ -394,7 +395,7 @@ const totalReady =
                                             data-email={order.customer_email}
                                             data-name={order.customer_name}
                                         >
-                                            ✅ Entregado
+                                            <svg class="w-4 h-4 inline -mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> Entregado
                                         </button>
                                     )}
                                 </div>
@@ -413,7 +414,7 @@ const totalReady =
         >
             <span
                 class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center"
-                >📦</span
+                ><svg class="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg></span
             >
             Envío Estándar (5-7 días)
             <span class="text-sm font-normal text-gray-500"
@@ -466,8 +467,9 @@ const totalReady =
                                     </p>
 
                                     <div class="mt-2 text-sm text-gray-700 bg-blue-50 rounded-lg p-3">
-                                        <p class="font-medium">
-                                            📍 {order.customer_address}
+                                        <p class="font-medium flex items-center gap-1">
+                                            <svg class="w-4 h-4 text-blue-500 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                                            {order.customer_address}
                                         </p>
                                         <p>
                                             {order.customer_postal_code}{" "}
@@ -514,7 +516,7 @@ const totalReady =
                                             data-name={order.customer_name}
                                             data-type="shipping"
                                         >
-                                            ✓ Listo
+                                            <svg class="w-4 h-4 inline -mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Listo
                                         </button>
                                     )}
                                     {order.status === "shipped" && (
@@ -526,7 +528,7 @@ const totalReady =
                                             data-email={order.customer_email}
                                             data-name={order.customer_name}
                                         >
-                                            ✅ Entregado
+                                            <svg class="w-4 h-4 inline -mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> Entregado
                                         </button>
                                     )}
                                 </div>
@@ -545,7 +547,7 @@ const totalReady =
         >
             <span
                 class="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center"
-                >🏪</span
+                ><svg class="w-4 h-4 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4"/></svg></span
             >
             Recogida en Tienda
             <span class="text-sm font-normal text-gray-500"
@@ -638,7 +640,7 @@ const totalReady =
                                             data-email={order.customer_email}
                                             data-name={order.customer_name}
                                         >
-                                            ✓ Listo
+                                            <svg class="w-4 h-4 inline -mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Listo
                                         </button>
                                     )}
                                     {order.status === "ready_for_pickup" && (
@@ -650,7 +652,7 @@ const totalReady =
                                             data-email={order.customer_email}
                                             data-name={order.customer_name}
                                         >
-                                            ✅ Entregado
+                                            <svg class="w-4 h-4 inline -mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> Entregado
                                         </button>
                                     )}
                                 </div>
@@ -681,7 +683,7 @@ const totalReady =
             </div>
             <div>
                 <h2 class="text-xl font-bold text-gray-900">
-                    ✅ Pedidos Completados
+                    <svg class="w-5 h-5 inline -mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> Pedidos Completados
                 </h2>
                 <p class="text-sm text-gray-600">
                     Pedidos entregados o cancelados ({allOrders.length} pedidos)
@@ -846,7 +848,7 @@ const totalReady =
             <h3
                 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2"
             >
-                🚚 Información de Envío
+                <svg class="w-5 h-5 inline -mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10l2-1 2 1 2-1 2 1m0 0V6m0 10l2-1 2 1 2-1 2 1V6a1 1 0 00-1-1h-4a1 1 0 00-1 1"/></svg> Información de Envío
             </h3>
 
             <form id="shipping-form" class="space-y-5">

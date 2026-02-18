@@ -89,7 +89,7 @@ const reasonLabels: Record<string, string> = {
                 <p class="text-xl sm:text-3xl font-bold text-yellow-600">
                     {pendingReturns.length + inTransitReturns.length}
                 </p>
-                <p class="text-xs sm:text-sm text-gray-600">📦 Pendientes</p>
+                <p class="text-xs sm:text-sm text-gray-600 flex items-center gap-1"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg> Pendientes</p>
             </div>
             <div
                 class="bg-white rounded-xl p-3 sm:p-4 shadow-sm border border-purple-100"
@@ -97,7 +97,7 @@ const reasonLabels: Record<string, string> = {
                 <p class="text-xl sm:text-3xl font-bold text-purple-600">
                     {receivedReturns.length}
                 </p>
-                <p class="text-xs sm:text-sm text-gray-600">📬 Recibidos</p>
+                <p class="text-xs sm:text-sm text-gray-600 flex items-center gap-1"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg> Recibidos</p>
             </div>
             <div
                 class="bg-white rounded-xl p-3 sm:p-4 shadow-sm border border-green-100"
@@ -108,7 +108,7 @@ const reasonLabels: Record<string, string> = {
                             .length
                     }
                 </p>
-                <p class="text-xs sm:text-sm text-gray-600">✅ Reembolsados</p>
+                <p class="text-xs sm:text-sm text-gray-600 flex items-center gap-1"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> Reembolsados</p>
             </div>
             <div
                 class="bg-white rounded-xl p-3 sm:p-4 shadow-sm border border-gray-100"
@@ -157,7 +157,7 @@ const reasonLabels: Record<string, string> = {
         >
             <span
                 class="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center"
-                >📦</span
+                ><svg class="w-4 h-4 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg></span
             >
             Pendientes de Recibir
             <span class="text-sm font-normal text-gray-500"
@@ -260,7 +260,7 @@ const reasonLabels: Record<string, string> = {
                                         data-return={ret.id}
                                         data-action="received"
                                     >
-                                        📬 Marcar Recibido
+                                        <svg class="w-4 h-4 inline -mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg> Marcar Recibido
                                     </button>
                                 </div>
                             </div>
@@ -278,7 +278,7 @@ const reasonLabels: Record<string, string> = {
         >
             <span
                 class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center"
-                >📬</span
+                ><svg class="w-4 h-4 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg></span
             >
             Recibidos - Pendientes de Reembolso
             <span class="text-sm font-normal text-gray-500"
@@ -358,14 +358,14 @@ const reasonLabels: Record<string, string> = {
                                             data-action="refunded"
                                             data-amount={ret.refund_amount}
                                         >
-                                            ✅ Procesar Reembolso
+                                            <svg class="w-4 h-4 inline -mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> Procesar Reembolso
                                         </button>
                                         <button
                                             type="button"
                                             class="w-full px-4 py-2 bg-red-100 text-red-700 font-medium rounded-lg hover:bg-red-200 transition-colors reject-btn"
                                             data-return={ret.id}
                                         >
-                                            ❌ Rechazar
+                                            <svg class="w-4 h-4 inline -mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> Rechazar
                                         </button>
                                     </div>
                                 </div>
@@ -396,7 +396,7 @@ const reasonLabels: Record<string, string> = {
             </div>
             <div>
                 <h2 class="text-xl font-bold text-gray-900">
-                    ✅ Devoluciones Completadas
+                    <svg class="w-5 h-5 inline -mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> Devoluciones Completadas
                 </h2>
                 <p class="text-sm text-gray-600">
                     {completedReturns.length} devoluciones procesadas
@@ -485,7 +485,7 @@ const reasonLabels: Record<string, string> = {
     >
         <div class="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
             <h3 class="text-xl font-bold text-gray-900 mb-4">
-                ❌ Rechazar Devolución
+                <svg class="w-5 h-5 inline -mt-0.5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> Rechazar Devolución
             </h3>
             <form id="reject-form">
                 <input type="hidden" id="reject-return-id" />

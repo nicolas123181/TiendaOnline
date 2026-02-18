@@ -381,36 +381,44 @@ function getReceivedEmailHtml(customerName: string, returnNumber: string): strin
                         <p style="margin: 15px 0 0 0; font-size: 14px; color: #6b7280;">Estado: <strong style="color: ${BRAND_COLORS.purple};">En revisión</strong></p>
                     </div>
 
-                    <div class="timeline">
-                        <div class="timeline-item">
-                            <div class="timeline-dot done">✓</div>
-                            <div>
+                    <table cellpadding="0" cellspacing="0" width="100%" style="border-collapse: collapse; margin: 30px 0;">
+                        <tr>
+                            <td style="width: 40px; vertical-align: top; padding-bottom: 18px;">
+                                <table cellpadding="0" cellspacing="0"><tr><td style="width: 24px; height: 24px; background: ${BRAND_COLORS.success}; color: white; border-radius: 50%; text-align: center; vertical-align: middle; font-size: 14px; line-height: 24px; font-weight: bold;">✓</td></tr></table>
+                            </td>
+                            <td style="vertical-align: top; padding-bottom: 18px; padding-left: 10px;">
                                 <p style="margin: 0; font-weight: 600; color: #374151;">Devolución solicitada</p>
                                 <p style="margin: 0; font-size: 14px; color: #6b7280;">Recibimos tu solicitud</p>
-                            </div>
-                        </div>
-                        <div class="timeline-item">
-                            <div class="timeline-dot done">✓</div>
-                            <div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="width: 40px; vertical-align: top; padding-bottom: 18px;">
+                                <table cellpadding="0" cellspacing="0"><tr><td style="width: 24px; height: 24px; background: ${BRAND_COLORS.success}; color: white; border-radius: 50%; text-align: center; vertical-align: middle; font-size: 14px; line-height: 24px; font-weight: bold;">✓</td></tr></table>
+                            </td>
+                            <td style="vertical-align: top; padding-bottom: 18px; padding-left: 10px;">
                                 <p style="margin: 0; font-weight: 600; color: #374151;">Paquete recibido</p>
                                 <p style="margin: 0; font-size: 14px; color: #6b7280;">Llegó a nuestro almacén</p>
-                            </div>
-                        </div>
-                        <div class="timeline-item">
-                            <div class="timeline-dot current">🔍</div>
-                            <div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="width: 40px; vertical-align: top; padding-bottom: 18px;">
+                                <table cellpadding="0" cellspacing="0"><tr><td style="width: 24px; height: 24px; background: ${BRAND_COLORS.purple}; color: white; border-radius: 50%; text-align: center; vertical-align: middle; font-size: 14px; line-height: 24px;">⬤</td></tr></table>
+                            </td>
+                            <td style="vertical-align: top; padding-bottom: 18px; padding-left: 10px;">
                                 <p style="margin: 0; font-weight: 600; color: ${BRAND_COLORS.purple};">En revisión</p>
                                 <p style="margin: 0; font-size: 14px; color: #6b7280;">Verificando el estado de los artículos</p>
-                            </div>
-                        </div>
-                        <div class="timeline-item">
-                            <div class="timeline-dot pending">4</div>
-                            <div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="width: 40px; vertical-align: top;">
+                                <table cellpadding="0" cellspacing="0"><tr><td style="width: 24px; height: 24px; background: #e5e7eb; color: #9ca3af; border-radius: 50%; text-align: center; vertical-align: middle; font-size: 14px; line-height: 24px; font-weight: bold;">4</td></tr></table>
+                            </td>
+                            <td style="vertical-align: top; padding-left: 10px;">
                                 <p style="margin: 0; font-weight: 600; color: #9ca3af;">Reembolso</p>
                                 <p style="margin: 0; font-size: 14px; color: #9ca3af;">Pendiente de procesar</p>
-                            </div>
-                        </div>
-                    </div>
+                            </td>
+                        </tr>
+                    </table>
 
                     <div class="info-box">
                         <p style="margin: 0;"><strong>⏱️ Plazo de revisión: 2-4 días laborables</strong></p>
@@ -474,24 +482,32 @@ function getRefundEmailHtml(customerName: string, returnNumber: string, amountCe
                         <p style="margin: 10px 0 0 0; font-size: 14px; color: #166534;">Devolución ${returnNumber}</p>
                     </div>
 
-                    <div class="timeline">
-                        <div class="timeline-item">
-                            <div class="timeline-dot">✓</div>
-                            <div><p style="margin: 0; font-weight: 600; color: #374151;">Devolución solicitada</p></div>
-                        </div>
-                        <div class="timeline-item">
-                            <div class="timeline-dot">✓</div>
-                            <div><p style="margin: 0; font-weight: 600; color: #374151;">Paquete recibido</p></div>
-                        </div>
-                        <div class="timeline-item">
-                            <div class="timeline-dot">✓</div>
-                            <div><p style="margin: 0; font-weight: 600; color: #374151;">Revisión completada</p></div>
-                        </div>
-                        <div class="timeline-item">
-                            <div class="timeline-dot">✓</div>
-                            <div><p style="margin: 0; font-weight: 600; color: ${BRAND_COLORS.success};">Reembolso procesado</p></div>
-                        </div>
-                    </div>
+                    <table cellpadding="0" cellspacing="0" width="100%" style="border-collapse: collapse; margin: 30px 0;">
+                        <tr>
+                            <td style="width: 40px; vertical-align: middle; padding-bottom: 18px;">
+                                <table cellpadding="0" cellspacing="0"><tr><td style="width: 24px; height: 24px; background: ${BRAND_COLORS.success}; color: white; border-radius: 50%; text-align: center; vertical-align: middle; font-size: 14px; line-height: 24px; font-weight: bold;">✓</td></tr></table>
+                            </td>
+                            <td style="vertical-align: middle; padding-bottom: 18px; padding-left: 10px;"><p style="margin: 0; font-weight: 600; color: #374151;">Devolución solicitada</p></td>
+                        </tr>
+                        <tr>
+                            <td style="width: 40px; vertical-align: middle; padding-bottom: 18px;">
+                                <table cellpadding="0" cellspacing="0"><tr><td style="width: 24px; height: 24px; background: ${BRAND_COLORS.success}; color: white; border-radius: 50%; text-align: center; vertical-align: middle; font-size: 14px; line-height: 24px; font-weight: bold;">✓</td></tr></table>
+                            </td>
+                            <td style="vertical-align: middle; padding-bottom: 18px; padding-left: 10px;"><p style="margin: 0; font-weight: 600; color: #374151;">Paquete recibido</p></td>
+                        </tr>
+                        <tr>
+                            <td style="width: 40px; vertical-align: middle; padding-bottom: 18px;">
+                                <table cellpadding="0" cellspacing="0"><tr><td style="width: 24px; height: 24px; background: ${BRAND_COLORS.success}; color: white; border-radius: 50%; text-align: center; vertical-align: middle; font-size: 14px; line-height: 24px; font-weight: bold;">✓</td></tr></table>
+                            </td>
+                            <td style="vertical-align: middle; padding-bottom: 18px; padding-left: 10px;"><p style="margin: 0; font-weight: 600; color: #374151;">Revisión completada</p></td>
+                        </tr>
+                        <tr>
+                            <td style="width: 40px; vertical-align: middle;">
+                                <table cellpadding="0" cellspacing="0"><tr><td style="width: 24px; height: 24px; background: ${BRAND_COLORS.success}; color: white; border-radius: 50%; text-align: center; vertical-align: middle; font-size: 14px; line-height: 24px; font-weight: bold;">✓</td></tr></table>
+                            </td>
+                            <td style="vertical-align: middle; padding-left: 10px;"><p style="margin: 0; font-weight: 600; color: ${BRAND_COLORS.success};">Reembolso procesado</p></td>
+                        </tr>
+                    </table>
 
                     <div class="info-box">
                         <p style="margin: 0; font-weight: 600;">💳 ¿Cuándo recibiré el dinero?</p>

@@ -1,6 +1,7 @@
 ---
 import AdminLayout from "../../layouts/AdminLayout.astro";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
+import { deleteImage } from "../../lib/cloudinary";
 
 // Verificar si Supabase está configurado
 if (!isSupabaseConfigured) {
@@ -17,6 +18,8 @@ if (Astro.request.method === "POST") {
 
     if (action === "create") {
         const name = formData.get("name") as string;
+        const imageUrl = (formData.get("image_url") as string) || null;
+        const imagePublicId = (formData.get("image_public_id") as string) || null;
         const description = formData.get("description") as string;
         const slug = name
             .toLowerCase()
@@ -27,7 +30,15 @@ if (Astro.request.method === "POST") {
 
         const { error } = await supabase
             .from("categories")
-            .insert({ name, slug, description });
+            .insert({
+                name,
+                slug,
+                description,
+                image_url: imageUrl,
+                image_public_id: imagePublicId,
+                image_provider: imageUrl ? "cloudinary" : null,
+                image_updated_at: imageUrl ? new Date().toISOString() : null,
+            });
 
         if (error) {
             message = `Error al crear categoría: ${error.message}`;
@@ -40,16 +51,36 @@ if (Astro.request.method === "POST") {
         const id = parseInt(formData.get("id") as string);
         const name = formData.get("name") as string;
         const description = formData.get("description") as string;
+        const imageUrl = (formData.get("image_url") as string) || null;
+        const imagePublicId = (formData.get("image_public_id") as string) || null;
+
+        const { data: currentCategory } = await supabase
+            .from("categories")
+            .select("image_public_id")
+            .eq("id", id)
+            .single();
+
+        const oldPublicId = currentCategory?.image_public_id as string | null;
 
         const { error } = await supabase
             .from("categories")
-            .update({ name, description })
+            .update({
+                name,
+                description,
+                image_url: imageUrl,
+                image_public_id: imagePublicId,
+                image_provider: imageUrl ? "cloudinary" : null,
+                image_updated_at: new Date().toISOString(),
+            })
             .eq("id", id);
 
         if (error) {
             message = `Error al actualizar categoría: ${error.message}`;
             messageType = "error";
         } else {
+            if (oldPublicId && oldPublicId !== imagePublicId) {
+                await deleteImage(oldPublicId);
+            }
             message = "Categoría actualizada correctamente";
             messageType = "success";
         }
@@ -66,6 +97,12 @@ if (Astro.request.method === "POST") {
             message = `No se puede eliminar: hay ${count} productos en esta categoría`;
             messageType = "error";
         } else {
+            const { data: currentCategory } = await supabase
+                .from("categories")
+                .select("image_public_id")
+                .eq("id", id)
+                .single();
+
             const { error } = await supabase
                 .from("categories")
                 .delete()
@@ -75,6 +112,9 @@ if (Astro.request.method === "POST") {
                 message = `Error al eliminar categoría: ${error.message}`;
                 messageType = "error";
             } else {
+                if (currentCategory?.image_public_id) {
+                    await deleteImage(currentCategory.image_public_id);
+                }
                 message = "Categoría eliminada correctamente";
                 messageType = "success";
             }
@@ -103,7 +143,7 @@ const categoriesWithCount =
 
 <AdminLayout title="Gestión de Categorías">
     <div class="page-header">
-        <h1>📂 Gestión de Categorías</h1>
+        <h1><svg class="w-6 h-6 inline -mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg> Gestión de Categorías</h1>
         <p>Administra las categorías de productos de la tienda</p>
     </div>
 
@@ -119,9 +159,15 @@ const categoriesWithCount =
 
     <!-- Formulario para crear nueva categoría -->
     <div class="card create-form">
-        <h2>➕ Crear Nueva Categoría</h2>
+        <h2><svg class="w-5 h-5 inline -mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg> Crear Nueva Categoría</h2>
         <form method="POST">
             <input type="hidden" name="action" value="create" />
+            <input type="hidden" name="image_url" id="create-image-input" />
+            <input
+                type="hidden"
+                name="image_public_id"
+                id="create-image-public-id-input"
+            />
             <div class="form-row">
                 <div class="form-group">
                     <label for="name">Nombre de la categoría *</label>
@@ -142,6 +188,13 @@ const categoriesWithCount =
                         placeholder="Descripción breve de la categoría"
                     />
                 </div>
+                <div class="form-group">
+                    <label for="create-file-input">Imagen (opcional)</label>
+                    <div style="display:flex;gap:.5rem;align-items:center;">
+                        <input type="file" id="create-file-input" accept="image/*" />
+                        <div id="create-image-preview" style="width:64px;height:64px;border-radius:8px;background:#f3f4f6;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:.75rem;color:#9ca3af">Preview</div>
+                    </div>
+                </div>
                 <div class="form-group form-actions">
                     <button type="submit" class="btn btn-primary"
                         >Crear Categoría</button
@@ -153,7 +206,7 @@ const categoriesWithCount =
 
     <!-- Lista de categorías existentes -->
     <div class="card">
-        <h2>📋 Categorías Existentes ({categoriesWithCount.length})</h2>
+        <h2><svg class="w-5 h-5 inline -mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg> Categorías Existentes ({categoriesWithCount.length})</h2>
 
         {
             categoriesWithCount.length === 0 ? (
@@ -163,7 +216,23 @@ const categoriesWithCount =
             ) : (
                 <div class="categories-grid">
                     {categoriesWithCount.map((category) => (
-                        <div class="category-card" data-id={category.id}>
+                        <div
+                            class="category-card"
+                            data-id={category.id}
+                            data-image-url={
+                                category.image_url || category.image || ""
+                            }
+                            data-image-public-id={
+                                category.image_public_id || ""
+                            }
+                        >
+                            {
+                                category.image_url || category.image ? (
+                                    <div style="margin-bottom:.75rem;">
+                                        <img src={category.image_url || category.image} alt={category.name} style="width:100%;height:140px;object-fit:cover;border-radius:8px;border:1px solid #e5e7eb" />
+                                    </div>
+                                ) : null
+                            }
                             <div class="category-header">
                                 <h3 class="category-name">{category.name}</h3>
                                 <span class="product-count">
@@ -184,8 +253,16 @@ const categoriesWithCount =
                                     data-description={
                                         category.description || ""
                                     }
+                                    data-image-url={
+                                        category.image_url ||
+                                        category.image ||
+                                        ""
+                                    }
+                                    data-image-public-id={
+                                        category.image_public_id || ""
+                                    }
                                 >
-                                    ✏️ Editar
+                                    <svg class="w-3.5 h-3.5 inline -mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg> Editar
                                 </button>
                                 {category.productCount === 0 ? (
                                     <form
@@ -207,7 +284,7 @@ const categoriesWithCount =
                                             type="submit"
                                             class="btn btn-sm btn-danger"
                                         >
-                                            🗑️ Eliminar
+                                            <svg class="w-3.5 h-3.5 inline -mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg> Eliminar
                                         </button>
                                     </form>
                                 ) : (
@@ -217,7 +294,7 @@ const categoriesWithCount =
                                         disabled
                                         title="Hay productos en esta categoría"
                                     >
-                                        🔒 En uso
+                                        <svg class="w-3.5 h-3.5 inline -mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg> En uso
                                     </button>
                                 )}
                             </div>
@@ -231,13 +308,26 @@ const categoriesWithCount =
     <!-- Modal de edición -->
     <div id="edit-modal" class="modal">
         <div class="modal-content">
-            <h2>✏️ Editar Categoría</h2>
+            <h2><svg class="w-5 h-5 inline -mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg> Editar Categoría</h2>
             <form method="POST">
                 <input type="hidden" name="action" value="update" />
                 <input type="hidden" name="id" id="edit-id" />
+                <input type="hidden" name="image_url" id="edit-image-input" />
+                <input
+                    type="hidden"
+                    name="image_public_id"
+                    id="edit-image-public-id-input"
+                />
                 <div class="form-group">
                     <label for="edit-name">Nombre</label>
                     <input type="text" id="edit-name" name="name" required />
+                </div>
+                <div class="form-group">
+                    <label for="edit-file-input">Imagen (opcional)</label>
+                    <div style="display:flex;gap:.5rem;align-items:center;">
+                        <input type="file" id="edit-file-input" accept="image/*" />
+                        <div id="edit-image-preview" style="width:64px;height:64px;border-radius:8px;background:#f3f4f6;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:.75rem;color:#9ca3af">Preview</div>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label for="edit-description">Descripción</label>
@@ -266,7 +356,7 @@ const categoriesWithCount =
 
     .page-header h1 {
         font-size: 2rem;
-        color: var(--navy);
+        color: #1a2744;
         margin: 0 0 0.5rem 0;
     }
 
@@ -285,7 +375,7 @@ const categoriesWithCount =
 
     .card h2 {
         font-size: 1.25rem;
-        color: var(--navy);
+        color: #1a2744;
         margin: 0 0 1.5rem 0;
         padding-bottom: 1rem;
         border-bottom: 1px solid #e5e7eb;
@@ -347,7 +437,7 @@ const categoriesWithCount =
     .form-group input:focus,
     .form-group textarea:focus {
         outline: none;
-        border-color: var(--navy);
+        border-color: #1a2744;
         box-shadow: 0 0 0 3px rgba(26, 39, 68, 0.1);
     }
 
@@ -366,7 +456,7 @@ const categoriesWithCount =
     }
 
     .btn-primary {
-        background: var(--navy);
+        background: #1a2744;
         color: white;
     }
 
@@ -419,7 +509,7 @@ const categoriesWithCount =
     }
 
     .category-card:hover {
-        border-color: var(--navy);
+        border-color: #1a2744;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
     }
 
@@ -433,12 +523,12 @@ const categoriesWithCount =
     .category-name {
         font-size: 1.1rem;
         font-weight: 600;
-        color: var(--navy);
+        color: #1a2744;
         margin: 0;
     }
 
     .product-count {
-        background: var(--navy);
+        background: #1a2744;
         color: white;
         padding: 0.25rem 0.75rem;
         border-radius: 20px;
@@ -544,38 +634,169 @@ const categoriesWithCount =
 </style>
 
 <script>
-    // Modal de edición
+    // ---- Estado global de upload ----
+    let isUploading = false;
+
+    // ---- Referencias DOM ----
     const modal = document.getElementById("edit-modal");
     const editBtns = document.querySelectorAll(".edit-btn");
     const closeModal = document.getElementById("close-modal");
 
+    const createFileInput = document.getElementById("create-file-input") as HTMLInputElement | null;
+    const createPreview = document.getElementById("create-image-preview");
+    const createUrlInput = document.getElementById("create-image-input") as HTMLInputElement | null;
+    const createPublicIdInput = document.getElementById("create-image-public-id-input") as HTMLInputElement | null;
+
+    const editFileInput = document.getElementById("edit-file-input") as HTMLInputElement | null;
+    const editPreview = document.getElementById("edit-image-preview");
+    const editUrlInput = document.getElementById("edit-image-input") as HTMLInputElement | null;
+    const editPublicIdInput = document.getElementById("edit-image-public-id-input") as HTMLInputElement | null;
+
+    // ---- Bloquear envío de formularios mientras se sube imagen ----
+    document.querySelectorAll("form").forEach((form) => {
+        form.addEventListener("submit", (e) => {
+            if (isUploading) {
+                e.preventDefault();
+                alert("Espera a que termine la subida de la imagen antes de guardar.");
+            }
+        });
+    });
+
+    // ---- Overlay de carga (bloquea toda interacción) ----
+    function showUploadingIndicator() {
+        const indicator = document.createElement("div");
+        indicator.id = "upload-indicator";
+        indicator.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999;";
+        indicator.innerHTML = `
+            <div style="background:white;border-radius:16px;padding:2rem;text-align:center;box-shadow:0 25px 50px rgba(0,0,0,0.25);">
+                <div style="width:48px;height:48px;border:4px solid #1a2744;border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 1rem;"></div>
+                <p style="color:#1a2744;font-weight:600;margin:0;">Subiendo imagen...</p>
+                <p style="color:#6b7280;font-size:0.85rem;margin-top:0.5rem;">Por favor, espera</p>
+            </div>
+            <style>@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}</style>
+        `;
+        document.body.appendChild(indicator);
+    }
+
+    function hideUploadingIndicator() {
+        document.getElementById("upload-indicator")?.remove();
+    }
+
+    // ---- Preview de imagen ----
+    function renderPreview(previewEl: HTMLElement | null, imageUrl: string) {
+        if (!previewEl) return;
+        if (!imageUrl) {
+            previewEl.textContent = "Preview";
+            return;
+        }
+        previewEl.innerHTML = "";
+        const image = document.createElement("img");
+        image.src = imageUrl;
+        image.style.width = "100%";
+        image.style.height = "100%";
+        image.style.objectFit = "cover";
+        previewEl.appendChild(image);
+    }
+
+    // ---- Upload con protección completa ----
+    async function uploadCategoryImage(file: File, previewEl: HTMLElement | null, urlInput: HTMLInputElement | null, publicIdInput: HTMLInputElement | null) {
+        if (!file || isUploading) return;
+
+        // Validar tipo
+        if (!file.type.startsWith("image/")) {
+            alert("El archivo debe ser una imagen");
+            return;
+        }
+
+        // Validar tamaño (max 10MB)
+        if (file.size > 10 * 1024 * 1024) {
+            alert("La imagen es demasiado grande. Máximo 10MB.");
+            return;
+        }
+
+        isUploading = true;
+        showUploadingIndicator();
+
+        const form = new FormData();
+        form.append("file", file);
+        form.append("folder", "categorias");
+
+        try {
+            if (previewEl) previewEl.textContent = "Subiendo...";
+
+            const response = await fetch("/api/upload-image", {
+                method: "POST",
+                body: form,
+            });
+
+            const payload = await response.json();
+
+            if (!response.ok) {
+                throw new Error(payload.error || "Error subiendo imagen");
+            }
+
+            if (urlInput) urlInput.value = payload.url || "";
+            if (publicIdInput) publicIdInput.value = payload.publicId || "";
+            renderPreview(previewEl, payload.url || "");
+        } catch (err: unknown) {
+            const error = err instanceof Error ? err : new Error(String(err));
+            console.error("Upload error:", error);
+            if (previewEl) previewEl.textContent = "Error";
+            alert("Error al subir la imagen: " + (error.message || "Error desconocido"));
+        } finally {
+            isUploading = false;
+            hideUploadingIndicator();
+        }
+    }
+
+    // ---- Modal de edición ----
     editBtns.forEach((btn) => {
         btn.addEventListener("click", () => {
             const id = btn.getAttribute("data-id");
             const name = btn.getAttribute("data-name");
             const description = btn.getAttribute("data-description");
+            const imageUrl = btn.getAttribute("data-image-url") || "";
+            const imagePublicId = btn.getAttribute("data-image-public-id") || "";
 
-            (document.getElementById("edit-id") as HTMLInputElement).value =
-                id || "";
-            (document.getElementById("edit-name") as HTMLInputElement).value =
-                name || "";
-            (
-                document.getElementById(
-                    "edit-description",
-                ) as HTMLTextAreaElement
-            ).value = description || "";
+            (document.getElementById("edit-id") as HTMLInputElement).value = id || "";
+            (document.getElementById("edit-name") as HTMLInputElement).value = name || "";
+            (document.getElementById("edit-description") as HTMLTextAreaElement).value = description || "";
+            if (editUrlInput) editUrlInput.value = imageUrl;
+            if (editPublicIdInput) editPublicIdInput.value = imagePublicId;
+            renderPreview(editPreview, imageUrl);
 
-            modal?.classList.add("active");
+            if (modal) modal.classList.add("active");
         });
     });
 
-    closeModal?.addEventListener("click", () => {
-        modal?.classList.remove("active");
-    });
+    if (closeModal) {
+        closeModal.addEventListener("click", () => {
+            if (modal) modal.classList.remove("active");
+        });
+    }
 
-    modal?.addEventListener("click", (e) => {
-        if (e.target === modal) {
-            modal.classList.remove("active");
-        }
-    });
+    if (modal) {
+        modal.addEventListener("click", (event) => {
+            if (event.target === modal) {
+                modal.classList.remove("active");
+            }
+        });
+    }
+
+    // ---- Listeners de file input ----
+    if (createFileInput) {
+        createFileInput.addEventListener("change", async () => {
+            const file = createFileInput.files?.[0];
+            if (!file) return;
+            await uploadCategoryImage(file, createPreview, createUrlInput, createPublicIdInput);
+        });
+    }
+
+    if (editFileInput) {
+        editFileInput.addEventListener("change", async () => {
+            const file = editFileInput.files?.[0];
+            if (!file) return;
+            await uploadCategoryImage(file, editPreview, editUrlInput, editPublicIdInput);
+        });
+    }
 </script>

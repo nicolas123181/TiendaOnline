@@ -381,7 +381,7 @@ const salePriceInEuros = product.sale_price
                                         </button>
                                         {index === 0 && (
                                             <span class="principal-label absolute bottom-2 left-2 px-2 py-1 bg-brand-navy text-white text-xs rounded font-semibold">
-                                                ⭐ Principal
+                                                ★ Principal
                                             </span>
                                         )}
                                     </div>
@@ -530,7 +530,7 @@ const salePriceInEuros = product.sale_price
                         <h2
                             class="text-lg font-semibold text-red-700 flex items-center gap-2"
                         >
-                            <span class="text-2xl">⚡</span>
+                            <span class="text-2xl"><svg class="w-6 h-6 inline text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg></span>
                             Oferta Flash
                         </h2>
                         <label
@@ -577,7 +577,7 @@ const salePriceInEuros = product.sale_price
                             {
                                 product.is_on_sale && product.sale_price && (
                                     <p class="text-sm text-green-600 mt-2 font-medium">
-                                        🏷️ Descuento:{" "}
+                                        <svg class="w-4 h-4 inline -mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" /></svg> Descuento:{" "}
                                         {Math.round(
                                             (1 -
                                                 product.sale_price /
@@ -618,7 +618,7 @@ const salePriceInEuros = product.sale_price
                         product.is_on_sale && (
                             <div class="mt-4 p-3 bg-red-100 rounded-lg">
                                 <p class="text-sm text-red-700 font-medium">
-                                    ✨ Este producto está actualmente en oferta
+                                    <svg class="w-4 h-4 inline -mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" /></svg> Este producto está actualmente en oferta
                                     flash
                                 </p>
                             </div>
@@ -892,7 +892,7 @@ const salePriceInEuros = product.sale_price
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
             </button>
-            ${index === 0 ? '<span class="principal-label absolute bottom-2 left-2 px-2 py-1 bg-brand-navy text-white text-xs rounded font-semibold">⭐ Principal</span>' : ""}
+            ${index === 0 ? '<span class="principal-label absolute bottom-2 left-2 px-2 py-1 bg-brand-navy text-white text-xs rounded font-semibold">★ Principal</span>' : ""}
         `;
 
         const removeBtn = div.querySelector(".remove-image");
@@ -917,7 +917,7 @@ const salePriceInEuros = product.sale_price
                 const label = document.createElement("span");
                 label.className =
                     "principal-label absolute bottom-2 left-2 px-2 py-1 bg-brand-navy text-white text-xs rounded font-semibold";
-                label.textContent = "⭐ Principal";
+                label.textContent = "★ Principal";
                 preview.appendChild(label);
             } else if (index !== 0 && existingLabel) {
                 existingLabel.remove();

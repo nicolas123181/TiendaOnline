@@ -160,7 +160,7 @@ function getStockBadgeClass(stock: number): string {
                         </svg>
                     </div>
                     <span class="text-xs bg-white/20 px-2 py-1 rounded-full"
-                        >⭐ Top</span
+                        >★ Top</span
                     >
                 </div>
                 <h3
@@ -736,17 +736,17 @@ function getStockBadgeClass(stock: number): string {
                 let message = "";
 
                 if (result.outOfStock === 0 && result.lowStock === 0) {
-                    message = "✅ No hay productos con stock bajo ni agotados.";
+                    message = "[\u2713] No hay productos con stock bajo ni agotados.";
                 } else {
                     const parts = [];
                     if (result.outOfStock > 0) {
                         parts.push(
-                            `🚨 ${result.outOfStock} producto(s) agotado(s)`,
+                            `[!] ${result.outOfStock} producto(s) agotado(s)`,
                         );
                     }
                     if (result.lowStock > 0) {
                         parts.push(
-                            `⚠️ ${result.lowStock} producto(s) con stock bajo`,
+                            `[\u26A0] ${result.lowStock} producto(s) con stock bajo`,
                         );
                     }
                     message = parts.join("\n");
@@ -755,20 +755,20 @@ function getStockBadgeClass(stock: number): string {
                         result.emailsSent.outOfStock ||
                         result.emailsSent.lowStock
                     ) {
-                        message += "\n\n📧 Alertas enviadas por email.";
+                        message += "\n\nAlertas enviadas por email.";
                     } else {
                         message +=
-                            "\n\n⚠️ No se pudieron enviar los emails. Verifica la configuración de Resend.";
+                            "\n\n[\u26A0] No se pudieron enviar los emails. Verifica la configuración de Resend.";
                     }
                 }
 
                 alert(message);
             } else {
-                alert("❌ Error: " + (result.error || "Error desconocido"));
+                alert("[Error] " + (result.error || "Error desconocido"));
             }
         } catch (error) {
             console.error("Error checking stock:", error);
-            alert("❌ Error al verificar el inventario");
+            alert("[Error] Error al verificar el inventario");
         } finally {
             btn.disabled = false;
             btn.innerHTML = originalContent;

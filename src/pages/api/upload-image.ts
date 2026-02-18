@@ -5,6 +5,11 @@ export const POST: APIRoute = async ({ request }) => {
     try {
         const formData = await request.formData();
         const file = formData.get('file') as File | null;
+        const requestedFolder = (formData.get('folder') as string | null)?.trim() || 'productos';
+
+        // Lista blanca de carpetas válidas para evitar path injection en Cloudinary
+        const allowedFolders = new Set(['productos', 'categorias', 'banners', 'newsletter']);
+        const folder = allowedFolders.has(requestedFolder) ? requestedFolder : 'productos';
 
         if (!file) {
             return new Response(
@@ -41,7 +46,7 @@ export const POST: APIRoute = async ({ request }) => {
 
         // Upload to Cloudinary
         const result = await uploadImage(buffer, {
-            folder: 'productos',
+            folder,
             filename: filename
         });
 

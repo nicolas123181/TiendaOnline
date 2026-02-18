@@ -530,24 +530,34 @@ function getCustomerReturnEmailHtml(
                         ${itemsHtml}
                     </div>
 
-                    <div class="steps">
-                        <p style="margin: 0 0 15px 0; font-weight: 600;">📋 Pasos a seguir:</p>
-                        <div class="step">
-                            <span class="step-num">1</span>
-                            <div><strong>Descarga e imprime</strong> el PDF adjunto con la etiqueta.</div>
-                        </div>
-                        <div class="step">
-                            <span class="step-num">2</span>
-                            <div><strong>Empaqueta</strong> los artículos de forma segura (preferiblemente en el embalaje original).</div>
-                        </div>
-                        <div class="step">
-                            <span class="step-num">3</span>
-                            <div><strong>Pega la etiqueta</strong> en el exterior del paquete de forma visible.</div>
-                        </div>
-                        <div class="step" style="margin-bottom: 0;">
-                            <span class="step-num">4</span>
-                            <div><strong>Entrega</strong> el paquete en cualquier oficina de <strong>Correos</strong> (gratuito).</div>
-                        </div>
+                    <div style="background: #fef3c7; border-radius: 12px; padding: 20px; margin: 25px 0;">
+                        <p style="margin: 0 0 15px 0; font-weight: 600;">Pasos a seguir:</p>
+                        <table cellpadding="0" cellspacing="0" width="100%" style="border-collapse: collapse;">
+                            <tr>
+                                <td style="width: 40px; vertical-align: top; padding-bottom: 15px;">
+                                    <table cellpadding="0" cellspacing="0"><tr><td style="width: 28px; height: 28px; background: ${BRAND_COLORS.navy}; color: white; border-radius: 50%; text-align: center; vertical-align: middle; font-weight: bold; font-size: 14px; line-height: 28px;">1</td></tr></table>
+                                </td>
+                                <td style="vertical-align: top; padding-bottom: 15px; padding-left: 10px;"><strong>Descarga e imprime</strong> el PDF adjunto con la etiqueta.</td>
+                            </tr>
+                            <tr>
+                                <td style="width: 40px; vertical-align: top; padding-bottom: 15px;">
+                                    <table cellpadding="0" cellspacing="0"><tr><td style="width: 28px; height: 28px; background: ${BRAND_COLORS.navy}; color: white; border-radius: 50%; text-align: center; vertical-align: middle; font-weight: bold; font-size: 14px; line-height: 28px;">2</td></tr></table>
+                                </td>
+                                <td style="vertical-align: top; padding-bottom: 15px; padding-left: 10px;"><strong>Empaqueta</strong> los artículos de forma segura (preferiblemente en el embalaje original).</td>
+                            </tr>
+                            <tr>
+                                <td style="width: 40px; vertical-align: top; padding-bottom: 15px;">
+                                    <table cellpadding="0" cellspacing="0"><tr><td style="width: 28px; height: 28px; background: ${BRAND_COLORS.navy}; color: white; border-radius: 50%; text-align: center; vertical-align: middle; font-weight: bold; font-size: 14px; line-height: 28px;">3</td></tr></table>
+                                </td>
+                                <td style="vertical-align: top; padding-bottom: 15px; padding-left: 10px;"><strong>Pega la etiqueta</strong> en el exterior del paquete de forma visible.</td>
+                            </tr>
+                            <tr>
+                                <td style="width: 40px; vertical-align: top;">
+                                    <table cellpadding="0" cellspacing="0"><tr><td style="width: 28px; height: 28px; background: ${BRAND_COLORS.navy}; color: white; border-radius: 50%; text-align: center; vertical-align: middle; font-weight: bold; font-size: 14px; line-height: 28px;">4</td></tr></table>
+                                </td>
+                                <td style="vertical-align: top; padding-left: 10px;"><strong>Entrega</strong> el paquete en cualquier oficina de <strong>Correos</strong> (gratuito).</td>
+                            </tr>
+                        </table>
                     </div>
                     
                     <p style="color: #666; font-size: 14px;">Si tienes alguna pregunta, no dudes en contactarnos respondiendo a este email.</p>

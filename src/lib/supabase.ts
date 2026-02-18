@@ -86,6 +86,13 @@ export interface Category {
     name: string;
     slug: string;
     description?: string;
+    // Campo legado (si existe en alguna base anterior)
+    image?: string | null;
+    // Campos actuales escalables para Cloudinary
+    image_url?: string | null;
+    image_public_id?: string | null;
+    image_provider?: string | null;
+    image_updated_at?: string | null;
     created_at: string;
 }
 

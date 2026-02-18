@@ -390,14 +390,14 @@ Puedes incluir:
                 const result = await response.json();
 
                 if (result.success) {
-                    statusEl!.textContent = `✅ Newsletter enviado a ${result.sentCount} suscriptores`;
+                    statusEl!.textContent = `[✓] Newsletter enviado a ${result.sentCount} suscriptores`;
                     statusEl!.className = "text-sm text-green-600";
                     form.reset();
                 } else {
                     throw new Error(result.error || "Error al enviar");
                 }
             } catch (error) {
-                statusEl!.textContent = `❌ ${(error as Error).message}`;
+                statusEl!.textContent = `[Error] ${(error as Error).message}`;
                 statusEl!.className = "text-sm text-red-600";
             } finally {
                 sendBtn.disabled = false;
