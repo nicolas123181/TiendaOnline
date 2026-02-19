@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS public.products (
   category_id integer,
   images text[] DEFAULT '{}'::text[],
   featured boolean DEFAULT false,
+  is_active boolean DEFAULT true,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT products_pkey PRIMARY KEY (id),

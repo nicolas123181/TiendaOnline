@@ -22,12 +22,26 @@ export const GET: APIRoute = async ({ url }) => {
         // Búsqueda ILIKE (insensible a mayúsculas/minúsculas)
         const searchPattern = `%${query}%`;
 
-        const { data: products, error } = await supabase
+        let queryBuilder = supabase
             .from('products')
             .select('id, name, slug, images, price, sale_price, is_on_sale')
             .or(`name.ilike.${searchPattern},description.ilike.${searchPattern}`)
+            .eq('is_active', true)
             .order('name')
             .limit(8);
+
+        let { data: products, error } = await queryBuilder;
+
+        if (error && error.message.includes('is_active') && error.message.includes('column')) {
+            const fallback = await supabase
+                .from('products')
+                .select('id, name, slug, images, price, sale_price, is_on_sale')
+                .or(`name.ilike.${searchPattern},description.ilike.${searchPattern}`)
+                .order('name')
+                .limit(8);
+            products = fallback.data;
+            error = fallback.error;
+        }
 
         if (error) {
             console.error('Search error:', error);

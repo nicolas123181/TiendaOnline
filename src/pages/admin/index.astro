@@ -7,7 +7,7 @@ import { formatPrice } from "../../lib/utils";
 export const prerender = false;
 
 // Obtener estadísticas
-const products = await getProducts();
+const products = await getProducts(true);
 const categories = await getCategories();
 
 const totalProducts = products.length;

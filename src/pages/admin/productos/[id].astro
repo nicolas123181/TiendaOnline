@@ -28,6 +28,13 @@ if (fetchError || !product) {
 
 const categories = await getCategories();
 
+const { count: initialSoldItemsCount } = await supabase
+    .from("order_items")
+    .select("id", { count: "exact", head: true })
+    .eq("product_id", id);
+
+let soldItemsCount = initialSoldItemsCount || 0;
+
 // Obtener stock por tallas
 const productSizes = await getProductSizes(Number(id));
 
@@ -57,16 +64,53 @@ if (Astro.request.method === "POST") {
         const action = formData.get("action")?.toString();
 
         if (action === "delete") {
-            // Eliminar producto
-            const { error: deleteError } = await supabase
+            const { count: soldCount, error: soldCountError } = await supabase
+                .from("order_items")
+                .select("id", { count: "exact", head: true })
+                .eq("product_id", id);
+
+            soldItemsCount = soldCount || 0;
+
+            if (soldCountError) {
+                error = `Error al validar ventas del producto: ${soldCountError.message}`;
+            } else if (soldItemsCount > 0) {
+                error = `No se puede eliminar este producto porque tiene ${soldItemsCount} venta(s) registrada(s). Puedes deshabilitarlo para ocultarlo de la tienda.`;
+            } else {
+                const { error: deleteError } = await supabase
+                    .from("products")
+                    .delete()
+                    .eq("id", id);
+
+                if (deleteError) {
+                    error = `Error al eliminar: ${deleteError.message}`;
+                } else {
+                    return Astro.redirect("/admin/productos?deleted=true");
+                }
+            }
+        } else if (action === "toggle_active") {
+            const nextIsActive = !(product.is_active !== false);
+
+            const { error: toggleError } = await supabase
                 .from("products")
-                .delete()
+                .update({
+                    is_active: nextIsActive,
+                    updated_at: new Date().toISOString(),
+                })
                 .eq("id", id);
 
-            if (deleteError) {
-                error = `Error al eliminar: ${deleteError.message}`;
+            if (toggleError) {
+                if (
+                    toggleError.message.includes("is_active") &&
+                    toggleError.message.includes("column")
+                ) {
+                    error =
+                        "No se pudo cambiar el estado porque falta la columna is_active en la base de datos. Ejecuta la migración SQL de productos activos.";
+                } else {
+                    error = `Error al cambiar estado: ${toggleError.message}`;
+                }
             } else {
-                return Astro.redirect("/admin/productos?deleted=true");
+                product.is_active = nextIsActive;
+                success = true;
             }
         } else {
             // Actualizar producto
@@ -183,6 +227,8 @@ const priceInEuros = (product.price / 100).toFixed(2);
 const salePriceInEuros = product.sale_price
     ? (product.sale_price / 100).toFixed(2)
     : "";
+const isProductActive = product.is_active !== false;
+const canDeleteProduct = soldItemsCount === 0;
 ---
 
 <AdminLayout title={`Editar: ${product.name}`}>
@@ -674,6 +720,18 @@ const salePriceInEuros = product.sale_price
                 <div
                     class="bg-surface-primary rounded-2xl p-6 shadow-soft space-y-3"
                 >
+                    <div class="mb-2">
+                        {isProductActive ? (
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-status-success-bg text-status-success">
+                                Producto activo en tienda
+                            </span>
+                        ) : (
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-status-warning-bg text-status-warning">
+                                Producto deshabilitado
+                            </span>
+                        )}
+                    </div>
+
                     <button
                         type="submit"
                         name="action"
@@ -709,6 +767,17 @@ const salePriceInEuros = product.sale_price
                         Ver en tienda
                     </a>
 
+                    <button
+                        type="submit"
+                        name="action"
+                        value="toggle_active"
+                        class="w-full py-3 px-6 border border-border-light text-text-secondary font-medium rounded-xl hover:bg-surface-secondary transition-colors"
+                    >
+                        {isProductActive
+                            ? "Deshabilitar producto"
+                            : "Habilitar producto"}
+                    </button>
+
                     <a
                         href="/admin/productos"
                         class="block w-full py-3 text-center text-text-muted hover:text-text-secondary transition-colors"
@@ -723,15 +792,22 @@ const salePriceInEuros = product.sale_price
                         Zona de Peligro
                     </h2>
                     <p class="text-sm text-status-error/80 mb-4">
-                        Esta acción es irreversible. El producto será eliminado
-                        permanentemente.
+                        {canDeleteProduct
+                            ? "Esta acción es irreversible. El producto será eliminado permanentemente."
+                            : "Este producto tiene ventas históricas y no se puede eliminar para conservar referencias de transacciones."}
                     </p>
+                    {!canDeleteProduct && (
+                        <p class="text-xs text-status-error/80 mb-4">
+                            Ventas registradas: {soldItemsCount}. Usa “Deshabilitar producto” para ocultarlo sin perder historial.
+                        </p>
+                    )}
                     <button
                         type="submit"
                         name="action"
                         value="delete"
                         id="delete-btn"
-                        class="w-full py-3 px-6 bg-status-error text-white font-medium rounded-xl hover:bg-red-700 transition-colors"
+                        disabled={!canDeleteProduct}
+                        class="w-full py-3 px-6 bg-status-error text-white font-medium rounded-xl hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         Eliminar Producto
                     </button>

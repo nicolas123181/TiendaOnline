@@ -6,7 +6,7 @@ import { formatPrice } from "../../../lib/utils";
 // SSR
 export const prerender = false;
 
-const products = await getProducts();
+const products = await getProducts(true);
 const categories = await getCategories();
 
 // Agrupar por categoría para filtros
@@ -244,7 +244,11 @@ const enrichedProducts = products.map((p) => ({
                                     </div>
                                 </td>
                                 <td class="px-6 py-4" data-label="Estado">
-                                    {product.isInStock ? (
+                                    {product.is_active === false ? (
+                                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-status-warning-bg text-status-warning">
+                                            Deshabilitado
+                                        </span>
+                                    ) : product.isInStock ? (
                                         <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-status-success-bg text-status-success">
                                             Disponible
                                         </span>

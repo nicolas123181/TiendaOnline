@@ -109,9 +109,17 @@ export interface Product {
     category_id: number;
     images: string[];
     featured: boolean;
+    is_active?: boolean;
     created_at: string;
     updated_at: string;
     category?: Category;
+}
+
+function isMissingIsActiveColumnError(error: unknown): boolean {
+    if (!error || typeof error !== 'object') return false;
+    const maybeError = error as { message?: string };
+    const message = maybeError.message || '';
+    return message.includes('is_active') && message.includes('column');
 }
 
 export interface Order {
@@ -162,14 +170,29 @@ export interface AppSettings {
 }
 
 // Funciones helper para productos
-export async function getProducts(): Promise<Product[]> {
+export async function getProducts(includeInactive = false): Promise<Product[]> {
     if (!isSupabaseConfigured) return [];
 
     try {
-        const { data, error } = await supabase
+        let query = supabase
             .from('products')
             .select('*, category:categories(*)')
             .order('created_at', { ascending: false });
+
+        if (!includeInactive) {
+            query = query.eq('is_active', true);
+        }
+
+        let { data, error } = await query;
+
+        if (error && !includeInactive && isMissingIsActiveColumnError(error)) {
+            const fallbackResult = await supabase
+                .from('products')
+                .select('*, category:categories(*)')
+                .order('created_at', { ascending: false });
+            data = fallbackResult.data;
+            error = fallbackResult.error;
+        }
 
         if (error) {
             console.error('Error fetching products:', error);
@@ -183,11 +206,23 @@ export async function getProducts(): Promise<Product[]> {
 }
 
 export async function getProductBySlug(slug: string): Promise<Product | null> {
-    const { data, error } = await supabase
+    let query = supabase
         .from('products')
         .select('*, category:categories(*)')
         .eq('slug', slug)
-        .single();
+        .eq('is_active', true);
+
+    let { data, error } = await query.single();
+
+    if (error && isMissingIsActiveColumnError(error)) {
+        const fallbackResult = await supabase
+            .from('products')
+            .select('*, category:categories(*)')
+            .eq('slug', slug)
+            .single();
+        data = fallbackResult.data;
+        error = fallbackResult.error;
+    }
 
     if (error) return null;
     return data;
@@ -202,11 +237,24 @@ export async function getProductsByCategory(categorySlug: string): Promise<Produ
 
     if (!category) return [];
 
-    const { data, error } = await supabase
+    let query = supabase
         .from('products')
         .select('*, category:categories(*)')
         .eq('category_id', category.id)
+        .eq('is_active', true)
         .order('created_at', { ascending: false });
+
+    let { data, error } = await query;
+
+    if (error && isMissingIsActiveColumnError(error)) {
+        const fallbackResult = await supabase
+            .from('products')
+            .select('*, category:categories(*)')
+            .eq('category_id', category.id)
+            .order('created_at', { ascending: false });
+        data = fallbackResult.data;
+        error = fallbackResult.error;
+    }
 
     if (error) {
         console.error('Error fetching products by category:', error);
@@ -219,12 +267,26 @@ export async function getFeaturedProducts(): Promise<Product[]> {
     if (!isSupabaseConfigured) return [];
 
     try {
-        const { data, error } = await supabase
+        let query = supabase
             .from('products')
             .select('*, category:categories(*)')
             .eq('featured', true)
+            .eq('is_active', true)
             .order('created_at', { ascending: false })
             .limit(8);
+
+        let { data, error } = await query;
+
+        if (error && isMissingIsActiveColumnError(error)) {
+            const fallbackResult = await supabase
+                .from('products')
+                .select('*, category:categories(*)')
+                .eq('featured', true)
+                .order('created_at', { ascending: false })
+                .limit(8);
+            data = fallbackResult.data;
+            error = fallbackResult.error;
+        }
 
         if (error) {
             console.error('Error fetching featured products:', error);
