@@ -6,6 +6,7 @@ import {
     isSupabaseConfigured
 } from '../../../lib/supabase';
 import { sendWishlistSaleEmail } from '../../../lib/email';
+import { verifyAdminRequest, unauthorizedResponse } from '../../../lib/adminAuth';
 
 export const prerender = false;
 
@@ -13,6 +14,10 @@ export const prerender = false;
 // POST para ejecutar el envío de emails
 
 export const POST: APIRoute = async ({ request }) => {
+    if (!await verifyAdminRequest(request)) {
+        return unauthorizedResponse();
+    }
+
     if (!isSupabaseConfigured) {
         return new Response(JSON.stringify({ error: 'Supabase not configured' }), {
             status: 500,
@@ -21,17 +26,6 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     try {
-        // Verificar API key de admin (opcional, para seguridad)
-        const authHeader = request.headers.get('Authorization');
-        const adminKey = import.meta.env.ADMIN_API_KEY;
-
-        if (adminKey && authHeader !== `Bearer ${adminKey}`) {
-            return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-                status: 401,
-                headers: { 'Content-Type': 'application/json' },
-            });
-        }
-
         // Primero resetear notificaciones de productos que ya no están en oferta
         await resetWishlistSaleNotifications();
 
@@ -117,8 +111,12 @@ export const POST: APIRoute = async ({ request }) => {
     }
 };
 
-// GET para ver estado de notificaciones pendientes
-export const GET: APIRoute = async () => {
+// GET para ver estado de notificaciones pendientes (también protegido)
+export const GET: APIRoute = async ({ request }) => {
+    if (!await verifyAdminRequest(request)) {
+        return unauthorizedResponse();
+    }
+
     if (!isSupabaseConfigured) {
         return new Response(JSON.stringify({ error: 'Supabase not configured' }), {
             status: 500,

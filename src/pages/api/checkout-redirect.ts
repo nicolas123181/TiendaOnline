@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import Stripe from 'stripe';
+import { supabase } from '../../lib/supabase';
 
 const stripeSecretKey = import.meta.env.STRIPE_SECRET_KEY;
 const stripe = new Stripe(stripeSecretKey, { apiVersion: '2023-10-16' });
@@ -58,7 +59,51 @@ export const GET: APIRoute = async ({ request, redirect }) => {
             );
         }
 
-        // Convertir items del carrito a line_items de Stripe
+        // ============================================================
+        // VALIDAR PRECIOS DESDE BD (evita manipulación desde el cliente)
+        // ============================================================
+        const productIds = items.map((item: any) => Number(item.id)).filter(Boolean);
+        const priceMap = new Map<number, number>();
+
+        if (productIds.length > 0) {
+            const { data: dbProducts } = await supabase
+                .from('products')
+                .select('id, price, sale_price, is_on_sale')
+                .in('id', productIds);
+
+            if (dbProducts) {
+                for (const p of dbProducts) {
+                    priceMap.set(p.id, (p.is_on_sale && p.sale_price) ? p.sale_price : p.price);
+                }
+            }
+        }
+
+        // ============================================================
+        // VALIDAR COSTE DE ENVÍO DESDE BD
+        // ============================================================
+        let validatedShippingCost = shipping_cost || 0;
+        if (shipping_method_id) {
+            const { data: shippingMethod } = await supabase
+                .from('shipping_methods')
+                .select('cost')
+                .eq('id', Number(shipping_method_id))
+                .eq('is_active', true)
+                .single();
+
+            if (shippingMethod) {
+                validatedShippingCost = shippingMethod.cost;
+            }
+        }
+
+        // Descuento: backward compat para Flutter (sin coupon_code)
+        // Se limita al 50 % del subtotal como cota de seguridad
+        const rawDiscount = discount || 0;
+        const rawSubtotal = items.reduce(
+            (sum: number, item: any) => sum + (priceMap.get(Number(item.id)) ?? item.price) * item.quantity, 0
+        );
+        const validatedDiscount = Math.min(rawDiscount, Math.floor(rawSubtotal * 0.5));
+
+        // Convertir items del carrito a line_items de Stripe (precio validado desde BD)
         const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = items.map((item: any) => ({
             price_data: {
                 currency: 'eur',
@@ -67,31 +112,31 @@ export const GET: APIRoute = async ({ request, redirect }) => {
                     images: item.image ? [item.image] : [],
                     description: item.size ? `Talla: ${item.size}` : undefined,
                 },
-                unit_amount: item.price,
+                unit_amount: priceMap.get(Number(item.id)) ?? item.price,
             },
             quantity: item.quantity,
         }));
 
-        // Agregar costo de envío como line item
-        if (shipping_cost > 0) {
+        // Agregar costo de envío validado como line item
+        if (validatedShippingCost > 0) {
             lineItems.push({
                 price_data: {
                     currency: 'eur',
                     product_data: {
                         name: 'Envío',
                     },
-                    unit_amount: shipping_cost,
+                    unit_amount: validatedShippingCost,
                 },
                 quantity: 1,
             });
         }
 
-        // Crear cupón de Stripe si hay descuento
+        // Crear cupón de Stripe si hay descuento validado
         let stripeCouponId: string | undefined;
-        if (discount && discount > 0) {
+        if (validatedDiscount > 0) {
             try {
                 const coupon = await stripe.coupons.create({
-                    amount_off: discount,
+                    amount_off: validatedDiscount,
                     currency: 'eur',
                     duration: 'once',
                     name: 'Descuento aplicado',
@@ -103,15 +148,20 @@ export const GET: APIRoute = async ({ request, redirect }) => {
             }
         }
 
-        // Preparar datos del pedido para metadata
+        // Preparar datos del pedido para metadata (precios validados desde BD)
         const simplifiedItems = items.map((item: any) => ({
             id: item.id,
             name: item.name,
-            price: item.price,
+            price: priceMap.get(Number(item.id)) ?? item.price,
             quantity: item.quantity,
             size: item.size || null,
             image: item.image || null,
         }));
+
+        const verifiedSubtotal = simplifiedItems.reduce(
+            (sum: number, item: any) => sum + item.price * item.quantity, 0
+        );
+        const verifiedTotal = verifiedSubtotal + validatedShippingCost - validatedDiscount;
 
         const metaOrderData = {
             customerName: customer_name,
@@ -122,10 +172,10 @@ export const GET: APIRoute = async ({ request, redirect }) => {
             customerPostalCode: customer_postal_code,
             shippingMethodId: shipping_method_id || 0,
             cartItems: simplifiedItems,
-            total: total || (subtotal + shipping_cost - (discount || 0)),
-            shipping: shipping_cost || 0,
-            subtotal: subtotal || 0,
-            discount: discount || 0,
+            total: verifiedTotal,
+            shipping: validatedShippingCost,
+            subtotal: verifiedSubtotal,
+            discount: validatedDiscount,
         };
 
         const origin = new URL(request.url).origin;

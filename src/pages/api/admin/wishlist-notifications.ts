@@ -5,12 +5,17 @@ import {
     isSupabaseConfigured
 } from '../../../lib/supabase';
 import { sendWishlistLowStockEmail } from '../../../lib/email';
+import { verifyAdminRequest, unauthorizedResponse } from '../../../lib/adminAuth';
 
 export const prerender = false;
 
 // Este endpoint debe ser llamado por un cron job o manualmente desde el admin
 // GET para probar, POST para ejecutar
 export const POST: APIRoute = async ({ request }) => {
+    if (!await verifyAdminRequest(request)) {
+        return unauthorizedResponse();
+    }
+
     if (!isSupabaseConfigured) {
         return new Response(JSON.stringify({ error: 'Supabase not configured' }), {
             status: 500,
@@ -19,21 +24,6 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     try {
-        // Verificar API key de admin (opcional, para seguridad)
-        const authHeader = request.headers.get('Authorization');
-        const adminKey = import.meta.env.ADMIN_API_KEY;
-
-        if (adminKey && authHeader !== `Bearer ${adminKey}`) {
-            // Si hay API key configurada y no coincide, rechazar
-            // Si no hay API key configurada, permitir (para desarrollo)
-            if (adminKey) {
-                return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-                    status: 401,
-                    headers: { 'Content-Type': 'application/json' },
-                });
-            }
-        }
-
         // Obtener productos de wishlist con stock bajo
         const notifications = await getWishlistLowStockNotifications(9);
 
@@ -115,8 +105,12 @@ export const POST: APIRoute = async ({ request }) => {
     }
 };
 
-// GET para probar/ver estado
-export const GET: APIRoute = async () => {
+// GET para probar/ver estado (también protegido)
+export const GET: APIRoute = async ({ request }) => {
+    if (!await verifyAdminRequest(request)) {
+        return unauthorizedResponse();
+    }
+
     if (!isSupabaseConfigured) {
         return new Response(JSON.stringify({ error: 'Supabase not configured' }), {
             status: 500,

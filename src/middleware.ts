@@ -3,16 +3,29 @@ import { supabase, isSupabaseConfigured } from './lib/supabase';
 
 export const onRequest = defineMiddleware(async (context, next) => {
     const isApiRoute = context.url.pathname.startsWith('/api');
+    const isAdminApiRoute = context.url.pathname.startsWith('/api/admin');
+    const securityHeaders = {
+        'X-Content-Type-Options': 'nosniff',
+        'X-Frame-Options': 'DENY',
+        'Referrer-Policy': 'strict-origin-when-cross-origin',
+        'X-DNS-Prefetch-Control': 'off',
+        'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
+        'Permissions-Policy': 'accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()'
+    };
     const corsHeaders = {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     };
 
-    if (isApiRoute && context.request.method === 'OPTIONS') {
+    if (isApiRoute && !isAdminApiRoute && context.request.method === 'OPTIONS') {
+        const preflightHeaders = {
+            ...corsHeaders,
+            ...securityHeaders
+        };
         return new Response(null, {
             status: 204,
-            headers: corsHeaders,
+            headers: preflightHeaders,
         });
     }
 
@@ -52,12 +65,15 @@ export const onRequest = defineMiddleware(async (context, next) => {
     }
 
     const response = await next();
-
-    if (!isApiRoute) return response;
-
     const headers = new Headers(response.headers);
-    for (const [key, value] of Object.entries(corsHeaders)) {
+    for (const [key, value] of Object.entries(securityHeaders)) {
         headers.set(key, value);
+    }
+
+    if (isApiRoute && !isAdminApiRoute) {
+        for (const [key, value] of Object.entries(corsHeaders)) {
+            headers.set(key, value);
+        }
     }
 
     return new Response(response.body, {

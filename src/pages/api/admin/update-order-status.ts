@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { supabase } from '../../../lib/supabase';
 import { sendDeliveryConfirmationEmail, SITE_URL } from '../../../lib/email';
 import { Resend } from 'resend';
+import { verifyAdminRequest, unauthorizedResponse } from '../../../lib/adminAuth';
 
 const resendApiKey = import.meta.env.RESEND_API_KEY;
 const resend = resendApiKey ? new Resend(resendApiKey) : null;
@@ -19,6 +20,9 @@ const BRAND_COLORS = {
  * API para actualizar estado de pedido y enviar email
  */
 export const POST: APIRoute = async ({ request }) => {
+    if (!await verifyAdminRequest(request)) {
+        return unauthorizedResponse();
+    }
     try {
         const {
             orderId,

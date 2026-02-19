@@ -1,11 +1,15 @@
 import type { APIRoute } from 'astro';
 import { supabase } from '../../../lib/supabase';
+import { verifyAdminRequest, unauthorizedResponse } from '../../../lib/adminAuth';
 
 /**
  * API de Analytics para el Dashboard Ejecutivo
  * GET /api/admin/analytics
  */
-export const GET: APIRoute = async () => {
+export const GET: APIRoute = async ({ request }) => {
+    if (!await verifyAdminRequest(request)) {
+        return unauthorizedResponse();
+    }
     try {
         const now = new Date();
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();

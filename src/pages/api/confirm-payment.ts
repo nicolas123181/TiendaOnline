@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import Stripe from 'stripe';
 import { supabase, getServiceSupabase } from '../../lib/supabase';
 import {
     sendOrderConfirmationEmail,
@@ -11,6 +12,11 @@ import {
     SITE_URL
 } from '../../lib/email';
 import { createInvoice, type InvoiceItem } from '../../lib/invoice';
+
+const STRIPE_API_VERSION = '2023-10-16' as const;
+const stripeClient = import.meta.env.STRIPE_SECRET_KEY
+    ? new Stripe(import.meta.env.STRIPE_SECRET_KEY as string, { apiVersion: STRIPE_API_VERSION })
+    : null;
 
 // Helper para añadir delay entre emails y evitar rate limiting de Resend
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -69,6 +75,41 @@ export const POST: APIRoute = async ({ request }) => {
             }), { status: 400, headers: { 'Content-Type': 'application/json' } });
         }
 
+        // ==========================================
+        // VERIFICACIÓN CON STRIPE: confirmar que el PaymentIntent realmente fue cobrado
+        // Sin esto, cualquier cliente podía forjar un pedido en estado 'paid'
+        // ==========================================
+        if (!paymentIntentId) {
+            console.error('❌ No paymentIntentId provided — rejecting request for security');
+            return new Response(JSON.stringify({
+                success: false,
+                error: 'Se requiere el identificador de pago'
+            }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        }
+
+        try {
+            if (!stripeClient) {
+                throw new Error('STRIPE_SECRET_KEY not configured');
+            }
+            const paymentIntent = await stripeClient.paymentIntents.retrieve(paymentIntentId);
+
+            if (paymentIntent.status !== 'succeeded') {
+                console.error(`❌ PaymentIntent ${paymentIntentId} status is '${paymentIntent.status}', not 'succeeded'`);
+                return new Response(JSON.stringify({
+                    success: false,
+                    error: 'El pago no fue completado correctamente'
+                }), { status: 402, headers: { 'Content-Type': 'application/json' } });
+            }
+
+            console.log(`✅ Stripe verified: PaymentIntent ${paymentIntentId} succeeded`);
+        } catch (stripeError) {
+            console.error('❌ Error verifying PaymentIntent with Stripe:', stripeError);
+            return new Response(JSON.stringify({
+                success: false,
+                error: 'No se pudo verificar el pago. Por favor, contacta con soporte.'
+            }), { status: 402, headers: { 'Content-Type': 'application/json' } });
+        }
+
         const {
             customerName,
             customerEmail,
@@ -97,26 +138,20 @@ export const POST: APIRoute = async ({ request }) => {
         // ==========================================
         // IDEMPOTENCIA: Verificar si ya existe un pedido con este paymentIntentId
         // Evita crear pedidos duplicados al refrescar la página de éxito
-        // Usa upsert-style: intenta insertar y maneja conflicto por stripe_payment_intent_id
         // ==========================================
-        if (paymentIntentId) {
-            const { data: existingOrder } = await db
-                .from('orders')
-                .select('id')
-                .eq('stripe_payment_intent_id', paymentIntentId)
-                .maybeSingle();
+        const { data: existingOrder } = await db
+            .from('orders')
+            .select('id')
+            .eq('stripe_payment_intent_id', paymentIntentId)
+            .maybeSingle();
 
-            if (existingOrder) {
-                console.log(`⚠️ Order already exists for payment ${paymentIntentId}: #${existingOrder.id}`);
-                return new Response(JSON.stringify({
-                    success: true,
-                    message: 'Pedido ya existente',
-                    orderId: existingOrder.id,
-                }), { status: 200, headers: { 'Content-Type': 'application/json' } });
-            }
-        } else {
-            // Sin paymentIntentId no podemos garantizar idempotencia
-            console.warn('⚠️ No paymentIntentId provided — cannot guarantee idempotency');
+        if (existingOrder) {
+            console.log(`⚠️ Order already exists for payment ${paymentIntentId}: #${existingOrder.id}`);
+            return new Response(JSON.stringify({
+                success: true,
+                message: 'Pedido ya existente',
+                orderId: existingOrder.id,
+            }), { status: 200, headers: { 'Content-Type': 'application/json' } });
         }
 
         // ==========================================
@@ -278,33 +313,38 @@ export const POST: APIRoute = async ({ request }) => {
 
                 if (sizeError || !sizeData) {
                     console.warn(`⚠️ Size ${item.size} not found for product ${item.id}, falling back to product stock`);
-                    // Fallback: decrementar stock general del producto
-                    const newStock = Math.max(0, product.stock - item.quantity);
-                    console.log(`📦 Updating product stock: ${product.stock} -> ${newStock}`);
 
-                    const { error: productUpdateError } = await db
+                    const { data: updatedProductRows, error: productUpdateError } = await db
                         .from('products')
-                        .update({ stock: newStock, updated_at: new Date().toISOString() })
-                        .eq('id', item.id);
+                        .update({ stock: product.stock - item.quantity, updated_at: new Date().toISOString() })
+                        .eq('id', item.id)
+                        .gte('stock', item.quantity)
+                        .select('id');
 
                     if (productUpdateError) {
                         console.error(`❌ Error updating product stock:`, productUpdateError.message);
+                    } else if (!updatedProductRows || updatedProductRows.length === 0) {
+                        console.warn(`⚠️ Race condition: stock for ${product.name} claimed concurrently (oversell prevented)`);
                     } else {
-                        console.log(`✅ Product stock updated: ${product.stock} -> ${newStock}`);
+                        console.log(`✅ Product stock updated (fallback): ${product.stock} → ${product.stock - item.quantity}`);
                     }
                 } else {
-                    // Decrementar stock de la talla específica
+                    // Decrementar stock de la talla específica (actualización condicional)
                     console.log(`📏 Size found: ID ${sizeData.id}, current stock: ${sizeData.stock}`);
-                    const newSizeStock = Math.max(0, sizeData.stock - item.quantity);
+                    const newSizeStock = sizeData.stock - item.quantity;
                     console.log(`📏 Updating size stock: ${sizeData.stock} -> ${newSizeStock}`);
 
-                    const { error: updateError } = await db
+                    const { data: updatedSizeRows, error: updateError } = await db
                         .from('product_sizes')
                         .update({ stock: newSizeStock })
-                        .eq('id', sizeData.id);
+                        .eq('id', sizeData.id)
+                        .gte('stock', item.quantity)
+                        .select('id');
 
                     if (updateError) {
                         console.error(`❌ Error updating size stock for ${item.name} (${item.size}):`, updateError.message);
+                    } else if (!updatedSizeRows || updatedSizeRows.length === 0) {
+                        console.warn(`⚠️ Race condition: size stock for ${item.name} (${item.size}) claimed concurrently (oversell prevented)`);
                     } else {
                         console.log(`✅ Size stock updated for ${item.name} (${item.size}): ${sizeData.stock} -> ${newSizeStock}`);
                     }
@@ -330,19 +370,23 @@ export const POST: APIRoute = async ({ request }) => {
                     }
                 }
             } else {
-                // Producto sin talla - decrementar stock general
-                const newStock = Math.max(0, product.stock - item.quantity);
+                // Producto sin talla - decrementar stock general (actualización condicional)
+                const newStock = product.stock - item.quantity;
 
-                const { error: updateError } = await db
+                const { data: updatedRows, error: updateError } = await db
                     .from('products')
                     .update({
                         stock: newStock,
                         updated_at: new Date().toISOString()
                     })
-                    .eq('id', item.id);
+                    .eq('id', item.id)
+                    .gte('stock', item.quantity)
+                    .select('id');
 
                 if (updateError) {
                     console.error(`❌ Error updating stock for ${item.name}:`, updateError);
+                } else if (!updatedRows || updatedRows.length === 0) {
+                    console.warn(`⚠️ Race condition: stock for ${item.name} claimed concurrently (oversell prevented)`);
                 } else {
                     console.log(`✅ Stock updated for ${item.name}: ${product.stock} -> ${newStock}`);
                 }

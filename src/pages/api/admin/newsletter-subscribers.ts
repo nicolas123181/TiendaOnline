@@ -1,12 +1,16 @@
 import type { APIRoute } from 'astro';
 import { getServiceSupabase } from '../../../lib/supabase';
+import { verifyAdminRequest, unauthorizedResponse } from '../../../lib/adminAuth';
 
 /**
  * API para obtener la lista de suscriptores del newsletter
  * Usado por el panel de administración de Flutter
  * Usa Service Role para bypassear RLS
  */
-export const GET: APIRoute = async () => {
+export const GET: APIRoute = async ({ request }) => {
+    if (!await verifyAdminRequest(request)) {
+        return unauthorizedResponse();
+    }
     try {
         const supabase = getServiceSupabase();
 

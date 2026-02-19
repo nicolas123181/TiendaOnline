@@ -7,6 +7,11 @@ export const prerender = false;
 // Desconectar usuario
 await supabase.auth.signOut();
 
+Astro.cookies.delete("admin_session", { path: "/" });
+Astro.cookies.delete("admin_session", { path: "/admin" });
+Astro.cookies.delete("sb-access-token", { path: "/" });
+Astro.cookies.delete("sb-refresh-token", { path: "/" });
+
 // Redirigir a login
 return Astro.redirect("/admin/login?message=Sesión cerrada correctamente");
 ---

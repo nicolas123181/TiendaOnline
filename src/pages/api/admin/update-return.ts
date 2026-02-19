@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { supabase } from '../../../lib/supabase';
 import { Resend } from 'resend';
 import Stripe from 'stripe';
+import { verifyAdminRequest, unauthorizedResponse } from '../../../lib/adminAuth';
 
 const resendApiKey = import.meta.env.RESEND_API_KEY;
 const resend = resendApiKey ? new Resend(resendApiKey) : null;
@@ -69,6 +70,9 @@ async function processStripeRefund(
  * API para actualizar estado de devolución (admin)
  */
 export const POST: APIRoute = async ({ request }) => {
+    if (!await verifyAdminRequest(request)) {
+        return unauthorizedResponse();
+    }
     try {
         const { returnId, status, adminNotes, refundAmount } = await request.json();
 

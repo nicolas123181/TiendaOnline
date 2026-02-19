@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import Stripe from 'stripe';
+import { supabase, validateCoupon } from '../../lib/supabase';
 
 const stripeSecretKey = import.meta.env.STRIPE_SECRET_KEY;
 const stripe = new Stripe(stripeSecretKey, { apiVersion: '2023-10-16' });
@@ -37,6 +38,9 @@ export const POST: APIRoute = async ({ request }) => {
             cancelUrl
         } = body;
 
+        // coupon_code es opcional (nuevo campo — el web lo envía, Flutter puede no enviarlo)
+        const coupon_code: string = body.coupon_code || '';
+
         if (!items || !Array.isArray(items) || items.length === 0) {
             return new Response(
                 JSON.stringify({ error: 'No hay productos en el carrito' }),
@@ -50,7 +54,85 @@ export const POST: APIRoute = async ({ request }) => {
             );
         }
 
-        // Convertir items del carrito a line_items de Stripe
+        // ============================================================
+        // VALIDAR PRECIOS DESDE BD (evita manipulación desde el cliente)
+        // ============================================================
+        const productIds = items.map((item: any) => Number(item.id)).filter(Boolean);
+        const priceMap = new Map<number, number>();
+
+        if (productIds.length > 0) {
+            const { data: dbProducts } = await supabase
+                .from('products')
+                .select('id, price, sale_price, is_on_sale')
+                .in('id', productIds);
+
+            if (dbProducts) {
+                for (const p of dbProducts) {
+                    priceMap.set(p.id, (p.is_on_sale && p.sale_price) ? p.sale_price : p.price);
+                }
+            }
+        }
+
+        // Calcular subtotal verificado desde precios de BD ANTES de validar el cupón
+        // (evita bypass del mínimo de compra enviando un subtotal inflado desde el cliente)
+        const verifiedSubtotal = items.reduce(
+            (sum: number, item: any) => sum + (priceMap.get(Number(item.id)) ?? item.price) * item.quantity, 0
+        );
+
+        // ============================================================
+        // VALIDAR COSTE DE ENVÍO DESDE BD
+        // ============================================================
+        let validatedShippingCost = 0;
+        if (shipping_method_id) {
+            const { data: shippingMethod } = await supabase
+                .from('shipping_methods')
+                .select('cost')
+                .eq('id', Number(shipping_method_id))
+                .eq('is_active', true)
+                .single();
+
+            if (shippingMethod) {
+                validatedShippingCost = shippingMethod.cost;
+            } else {
+                console.error(`❌ Shipping method ${shipping_method_id} not found or inactive`);
+                return new Response(
+                    JSON.stringify({ error: 'Método de envío no disponible. Por favor, recarga la página.' }),
+                    { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+                );
+            }
+        } else {
+            validatedShippingCost = shipping_cost || 0;
+        }
+
+        // ============================================================
+        // VALIDAR DESCUENTO: requiere cupón válido desde BD
+        // Si se envía coupon_code → validar server-side
+        // Si no hay coupon_code → descuento = 0 (ignora valor del cliente)
+        // ============================================================
+        let validatedDiscount = 0;
+        if (coupon_code) {
+            const couponResult = await validateCoupon(
+                coupon_code,
+                verifiedSubtotal,
+                customer_email || ''
+            );
+            if (couponResult.valid) {
+                validatedDiscount = couponResult.discount;
+                console.log(`✅ Coupon '${coupon_code}' validated: -${validatedDiscount} cents`);
+            } else {
+                console.warn(`⚠️ Coupon '${coupon_code}' invalid: ${couponResult.message}`);
+            }
+        } else if (discount && discount > 0) {
+            // Backward compat para clientes que aún no envían coupon_code (e.g. Flutter)
+            // Se limita al 50% del subtotal como cota de seguridad
+            const maxAllowedDiscount = Math.floor(verifiedSubtotal * 0.5);
+            validatedDiscount = Math.min(discount, maxAllowedDiscount);
+            if (validatedDiscount !== discount) {
+                console.warn(`⚠️ Discount ${discount} capped to ${validatedDiscount} (no coupon_code provided)`);
+            }
+        }
+
+        // Convertir items del carrito a line_items de Stripe (precio validado desde BD)
         const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = items.map((item: any) => ({
             price_data: {
                 currency: 'eur',
@@ -59,39 +141,39 @@ export const POST: APIRoute = async ({ request }) => {
                     images: item.image ? [item.image] : [],
                     description: item.size ? `Talla: ${item.size}` : undefined,
                 },
-                unit_amount: item.price,
+                // Usar precio de BD si disponible; si no, precio cliente con aviso
+                unit_amount: priceMap.get(Number(item.id)) ?? item.price,
             },
             quantity: item.quantity,
         }));
 
-        // Agregar costo de envío como line item
-        if (shipping_cost > 0) {
+        // Agregar costo de envío validado como line item
+        if (validatedShippingCost > 0) {
             lineItems.push({
                 price_data: {
                     currency: 'eur',
                     product_data: {
                         name: 'Envío',
                     },
-                    unit_amount: shipping_cost,
+                    unit_amount: validatedShippingCost,
                 },
                 quantity: 1,
             });
         }
 
-        // Crear cupón de Stripe si hay descuento
+        // Crear cupón de Stripe si hay descuento validado
         let stripeCouponId: string | undefined;
-        if (discount && discount > 0) {
+        if (validatedDiscount > 0) {
             try {
-                // Crear un cupón temporal en Stripe
                 const coupon = await stripe.coupons.create({
-                    amount_off: discount, // en céntimos
+                    amount_off: validatedDiscount,
                     currency: 'eur',
                     duration: 'once',
                     name: 'Descuento aplicado',
                     max_redemptions: 1,
                 });
                 stripeCouponId = coupon.id;
-                console.log(`✅ Stripe coupon created: ${coupon.id} for ${discount} cents`);
+                console.log(`✅ Stripe coupon created: ${coupon.id} for ${validatedDiscount} cents`);
             } catch (couponError) {
                 console.error('Error creating Stripe coupon:', couponError);
                 // Continuar sin el cupón si falla
@@ -99,16 +181,17 @@ export const POST: APIRoute = async ({ request }) => {
         }
 
         // Preparar datos del pedido para guardar en metadata
-        // Stripe metadata tiene límite de 500 caracteres por valor
-        // Así que simplificamos los items
+        // (con precios validados desde BD)
         const simplifiedItems = items.map((item: any) => ({
             id: item.id,
             name: item.name,
-            price: item.price,
+            price: priceMap.get(Number(item.id)) ?? item.price, // Precio validado desde BD
             quantity: item.quantity,
             size: item.size || null,
             image: item.image || null,
         }));
+
+        const verifiedTotal = verifiedSubtotal + validatedShippingCost - validatedDiscount;
 
         const orderData = {
             customerName: customer_name,
@@ -119,10 +202,10 @@ export const POST: APIRoute = async ({ request }) => {
             customerPostalCode: customer_postal_code,
             shippingMethodId: shipping_method_id || 0,
             cartItems: simplifiedItems,
-            total: total || (subtotal + shipping_cost - (discount || 0)),
-            shipping: shipping_cost || 0,
-            subtotal: subtotal || 0,
-            discount: discount || 0,
+            total: verifiedTotal,
+            shipping: validatedShippingCost,
+            subtotal: verifiedSubtotal,
+            discount: validatedDiscount,
         };
 
         // Crear Checkout Session

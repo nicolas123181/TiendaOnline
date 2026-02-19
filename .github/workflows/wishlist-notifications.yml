@@ -1,20 +1,21 @@
 name: Wishlist Email Notifications
 
-# Ejecutar todos los días a las 18:00 (hora de Madrid/España) - TEMPORAL PARA PRUEBA
-# Nota: El cron de GitHub usa UTC, Madrid es UTC+1 (invierno)
-# 18:00 Madrid = 17:00 UTC
 on:
+  # 08:00 UTC diariamente
   schedule:
-    # TEMPORAL: Ejecutar a las 17:00 UTC (18:00 hora España)
-    # CAMBIAR A: '0 8 * * *' para las 9:00 AM España
-    - cron: '0 8 * * *'
-  
-  # Permitir ejecución manual desde GitHub Actions
+    - cron: "0 8 * * *"
+
+  # Permite ejecución manual
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: wishlist-notifications
+  cancel-in-progress: false
+
 env:
-  # URL de tu aplicación desplegada
-  # Cambiar esto cuando despliegues la app
   SITE_URL: ${{ secrets.SITE_URL }}
   ADMIN_API_KEY: ${{ secrets.ADMIN_API_KEY }}
 
@@ -22,69 +23,202 @@ jobs:
   send-notifications:
     name: Send Wishlist Notifications
     runs-on: ubuntu-latest
-    
+    timeout-minutes: 10
+
     steps:
-      - name: Check Site URL is configured
+      - name: Validate required secrets
         run: |
-          if [ -z "$SITE_URL" ]; then
-            echo "❌ Error: SITE_URL secret not configured"
-            echo "Please add SITE_URL to your repository secrets"
+          set -euo pipefail
+
+          if [[ -z "${SITE_URL:-}" ]]; then
+            echo "❌ Missing required secret: SITE_URL"
             exit 1
           fi
-          echo "✅ Site URL configured: $SITE_URL"
 
-      - name: Send Low Stock Notifications
+          if [[ -z "${ADMIN_API_KEY:-}" ]]; then
+            echo "❌ Missing required secret: ADMIN_API_KEY"
+            exit 1
+          fi
+
+          if [[ ! "$SITE_URL" =~ ^https?:// ]]; then
+            echo "❌ SITE_URL must start with http:// or https://"
+            exit 1
+          fi
+
+          CLEAN_SITE_URL="${SITE_URL%/}"
+          echo "clean_site_url=$CLEAN_SITE_URL" >> "$GITHUB_OUTPUT"
+        id: validate
+
+      - name: Send Low Stock Notifications (with retry)
         id: low_stock
+        env:
+          ENDPOINT_URL: ${{ steps.validate.outputs.clean_site_url }}/api/admin/wishlist-notifications
         run: |
-          echo "📦 Checking for low stock wishlist notifications..."
-          
-          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
-            "$SITE_URL/api/admin/wishlist-notifications" \
-            -H "Content-Type: application/json" \
-            -H "Authorization: Bearer $ADMIN_API_KEY" \
-            --max-time 30)
-          
-          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
-          BODY=$(echo "$RESPONSE" | sed '$d')
-          
-          echo "Response code: $HTTP_CODE"
-          echo "Response: $BODY"
-          
-          if [ "$HTTP_CODE" -eq 200 ]; then
-            echo "✅ Low stock notifications processed successfully"
-          else
-            echo "⚠️ Low stock notifications failed with code $HTTP_CODE"
-          fi
+          set -euo pipefail
 
-      - name: Send Sale Notifications
+          echo "📦 Calling: $ENDPOINT_URL"
+
+          last_http_code=""
+          last_body=""
+
+          for attempt in 1 2 3; do
+            echo "Attempt $attempt/3..."
+
+            response=$(curl -sS -w "\n%{http_code}" -X POST \
+              "$ENDPOINT_URL" \
+              -H "Content-Type: application/json" \
+              -H "Authorization: Bearer $ADMIN_API_KEY" \
+              --connect-timeout 10 \
+              --max-time 60)
+
+            http_code=$(echo "$response" | tail -n1)
+            body=$(echo "$response" | sed '$d')
+
+            last_http_code="$http_code"
+            last_body="$body"
+
+            echo "HTTP: $http_code"
+            echo "Body: $body"
+
+            if [[ "$http_code" == "200" ]]; then
+              body_ok=$(python -c 'import json,sys
+      raw=sys.argv[1].strip() if len(sys.argv)>1 else ""
+      try:
+        data=json.loads(raw) if raw else {}
+        ok=data.get("success", True)
+        print("true" if ok else "false")
+      except Exception:
+        print("false")' "$body")
+
+              if [[ "$body_ok" == "true" ]]; then
+              sent=$(python -c 'import json,sys
+      raw=sys.argv[1].strip() if len(sys.argv)>1 else ""
+      try:
+        data=json.loads(raw) if raw else {}
+        print(data.get("sentCount", 0))
+      except Exception:
+        print(0)' "$body")
+
+              marked=$(python -c 'import json,sys
+      raw=sys.argv[1].strip() if len(sys.argv)>1 else ""
+      try:
+        data=json.loads(raw) if raw else {}
+        print(data.get("markedCount", 0))
+      except Exception:
+        print(0)' "$body")
+
+                echo "sent_count=$sent" >> "$GITHUB_OUTPUT"
+                echo "marked_count=$marked" >> "$GITHUB_OUTPUT"
+                echo "✅ Low stock notifications completed"
+                exit 0
+              fi
+            fi
+
+            if [[ "$attempt" -lt 3 ]]; then
+              sleep_seconds=$((attempt * 5))
+              echo "Retrying in ${sleep_seconds}s..."
+              sleep "$sleep_seconds"
+            fi
+          done
+
+          echo "❌ Low stock notifications failed after 3 attempts"
+          echo "Last HTTP code: $last_http_code"
+          echo "Last body: $last_body"
+          exit 1
+
+      - name: Send Sale Notifications (with retry)
         id: sale
+        env:
+          ENDPOINT_URL: ${{ steps.validate.outputs.clean_site_url }}/api/admin/wishlist-sale-notifications
         run: |
-          echo "🏷️ Checking for sale wishlist notifications..."
-          
-          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
-            "$SITE_URL/api/admin/wishlist-sale-notifications" \
-            -H "Content-Type: application/json" \
-            -H "Authorization: Bearer $ADMIN_API_KEY" \
-            --max-time 30)
-          
-          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
-          BODY=$(echo "$RESPONSE" | sed '$d')
-          
-          echo "Response code: $HTTP_CODE"
-          echo "Response: $BODY"
-          
-          if [ "$HTTP_CODE" -eq 200 ]; then
-            echo "✅ Sale notifications processed successfully"
-          else
-            echo "⚠️ Sale notifications failed with code $HTTP_CODE"
-          fi
+          set -euo pipefail
+
+          echo "🏷️ Calling: $ENDPOINT_URL"
+
+          last_http_code=""
+          last_body=""
+
+          for attempt in 1 2 3; do
+            echo "Attempt $attempt/3..."
+
+            response=$(curl -sS -w "\n%{http_code}" -X POST \
+              "$ENDPOINT_URL" \
+              -H "Content-Type: application/json" \
+              -H "Authorization: Bearer $ADMIN_API_KEY" \
+              --connect-timeout 10 \
+              --max-time 60)
+
+            http_code=$(echo "$response" | tail -n1)
+            body=$(echo "$response" | sed '$d')
+
+            last_http_code="$http_code"
+            last_body="$body"
+
+            echo "HTTP: $http_code"
+            echo "Body: $body"
+
+            if [[ "$http_code" == "200" ]]; then
+              body_ok=$(python -c 'import json,sys
+      raw=sys.argv[1].strip() if len(sys.argv)>1 else ""
+      try:
+        data=json.loads(raw) if raw else {}
+        ok=data.get("success", True)
+        print("true" if ok else "false")
+      except Exception:
+        print("false")' "$body")
+
+              if [[ "$body_ok" == "true" ]]; then
+              sent=$(python -c 'import json,sys
+      raw=sys.argv[1].strip() if len(sys.argv)>1 else ""
+      try:
+        data=json.loads(raw) if raw else {}
+        print(data.get("sentCount", 0))
+      except Exception:
+        print(0)' "$body")
+
+              marked=$(python -c 'import json,sys
+      raw=sys.argv[1].strip() if len(sys.argv)>1 else ""
+      try:
+        data=json.loads(raw) if raw else {}
+        print(data.get("markedCount", 0))
+      except Exception:
+        print(0)' "$body")
+
+                echo "sent_count=$sent" >> "$GITHUB_OUTPUT"
+                echo "marked_count=$marked" >> "$GITHUB_OUTPUT"
+                echo "✅ Sale notifications completed"
+                exit 0
+              fi
+            fi
+
+            if [[ "$attempt" -lt 3 ]]; then
+              sleep_seconds=$((attempt * 5))
+              echo "Retrying in ${sleep_seconds}s..."
+              sleep "$sleep_seconds"
+            fi
+          done
+
+          echo "❌ Sale notifications failed after 3 attempts"
+          echo "Last HTTP code: $last_http_code"
+          echo "Last body: $last_body"
+          exit 1
 
       - name: Summary
+        if: success()
         run: |
-          echo "=========================================="
-          echo "📧 Wishlist Notifications Complete"
-          echo "=========================================="
-          echo "Time: $(date)"
-          echo ""
-          echo "Both low stock and sale notifications have been processed."
-          echo "Check the logs above for details on emails sent."
+          set -euo pipefail
+
+          LOW_STOCK_SENT="${{ steps.low_stock.outputs.sent_count }}"
+          LOW_STOCK_MARKED="${{ steps.low_stock.outputs.marked_count }}"
+          SALE_SENT="${{ steps.sale.outputs.sent_count }}"
+          SALE_MARKED="${{ steps.sale.outputs.marked_count }}"
+
+          echo "## 📧 Wishlist Notifications" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Ejecutado: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Low stock enviados: ${LOW_STOCK_SENT:-0}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Low stock marcados: ${LOW_STOCK_MARKED:-0}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Ofertas enviadas: ${SALE_SENT:-0}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Ofertas marcadas: ${SALE_MARKED:-0}" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "✅ Automatización completada correctamente." >> "$GITHUB_STEP_SUMMARY"

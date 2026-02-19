@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { supabase } from '../../../lib/supabase';
 import { createInvoice, getInvoiceByOrderId } from '../../../lib/invoice';
+import { verifyAdminRequest, unauthorizedResponse } from '../../../lib/adminAuth';
 
 /**
  * POST /api/admin/create-invoice
@@ -8,6 +9,9 @@ import { createInvoice, getInvoiceByOrderId } from '../../../lib/invoice';
  * Body: { orderId: number }
  */
 export const POST: APIRoute = async ({ request }) => {
+    if (!await verifyAdminRequest(request)) {
+        return unauthorizedResponse();
+    }
     try {
         const body = await request.json();
         const { orderId } = body;

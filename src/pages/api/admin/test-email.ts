@@ -1,12 +1,16 @@
 import type { APIRoute } from 'astro';
 import { sendWishlistSaleEmail, sendWishlistLowStockEmail } from '../../../lib/email';
+import { verifyAdminRequest, unauthorizedResponse } from '../../../lib/adminAuth';
 
 export const prerender = false;
 
-// Endpoint temporal para probar emails de wishlist
+// Endpoint para probar emails de wishlist (solo accesible para admins)
 // POST con body: { type: 'sale' | 'low_stock', ...data }
 
 export const POST: APIRoute = async ({ request }) => {
+    if (!await verifyAdminRequest(request)) {
+        return unauthorizedResponse();
+    }
     try {
         const data = await request.json();
         const { type, ...emailData } = data;

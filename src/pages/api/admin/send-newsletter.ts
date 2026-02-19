@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { supabase } from '../../../lib/supabase';
 import { Resend } from 'resend';
+import { verifyAdminRequest, unauthorizedResponse } from '../../../lib/adminAuth';
 
 const resendApiKey = import.meta.env.RESEND_API_KEY;
 const resend = resendApiKey ? new Resend(resendApiKey) : null;
@@ -17,6 +18,9 @@ const BRAND_COLORS = {
  * API para enviar newsletter a todos los suscriptores
  */
 export const POST: APIRoute = async ({ request }) => {
+    if (!await verifyAdminRequest(request)) {
+        return unauthorizedResponse();
+    }
     try {
         if (!resend) {
             return new Response(JSON.stringify({

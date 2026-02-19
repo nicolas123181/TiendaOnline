@@ -54,11 +54,14 @@ export default function CheckoutForm({ shippingMethods }: CheckoutFormProps) {
     useEffect(() => {
         const checkAuth = async () => {
             const supabaseUrl = (import.meta as any).env?.PUBLIC_SUPABASE_URL ||
-                (window as any).__SUPABASE_URL__ ||
-                'https://kggjqbhcvvayqwkbpwvp.supabase.co';
+                (window as any).__SUPABASE_URL__;
             const supabaseAnonKey = (import.meta as any).env?.PUBLIC_SUPABASE_ANON_KEY ||
-                (window as any).__SUPABASE_ANON_KEY__ ||
-                'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtnZ2pxYmhjdnZheXF3a2Jwd3ZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzYyNDI2NDQsImV4cCI6MjA1MTgxODY0NH0.P9eqbIFVBt2IuHnzTcCDbGb6w72xR-AQ60aKEkqJnYY';
+                (window as any).__SUPABASE_ANON_KEY__;
+
+            if (!supabaseUrl || !supabaseAnonKey) {
+                setIsLoggedIn(false);
+                return;
+            }
 
             const supabase = createClient(supabaseUrl, supabaseAnonKey);
             const { data: { session } } = await supabase.auth.getSession();
@@ -294,6 +297,7 @@ export default function CheckoutForm({ shippingMethods }: CheckoutFormProps) {
                     shipping_method_id: formData.shipping_method_id,
                     shipping_cost: shippingCost,
                     subtotal: subtotal,
+                    coupon_code: appliedCoupon || undefined,
                     discount: couponDiscount,
                     total: total,
                 }),

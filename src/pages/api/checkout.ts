@@ -25,7 +25,7 @@ export const POST: APIRoute = async ({ request }) => {
         const subtotal = parseInt(formData.get("subtotal")?.toString() || "0");
         const discount = parseInt(formData.get("discount")?.toString() || "0");
 
-        console.log('📋 Checkout data:', { customerName, customerEmail, itemCount: cartItems.length, total });
+        console.log('📋 Checkout data:', { email: customerEmail.replace(/(.{2}).+(@.+)/, '$1***$2'), itemCount: cartItems.length, total });
 
         // Validar datos
         if (!customerName || !customerEmail || !customerAddress || !customerCity || !customerPostalCode) {
@@ -43,35 +43,77 @@ export const POST: APIRoute = async ({ request }) => {
         }
 
         // ==========================================
-        // SOLO VERIFICAR STOCK (NO CREAR ORDEN)
+        // SOLO VERIFICAR STOCK (NO CREAR ORDEN) — 2 queries en vez de N+1 por item
         // La orden se crea cuando Stripe confirma el pago
         // ==========================================
+        const itemIds = cartItems.map((item: any) => Number(item.id));
+
+        // Fetch todos los productos en una sola query
+        const { data: allProducts, error: bulkProductError } = await supabase
+            .from('products')
+            .select('id, name, stock')
+            .in('id', itemIds);
+
+        if (bulkProductError || !allProducts) {
+            return new Response(JSON.stringify({
+                success: false,
+                error: 'Error al verificar stock de productos.'
+            }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+        }
+
+        const productMap = new Map(allProducts.map((p: any) => [p.id, p]));
+
+        // Fetch stocks por talla en una sola query
+        const sizedItems = cartItems.filter((item: any) => item.size);
+        const sizeMap = new Map<string, { stock: number }>();
+        if (sizedItems.length > 0) {
+            const { data: allSizes } = await supabase
+                .from('product_sizes')
+                .select('product_id, size, stock')
+                .in('product_id', sizedItems.map((i: any) => Number(i.id)));
+            if (allSizes) {
+                for (const s of allSizes) {
+                    sizeMap.set(`${s.product_id}:${s.size}`, { stock: s.stock });
+                }
+            }
+        }
+
         for (const item of cartItems) {
-            console.log(`📦 Verificando stock: ${item.name} (ID: ${item.id}, Qty: ${item.quantity})`);
-
-            const { data: currentProduct, error: fetchError } = await supabase
-                .from('products')
-                .select('id, name, stock')
-                .eq('id', item.id)
-                .single();
-
-            if (fetchError || !currentProduct) {
-                console.error(`❌ Product not found: ${item.id}`);
+            const product = productMap.get(Number(item.id));
+            if (!product) {
                 return new Response(JSON.stringify({
                     success: false,
                     error: `Producto "${item.name}" no encontrado.`
                 }), { status: 400, headers: { 'Content-Type': 'application/json' } });
             }
 
-            if (currentProduct.stock < item.quantity) {
-                console.error(`❌ Insufficient stock for ${item.name}: has ${currentProduct.stock}, needs ${item.quantity}`);
+            if (product.stock < item.quantity) {
                 return new Response(JSON.stringify({
                     success: false,
-                    error: `No hay suficiente stock para "${item.name}". Disponible: ${currentProduct.stock} unidades.`
+                    error: `No hay suficiente stock para "${product.name}". Disponible: ${product.stock} unidades.`
                 }), { status: 400, headers: { 'Content-Type': 'application/json' } });
             }
 
-            console.log(`✅ Stock OK para ${item.name}: ${currentProduct.stock} disponibles`);
+            if (item.size) {
+                const sizeData = sizeMap.get(`${item.id}:${item.size}`);
+                if (!sizeData) {
+                    return new Response(JSON.stringify({
+                        success: false,
+                        error: `La talla ${item.size} de "${item.name}" no está disponible.`
+                    }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+                }
+
+                if (sizeData.stock < item.quantity) {
+                    return new Response(JSON.stringify({
+                        success: false,
+                        error: `No hay suficiente stock en talla ${item.size} para "${item.name}". Disponible: ${sizeData.stock} unidades.`
+                    }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+                }
+
+                console.log(`✅ Stock por talla OK: ${item.name} (${item.size}) → ${sizeData.stock} disponibles`);
+            }
+
+            console.log(`✅ Stock OK para ${product.name}: ${product.stock} disponibles`);
         }
 
         console.log('✅ Stock verificado correctamente, listo para Stripe');

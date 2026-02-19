@@ -799,7 +799,26 @@ function getStockBadgeClass(stock: number): string {
     // Cargar analytics
     async function loadAnalytics() {
         try {
-            const response = await fetch("/api/admin/analytics");
+            const response = await fetch("/api/admin/analytics", {
+                credentials: "include",
+            });
+
+            if (!response.ok) {
+                if (response.status === 401) {
+                    (window as any).vantageNotify?.(
+                        "Tu sesión de administrador expiró. Inicia sesión de nuevo.",
+                        "warning",
+                    );
+                    return;
+                }
+
+                (window as any).vantageNotify?.(
+                    `Error al cargar analíticas (HTTP ${response.status}).`,
+                    "error",
+                );
+                return;
+            }
+
             const data = await response.json();
 
             if (!data.success) {
