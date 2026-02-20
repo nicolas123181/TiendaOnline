@@ -585,6 +585,14 @@ const maxPrice = prices.length > 0 ? Math.max(...prices) / 100 : 1000;
     const mobileApplyFilters = document.getElementById("mobile-apply-filters");
     const clearAllFilters = document.getElementById("clear-all-filters");
 
+    // Initialize from URL params (e.g., q= from mobile menu search)
+    const urlParams = new URLSearchParams(window.location.search);
+    const qParam = urlParams.get("q");
+    if (qParam && qParam.trim()) {
+        currentFilters.search = qParam.toLowerCase().trim();
+        if (searchInput) searchInput.value = qParam.trim();
+    }
+
     // Search with debounce
     let searchTimeout;
     searchInput?.addEventListener("input", (e) => {

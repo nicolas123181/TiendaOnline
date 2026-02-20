@@ -191,8 +191,8 @@ const orderId = Astro.params.id;
                                 </h3>
                                 <p class="text-sm text-gray-600 mb-4">
                                     Tu pedido aún no ha sido enviado. Puedes
-                                    cancelarlo y el stock será restaurado
-                                    automáticamente.
+                                    cancelarlo y recibirás el reembolso en tu
+                                    método de pago original en 5-10 días hábiles.
                                 </p>
                                 <button
                                     id="cancel-order-btn"
@@ -521,12 +521,16 @@ const orderId = Astro.params.id;
     // Invoice functionality
     async function loadInvoiceInfo() {
         try {
-            const { data: invoice, error } = await supabase
+            // Usar order+limit en lugar de .single() porque un pedido puede tener
+            // más de una factura (original + rectificativa tras cancelación).
+            const { data: invoices, error } = await supabase
                 .from("invoices")
                 .select("invoice_number, id")
                 .eq("order_id", orderId)
-                .single();
+                .order("created_at", { ascending: true })
+                .limit(1);
 
+            const invoice = invoices?.[0];
             if (!error && invoice) {
                 const invoiceNumberEl =
                     document.getElementById("invoice-number");
@@ -555,7 +559,7 @@ const orderId = Astro.params.id;
     cancelOrderBtn?.addEventListener("click", async () => {
         const confirmMessage =
             "¿Estás seguro de que deseas cancelar este pedido?\n\n" +
-            "Esta acción no se puede deshacer. El stock de los productos será restaurado automáticamente.";
+            "Esta acción no se puede deshacer. Recibirás el reembolso en tu método de pago original en un plazo de 5-10 días hábiles.";
         const confirmed =
             (await (window as any).vantageConfirm?.(confirmMessage, {
                 title: "Cancelar pedido",
@@ -577,9 +581,17 @@ const orderId = Astro.params.id;
         `;
 
         try {
+            // Obtener el token de sesión para enviarlo en el header Authorization
+            // (Supabase v2 guarda el token en localStorage, no en cookies)
+            const { data: { session } } = await supabase.auth.getSession();
+            const fetchHeaders: Record<string, string> = { "Content-Type": "application/json" };
+            if (session?.access_token) {
+                fetchHeaders["Authorization"] = `Bearer ${session.access_token}`;
+            }
+
             const response = await fetch("/api/orders/cancel", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: fetchHeaders,
                 body: JSON.stringify({ orderId: parseInt(orderId) }),
             });
 

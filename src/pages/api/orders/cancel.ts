@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { createServerClient, getServiceSupabase } from '../../../lib/supabase';
+import { createServerClient, createServerClientFromAuthHeader, getServiceSupabase } from '../../../lib/supabase';
 import { Resend } from 'resend';
 import Stripe from 'stripe';
 
@@ -26,9 +26,13 @@ export const POST: APIRoute = async ({ request, cookies }) => {
             }), { status: 400 });
         }
 
-        // 1. Verificar autenticación usando el helper robusto
-        // createServerClient maneja automáticamente la obtención de tokens de las cookies
-        const authClient = createServerClient(cookies);
+        // 1. Verificar autenticación: priorizar header Authorization (Supabase v2 usa
+        // localStorage en el navegador, no cookies), con fallback a cookies.
+        const authHeader = request.headers.get('Authorization');
+        const authClient = authHeader
+            ? createServerClientFromAuthHeader(authHeader)
+            : createServerClient(cookies);
+
         const { data: { user }, error: authError } = await authClient.auth.getUser();
 
         if (authError || !user) {
@@ -48,7 +52,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
             serviceDb = authClient;
         }
 
-        // Obtener pedido con items
+        // Obtener pedido con items (sin filtro de email para evitar problemas de
+        // diferencias de mayúsculas/minúsculas — verificamos la propiedad manualmente)
         const { data: order, error: orderError } = await serviceDb
             .from('orders')
             .select(`
@@ -56,25 +61,32 @@ export const POST: APIRoute = async ({ request, cookies }) => {
                 order_items(
                     id,
                     product_id,
+                    product_name,
+                    product_price,
                     quantity,
-                    size,
-                    product_name
+                    size
                 )
             `)
             .eq('id', orderId)
-            // Asegurarnos de que el pedido pertenece al usuario autenticado
-            .eq('customer_email', user.email)
             .single();
 
         console.log('🔍 Debug Cancel:', {
             orderId,
             userEmail: user.email,
+            orderEmail: order?.customer_email,
             found: !!order,
             error: orderError?.message
         });
 
         if (orderError || !order) {
-            // Intento de debug adicional: buscar sin filtro de email para ver si existe
+            return new Response(JSON.stringify({
+                success: false,
+                error: 'Pedido no encontrado.'
+            }), { status: 404 });
+        }
+
+        // Verificar que el pedido pertenece al usuario autenticado (case-insensitive)
+        if (order.customer_email?.toLowerCase() !== user.email?.toLowerCase()) {
             return new Response(JSON.stringify({
                 success: false,
                 error: 'Pedido no encontrado.'
@@ -191,15 +203,80 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         if (updateError) throw updateError;
 
         // ============================================
-        // EMAIL 2: CANCELACIÓN COMPLETADA
+        // 4. GENERAR FACTURA RECTIFICATIVA (Credit Note)
+        // ============================================
+        let creditNoteInvoice: any = null;
+        try {
+            const {
+                createInvoice: createInv,
+                getInvoiceByOrderId,
+                generateInvoiceHTML,
+                getInvoiceItems
+            } = await import('../../../lib/invoice');
+
+            const originalInvoice = await getInvoiceByOrderId(orderId);
+
+            if (originalInvoice && originalInvoice.type !== 'credit_note') {
+                const invoiceItems = (order.order_items || []).map((item: any) => ({
+                    productName: item.product_name || 'Producto',
+                    productSize: item.size || undefined,
+                    quantity: item.quantity,
+                    unitPrice: -Math.abs(item.product_price || 0),
+                    lineTotal: -Math.abs((item.product_price || 0) * item.quantity)
+                }));
+
+                creditNoteInvoice = await createInv({
+                    orderId,
+                    customerName: order.customer_name,
+                    customerEmail: order.customer_email,
+                    customerAddress: order.customer_address,
+                    customerCity: order.customer_city,
+                    customerPostalCode: order.customer_postal_code,
+                    customerPhone: order.customer_phone,
+                    items: invoiceItems,
+                    subtotal: -Math.abs(order.subtotal || order.total || 0),
+                    shippingCost: 0,
+                    taxRate: originalInvoice.tax_rate,
+                    notes: `Cancelación del pedido #${orderId}`,
+                    type: 'credit_note',
+                    originalInvoiceId: originalInvoice.id
+                });
+
+                if (creditNoteInvoice) {
+                    console.log('✅ Factura rectificativa de cancelación generada:', creditNoteInvoice.invoice_number);
+                }
+            }
+        } catch (invoiceError) {
+            console.error('Error generando factura rectificativa:', invoiceError);
+        }
+
+        // ============================================
+        // EMAIL 2: CANCELACIÓN COMPLETADA (con factura adjunta)
         // ============================================
         if (resend) {
             try {
+                // Generar adjunto de la factura rectificativa si existe
+                const attachments: Array<{ filename: string; content: Buffer }> = [];
+                if (creditNoteInvoice) {
+                    try {
+                        const { generateInvoicePDF, getInvoiceItems } = await import('../../../lib/invoice');
+                        const creditItems = await getInvoiceItems(creditNoteInvoice.id);
+                        const pdfBuffer = await generateInvoicePDF(creditNoteInvoice, creditItems);
+                        attachments.push({
+                            filename: `factura-rectificativa-${creditNoteInvoice.invoice_number}.pdf`,
+                            content: pdfBuffer
+                        });
+                    } catch (attachErr) {
+                        console.error('Error preparando adjunto PDF de factura:', attachErr);
+                    }
+                }
+
                 await resend.emails.send({
                     from: 'Vantage <onboarding@resend.dev>',
                     to: order.customer_email,
-                    subject: `✅ Pedido Cancelado - #${orderId}`,
-                    html: getCancelledEmailHtml(order.customer_name, orderId.toString(), order.total, order.order_items)
+                    subject: `Pedido Cancelado - #${orderId}`,
+                    html: getCancelledEmailHtml(order.customer_name, orderId.toString(), order.total, order.order_items),
+                    ...(attachments.length > 0 && { attachments })
                 });
                 console.log('📧 Email "Cancelado" enviado al cliente');
             } catch (e) {
@@ -275,7 +352,7 @@ function getProcessingEmailHtml(name: string, orderId: string): string {
                 <p>Hola <strong>${name}</strong>,</p>
                 <p>Hemos recibido tu solicitud para cancelar el pedido <strong>#${orderId}</strong>.</p>
                 <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 15px; margin: 20px 0;">
-                    <p style="margin:0; color: #1e40af;">🔄 Estamos procesando la devolución del stock y el reembolso de tu dinero.</p>
+                    <p style="margin:0; color: #1e40af;">Estamos procesando el reembolso de tu dinero.</p>
                 </div>
                 <p>Recibirás una confirmación en unos instantes.</p>
             </div>

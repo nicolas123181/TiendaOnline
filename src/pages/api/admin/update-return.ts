@@ -224,6 +224,7 @@ export const POST: APIRoute = async ({ request }) => {
             // ============================================
             // 2. GENERAR FACTURA RECTIFICATIVA (Credit Note)
             // ============================================
+            let creditNoteInvoice: any = null;
             try {
                 // Importar dinámicamente para evitar problemas de dependencias circulares
                 const { createInvoice, getInvoiceByOrderId } = await import('../../../lib/invoice');
@@ -243,7 +244,7 @@ export const POST: APIRoute = async ({ request }) => {
                         lineTotal: -Math.abs(item.price * item.quantity)
                     }));
 
-                    await createInvoice({
+                    creditNoteInvoice = await createInvoice({
                         orderId: returnData.order_id,
                         customerName: returnData.customer_name,
                         customerEmail: returnData.customer_email,
@@ -289,13 +290,31 @@ export const POST: APIRoute = async ({ request }) => {
                     });
                     emailSent = true;
                 } else if (status === 'refunded') {
-                    // Email: Reembolso procesado
+                    // Email: Reembolso procesado (con factura rectificativa adjunta)
                     const amount = refundAmount || returnData.refund_amount || 0;
+
+                    // Preparar adjunto de la factura rectificativa si se generó
+                    const attachments: Array<{ filename: string; content: Buffer }> = [];
+                    if (creditNoteInvoice) {
+                        try {
+                            const { generateInvoicePDF, getInvoiceItems } = await import('../../../lib/invoice');
+                            const creditItems = await getInvoiceItems(creditNoteInvoice.id);
+                            const pdfBuffer = await generateInvoicePDF(creditNoteInvoice, creditItems);
+                            attachments.push({
+                                filename: `factura-rectificativa-${creditNoteInvoice.invoice_number}.pdf`,
+                                content: pdfBuffer
+                            });
+                        } catch (attachErr) {
+                            console.error('Error preparando adjunto PDF de factura rectificativa:', attachErr);
+                        }
+                    }
+
                     await resend.emails.send({
                         from: 'Vantage <onboarding@resend.dev>',
                         to: returnData.customer_email,
-                        subject: `✅ Reembolso procesado - ${returnData.return_number}`,
-                        html: getRefundEmailHtml(returnData.customer_name, returnData.return_number, amount)
+                        subject: `Reembolso procesado - ${returnData.return_number}`,
+                        html: getRefundEmailHtml(returnData.customer_name, returnData.return_number, amount),
+                        ...(attachments.length > 0 && { attachments })
                     });
                     emailSent = true;
                 } else if (status === 'rejected') {

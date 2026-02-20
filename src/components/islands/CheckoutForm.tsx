@@ -16,11 +16,34 @@ function formatPrice(cents: number): string {
     }).format(cents / 100);
 }
 
+const StepIcons: Record<number, React.ReactNode> = {
+    1: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+        </svg>
+    ),
+    2: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+        </svg>
+    ),
+    3: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+        </svg>
+    ),
+    4: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+        </svg>
+    ),
+};
+
 const STEPS = [
-    { id: 1, name: 'Información', icon: '📋' },
-    { id: 2, name: 'Envío', icon: '🚚' },
-    { id: 3, name: 'Descuento', icon: '🎟️' },
-    { id: 4, name: 'Confirmación', icon: '✓' },
+    { id: 1, name: 'Información' },
+    { id: 2, name: 'Envío' },
+    { id: 3, name: 'Descuento' },
+    { id: 4, name: 'Confirmación' },
 ];
 
 export default function CheckoutForm({ shippingMethods }: CheckoutFormProps) {
@@ -351,14 +374,18 @@ export default function CheckoutForm({ shippingMethods }: CheckoutFormProps) {
                                     }`}
                             >
                                 <div
-                                    className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold transition-all ${step.id === currentStep
+                                    className={`w-12 h-12 rounded-full flex items-center justify-center font-bold transition-all ${step.id === currentStep
                                             ? 'bg-brand-navy text-white scale-110 shadow-lg'
                                             : step.id < currentStep
                                                 ? 'bg-green-500 text-white'
                                                 : 'bg-gray-200 text-gray-400'
                                         }`}
                                 >
-                                    {step.id < currentStep ? '✓' : step.icon}
+                                    {step.id < currentStep ? (
+                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                        </svg>
+                                    ) : StepIcons[step.id]}
                                 </div>
                                 <span
                                     className={`text-sm font-medium hidden md:block ${step.id === currentStep
@@ -649,7 +676,11 @@ export default function CheckoutForm({ shippingMethods }: CheckoutFormProps) {
                                 ) : (
                                     <div className="bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200 rounded-xl p-6 mb-6">
                                         <div className="flex items-center gap-3 mb-4">
-                                            <div className="text-3xl">🎟️</div>
+                                            <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center shrink-0">
+                                                <svg className="w-5 h-5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                                                </svg>
+                                            </div>
                                             <div>
                                                 <p className="font-semibold text-gray-900">Ingresa tu código</p>
                                                 <p className="text-sm text-gray-600">Ahorra en tu compra con cupones especiales</p>
@@ -728,7 +759,9 @@ export default function CheckoutForm({ shippingMethods }: CheckoutFormProps) {
                                     <div className="bg-gray-50 rounded-xl p-5 border border-gray-200">
                                         <div className="flex items-center justify-between mb-3">
                                             <h3 className="font-bold text-gray-900 flex items-center gap-2">
-                                                <span className="text-xl">📋</span>
+                                                <svg className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                                </svg>
                                                 Información de Envío
                                             </h3>
                                             <button
@@ -752,7 +785,9 @@ export default function CheckoutForm({ shippingMethods }: CheckoutFormProps) {
                                     <div className="bg-gray-50 rounded-xl p-5 border border-gray-200">
                                         <div className="flex items-center justify-between mb-3">
                                             <h3 className="font-bold text-gray-900 flex items-center gap-2">
-                                                <span className="text-xl">🚚</span>
+                                                <svg className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                                                </svg>
                                                 Método de Envío
                                             </h3>
                                             <button
@@ -812,9 +847,18 @@ export default function CheckoutForm({ shippingMethods }: CheckoutFormProps) {
                                                 Al continuar serás redirigido a <strong>Stripe</strong>, nuestra pasarela de pago segura donde podrás elegir:
                                             </p>
                                             <div className="mt-3 flex flex-wrap gap-2">
-                                                <span className="px-3 py-1.5 bg-white rounded-lg text-xs font-semibold text-blue-900 border border-blue-200">💳 Tarjeta de Crédito</span>
-                                                <span className="px-3 py-1.5 bg-white rounded-lg text-xs font-semibold text-blue-900 border border-blue-200">💳 Tarjeta de Débito</span>
-                                                <span className="px-3 py-1.5 bg-white rounded-lg text-xs font-semibold text-blue-900 border border-blue-200">🅿️ PayPal</span>
+                                                <span className="px-3 py-1.5 bg-white rounded-lg text-xs font-semibold text-blue-900 border border-blue-200 flex items-center gap-1.5">
+                                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+                                                    Tarjeta de Crédito
+                                                </span>
+                                                <span className="px-3 py-1.5 bg-white rounded-lg text-xs font-semibold text-blue-900 border border-blue-200 flex items-center gap-1.5">
+                                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+                                                    Tarjeta de Débito
+                                                </span>
+                                                <span className="px-3 py-1.5 bg-white rounded-lg text-xs font-semibold text-blue-900 border border-blue-200 flex items-center gap-1.5">
+                                                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M7.076 21.337H2.47a.641.641 0 01-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.15 1.304 2.42 1.012 4.287-.983 5.05-4.349 6.797-8.647 6.797h-2.19c-.524 0-.968.382-1.05.9l-1.12 7.106zm14.146-14.42c1.216 2.09.988 4.742-.584 7.941-.943 1.921-2.213 3.409-3.723 4.41H21.1c.524 0 .968-.382 1.051-.9l.894-5.662a.641.641 0 00-.633-.74h-1.19z" /></svg>
+                                                    PayPal
+                                                </span>
                                             </div>
                                         </div>
                                     </div>

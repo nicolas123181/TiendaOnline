@@ -1,8 +1,7 @@
 import type { APIRoute } from "astro";
 import { getServiceSupabase, supabase } from "../../../lib/supabase";
-import { generateInvoiceHTML } from "../../../lib/invoice";
 
-export const GET: APIRoute = async ({ params }) => {
+export const GET: APIRoute = async ({ params, redirect }) => {
   const orderIdParam = params.orderId;
   if (!orderIdParam) {
     return new Response(JSON.stringify({ error: "Order ID is required" }), { status: 400, headers: { "Content-Type": "application/json" } });
@@ -12,7 +11,6 @@ export const GET: APIRoute = async ({ params }) => {
     return new Response(JSON.stringify({ error: "Invalid Order ID format" }), { status: 400, headers: { "Content-Type": "application/json" } });
   }
   try {
-    // Usar service role para garantizar acceso (bypassa RLS)
     let db;
     try {
       db = getServiceSupabase();
@@ -20,21 +18,23 @@ export const GET: APIRoute = async ({ params }) => {
       db = supabase;
     }
 
-    console.log("Loading invoice for order ID:", orderId);
-    const { data: invoice, error: invoiceError } = await db.from("invoices").select("*").eq("order_id", orderId).single();
+    // Obtener la factura original (primera por created_at) para redirect al PDF
+    const { data: invoices, error: invoiceError } = await db
+      .from("invoices")
+      .select("id")
+      .eq("order_id", orderId)
+      .order("created_at", { ascending: true })
+      .limit(1);
+
+    const invoice = invoices?.[0];
     if (invoiceError || !invoice) {
-      console.error("Invoice not found:", invoiceError);
       return new Response(JSON.stringify({ error: "Invoice not found" }), { status: 404, headers: { "Content-Type": "application/json" } });
     }
-    const { data: items, error: itemsError } = await db.from("invoice_items").select("*").eq("invoice_id", invoice.id);
-    if (itemsError) {
-      console.error("Error loading items:", itemsError);
-      return new Response(JSON.stringify({ error: "Error loading items" }), { status: 500, headers: { "Content-Type": "application/json" } });
-    }
-    const invoiceHTML = generateInvoiceHTML(invoice, items || []);
-    return new Response(invoiceHTML, { status: 200, headers: { "Content-Type": "text/html" } });
+
+    // Redirigir al endpoint de PDF real
+    return redirect(`/api/invoice/${invoice.id}/pdf`, 302);
   } catch (error) {
     console.error("Error:", error);
-    return new Response(JSON.stringify({ error: "Internal error", details: error instanceof Error ? error.message : "Unknown" }), { status: 500, headers: { "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ error: "Internal error" }), { status: 500, headers: { "Content-Type": "application/json" } });
   }
 };

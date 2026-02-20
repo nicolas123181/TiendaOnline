@@ -188,7 +188,7 @@ export const POST: APIRoute = async ({ request }) => {
             price: priceMap.get(Number(item.id)) ?? item.price, // Precio validado desde BD
             quantity: item.quantity,
             size: item.size || null,
-            image: item.image || null,
+            // image omitted: Stripe metadata limit is 500 chars per value
         }));
 
         const verifiedTotal = verifiedSubtotal + validatedShippingCost - validatedDiscount;

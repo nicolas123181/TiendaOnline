@@ -101,17 +101,62 @@ export const GET: APIRoute = async ({ request }) => {
             .in('status', ['paid', 'shipped', 'delivered'])
             .gte('created_at', startOfMonth);
 
+        // 6. Analytics de devoluciones
+        const { data: monthlyReturnsData } = await supabase
+            .from('returns')
+            .select('status, refund_amount')
+            .gte('created_at', startOfMonth);
+
+        const { data: weeklyReturnsData } = await supabase
+            .from('returns')
+            .select('status, refund_amount, refunded_at')
+            .gte('created_at', sevenDaysAgo);
+
+        // Devoluciones agrupadas por estado (mes actual)
+        const returnsByStatus: Record<string, number> = { pending: 0, in_transit: 0, received: 0, refunded: 0, rejected: 0 };
+        monthlyReturnsData?.forEach((r: any) => {
+            if (r.status in returnsByStatus) returnsByStatus[r.status]++;
+        });
+
+        // Importe total reembolsado este mes
+        const monthlyRefunds = monthlyReturnsData
+            ?.filter((r: any) => r.status === 'refunded')
+            .reduce((sum: number, r: any) => sum + (r.refund_amount || 0), 0) || 0;
+
+        // Reembolsos por día (últimos 7 días) para gráfico de impacto
+        const refundsByDay: Record<string, number> = {};
+        for (let i = 6; i >= 0; i--) {
+            const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+            const key = date.toISOString().split('T')[0];
+            refundsByDay[key] = 0;
+        }
+        weeklyReturnsData?.forEach((r: any) => {
+            if (r.status === 'refunded' && r.refunded_at) {
+                const date = new Date(r.refunded_at).toISOString().split('T')[0];
+                if (Object.prototype.hasOwnProperty.call(refundsByDay, date)) {
+                    refundsByDay[date] += r.refund_amount || 0;
+                }
+            }
+        });
+        const refundsChartData = sortedDates.map(d => refundsByDay[d] || 0);
+
         const response = {
             success: true,
             kpis: {
                 monthlySales,
                 pendingOrders: pendingOrders || 0,
                 topProduct,
-                totalOrders: totalOrders || 0
+                totalOrders: totalOrders || 0,
+                monthlyRefunds,
+                pendingReturns: returnsByStatus.pending + returnsByStatus.in_transit + returnsByStatus.received
             },
             salesChart: {
                 labels,
-                data
+                data,
+                refundsData: refundsChartData
+            },
+            returnsChart: {
+                byStatus: returnsByStatus
             }
         };
 

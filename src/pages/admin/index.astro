@@ -76,7 +76,7 @@ function getStockBadgeClass(stock: number): string {
 
         <!-- KPIs de Negocio -->
         <div
-            class="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 mb-6"
+            class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6"
         >
             <!-- Ventas del Mes -->
             <div
@@ -181,36 +181,103 @@ function getStockBadgeClass(stock: number): string {
                     Producto Más Vendido
                 </p>
             </div>
+
+            <!-- Devoluciones Pendientes -->
+            <div
+                class="bg-gradient-to-br from-rose-500 to-red-600 rounded-2xl p-5 sm:p-6 text-white shadow-lg"
+            >
+                <div class="flex items-center justify-between mb-3 sm:mb-4">
+                    <div class="p-2 bg-white/20 rounded-lg">
+                        <svg
+                            class="w-5 h-5 sm:w-6 sm:h-6"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"
+                            ></path>
+                        </svg>
+                    </div>
+                    <span class="text-xs bg-white/20 px-2 py-1 rounded-full">Devoluciones</span>
+                </div>
+                <h3
+                    id="kpi-pending-returns"
+                    class="text-2xl sm:text-3xl font-bold mb-1"
+                >
+                    --
+                </h3>
+                <p id="kpi-monthly-refunds" class="text-rose-100 text-xs sm:text-sm">
+                    Pendientes · --€ reembolsado este mes
+                </p>
+            </div>
         </div>
 
-        <!-- Gráfico de Ventas -->
-        <div class="bg-surface-primary rounded-2xl p-4 sm:p-6 shadow-soft">
-            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4 sm:mb-6">
-                <h3
-                    class="font-semibold text-brand-navy flex items-center gap-2 text-sm sm:text-base"
-                >
-                    <svg
-                        class="w-4 h-4 sm:w-5 sm:h-5 text-brand-leather"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
+        <!-- Gráficos: Ventas + Devoluciones -->
+        <div class="grid lg:grid-cols-2 gap-4 sm:gap-6">
+            <!-- Gráfico de Ventas / Reembolsos -->
+            <div class="bg-surface-primary rounded-2xl p-4 sm:p-6 shadow-soft">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4 sm:mb-6">
+                    <h3
+                        class="font-semibold text-brand-navy flex items-center gap-2 text-sm sm:text-base"
                     >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"
-                        ></path>
-                    </svg>
-                    Ventas Últimos 7 Días
-                </h3>
-                <span
-                    id="chart-total"
-                    class="text-xs sm:text-sm font-medium text-text-muted">--</span
-                >
+                        <svg
+                            class="w-4 h-4 sm:w-5 sm:h-5 text-brand-leather"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"
+                            ></path>
+                        </svg>
+                        Ventas vs Reembolsos (7 días)
+                    </h3>
+                    <span
+                        id="chart-total"
+                        class="text-xs sm:text-sm font-medium text-text-muted">--</span
+                    >
+                </div>
+                <div class="h-56 sm:h-64">
+                    <canvas id="salesChart"></canvas>
+                </div>
             </div>
-            <div class="h-56 sm:h-64">
-                <canvas id="salesChart"></canvas>
+
+            <!-- Gráfico de Devoluciones por Estado -->
+            <div class="bg-surface-primary rounded-2xl p-4 sm:p-6 shadow-soft">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4 sm:mb-6">
+                    <h3
+                        class="font-semibold text-brand-navy flex items-center gap-2 text-sm sm:text-base"
+                    >
+                        <svg
+                            class="w-4 h-4 sm:w-5 sm:h-5 text-rose-500"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"
+                            ></path>
+                        </svg>
+                        Devoluciones por Estado (mes actual)
+                    </h3>
+                    <span
+                        id="returns-total"
+                        class="text-xs sm:text-sm font-medium text-text-muted">--</span
+                    >
+                </div>
+                <div class="h-56 sm:h-64 flex items-center justify-center">
+                    <canvas id="returnsChart"></canvas>
+                </div>
             </div>
         </div>
     </section>
@@ -862,16 +929,27 @@ function getStockBadgeClass(stock: number): string {
                 }
             }
 
+            // KPI Devoluciones
+            const pendingReturnsEl = document.getElementById("kpi-pending-returns");
+            const monthlyRefundsEl = document.getElementById("kpi-monthly-refunds");
+            if (pendingReturnsEl) {
+                pendingReturnsEl.textContent = (data.kpis.pendingReturns || 0).toString();
+            }
+            if (monthlyRefundsEl) {
+                monthlyRefundsEl.textContent =
+                    `Pendientes · ${formatPrice(data.kpis.monthlyRefunds || 0)} reembolsado este mes`;
+            }
+
             // Total de los últimos 7 días
             const weekTotal = data.salesChart.data.reduce(
                 (sum: number, val: number) => sum + val,
                 0,
             );
             if (chartTotalEl) {
-                chartTotalEl.textContent = `Total: ${formatPrice(weekTotal)}`;
+                chartTotalEl.textContent = `Total ventas: ${formatPrice(weekTotal)}`;
             }
 
-            // Renderizar gráfico
+            // Renderizar gráfico de Ventas vs Reembolsos
             const canvas = document.getElementById(
                 "salesChart",
             ) as HTMLCanvasElement;
@@ -891,7 +969,18 @@ function getStockBadgeClass(stock: number): string {
                                     backgroundColor: "rgba(124, 58, 237, 0.8)",
                                     borderColor: "rgba(124, 58, 237, 1)",
                                     borderWidth: 2,
-                                    borderRadius: 8,
+                                    borderRadius: 6,
+                                    borderSkipped: false,
+                                },
+                                {
+                                    label: "Reembolsos (€)",
+                                    data: (data.salesChart.refundsData || []).map(
+                                        (v: number) => v / 100,
+                                    ),
+                                    backgroundColor: "rgba(239, 68, 68, 0.7)",
+                                    borderColor: "rgba(239, 68, 68, 1)",
+                                    borderWidth: 2,
+                                    borderRadius: 6,
                                     borderSkipped: false,
                                 },
                             ],
@@ -901,7 +990,9 @@ function getStockBadgeClass(stock: number): string {
                             maintainAspectRatio: false,
                             plugins: {
                                 legend: {
-                                    display: false,
+                                    display: true,
+                                    position: "top",
+                                    labels: { boxWidth: 12, font: { size: 11 } }
                                 },
                                 tooltip: {
                                     backgroundColor: "#1a2744",
@@ -909,12 +1000,9 @@ function getStockBadgeClass(stock: number): string {
                                     bodyColor: "#fff",
                                     padding: 12,
                                     cornerRadius: 8,
-                                    displayColors: false,
                                     callbacks: {
                                         label: function (context) {
-                                            return formatPrice(
-                                                (context.raw as number) * 100,
-                                            );
+                                            return `${context.dataset.label}: ${formatPrice((context.raw as number) * 100)}`;
                                         },
                                     },
                                 },
@@ -922,25 +1010,113 @@ function getStockBadgeClass(stock: number): string {
                             scales: {
                                 y: {
                                     beginAtZero: true,
-                                    grid: {
-                                        color: "rgba(0, 0, 0, 0.05)",
-                                    },
+                                    grid: { color: "rgba(0, 0, 0, 0.05)" },
                                     ticks: {
                                         callback: function (value) {
-                                            return formatPrice(
-                                                (value as number) * 100,
-                                            );
+                                            return formatPrice((value as number) * 100);
                                         },
                                     },
                                 },
-                                x: {
-                                    grid: {
-                                        display: false,
-                                    },
-                                },
+                                x: { grid: { display: false } },
                             },
                         },
                     });
+                }
+            }
+
+            // Renderizar gráfico de Devoluciones por Estado
+            const returnsCanvas = document.getElementById("returnsChart") as HTMLCanvasElement;
+            const returnsTotalEl = document.getElementById("returns-total");
+            if (returnsCanvas && data.returnsChart) {
+                const statusLabels: Record<string, string> = {
+                    pending: "Pendiente",
+                    in_transit: "En tránsito",
+                    received: "Recibida",
+                    refunded: "Reembolsada",
+                    rejected: "Rechazada",
+                };
+                const byStatus = data.returnsChart.byStatus || {};
+                const statusKeys = Object.keys(statusLabels);
+                const vals = statusKeys.map(k => byStatus[k] || 0);
+                const total = vals.reduce((a: number, b: number) => a + b, 0);
+
+                if (returnsTotalEl) {
+                    returnsTotalEl.textContent = `${total} devoluciones este mes`;
+                }
+
+                if (total === 0) {
+                    // No hay devoluciones: placeholder
+                    const rctx = returnsCanvas.getContext("2d");
+                    if (rctx) {
+                        new Chart(rctx, {
+                            type: "doughnut",
+                            data: {
+                                labels: ["Sin devoluciones"],
+                                datasets: [{
+                                    data: [1],
+                                    backgroundColor: ["rgba(209, 213, 219, 0.5)"],
+                                    borderWidth: 0,
+                                }],
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: { display: false },
+                                    tooltip: { enabled: false },
+                                },
+                            },
+                        });
+                    }
+                    if (returnsTotalEl) returnsTotalEl.textContent = "Sin devoluciones este mes";
+                } else {
+                    const colors = [
+                        "rgba(251, 191, 36, 0.85)",   // pending - amber
+                        "rgba(96, 165, 250, 0.85)",   // in_transit - blue
+                        "rgba(52, 211, 153, 0.85)",   // received - green
+                        "rgba(124, 58, 237, 0.85)",   // refunded - purple
+                        "rgba(239, 68, 68, 0.85)",    // rejected - red
+                    ];
+                    const rctx = returnsCanvas.getContext("2d");
+                    if (rctx) {
+                        new Chart(rctx, {
+                            type: "doughnut",
+                            data: {
+                                labels: statusKeys.map(k => statusLabels[k]),
+                                datasets: [{
+                                    data: vals,
+                                    backgroundColor: colors,
+                                    borderWidth: 2,
+                                    borderColor: "#fff",
+                                }],
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: {
+                                        display: true,
+                                        position: "bottom",
+                                        labels: { boxWidth: 12, font: { size: 11 }, padding: 10 }
+                                    },
+                                    tooltip: {
+                                        backgroundColor: "#1a2744",
+                                        titleColor: "#fff",
+                                        bodyColor: "#fff",
+                                        padding: 10,
+                                        cornerRadius: 8,
+                                        callbacks: {
+                                            label: function(context) {
+                                                const v = context.raw as number;
+                                                const pct = total > 0 ? Math.round((v / total) * 100) : 0;
+                                                return `${context.label}: ${v} (${pct}%)`;
+                                            }
+                                        }
+                                    },
+                                },
+                            },
+                        });
+                    }
                 }
             }
         } catch (error) {
