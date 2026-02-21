@@ -9,6 +9,14 @@ export const prerender = false;
 const flashOffersEnabled = await getSetting("flash_offers_enabled");
 const lowStockThreshold = (await getSetting("low_stock_threshold")) || "5";
 
+// Popup settings
+const popupEnabled      = (await getSetting("popup_enabled"))        ?? "true";
+const popupTitle        = (await getSetting("popup_title"))          ?? "10% de Descuento Exclusivo";
+const popupSubtitle     = (await getSetting("popup_subtitle"))       ?? "Bienvenido a la excelencia";
+const popupDescription  = (await getSetting("popup_description"))    ?? "Suscríbete a nuestra newsletter y recibe un descuento especial en tu primera compra.";
+const popupPromoCode    = (await getSetting("popup_promo_code"))     ?? "BIENVENIDO10";
+const popupDelay        = (await getSetting("popup_delay_seconds"))  ?? "5";
+
 let success = false;
 let error = "";
 
@@ -62,6 +70,33 @@ if (Astro.request.method === "POST") {
                     success = true;
                 }
             }
+        } else if (action === "popup_settings") {
+            const enabled      = formData.get("popup_enabled") === "on" ? "true" : "false";
+            const title        = (formData.get("popup_title")        as string)?.trim()  || "10% de Descuento Exclusivo";
+            const subtitle     = (formData.get("popup_subtitle")     as string)?.trim()  || "Bienvenido a la excelencia";
+            const description  = (formData.get("popup_description")  as string)?.trim()  || "Suscríbete a nuestra newsletter y recibe un descuento especial en tu primera compra.";
+            const promoCode    = (formData.get("popup_promo_code")   as string)?.trim().toUpperCase() || "BIENVENIDO10";
+            const delayRaw     = parseInt(formData.get("popup_delay_seconds") as string);
+            const delay        = isNaN(delayRaw) || delayRaw < 0 ? 5 : Math.min(delayRaw, 60);
+
+            const upserts = [
+                { key: "popup_enabled",        value: enabled },
+                { key: "popup_title",          value: title },
+                { key: "popup_subtitle",       value: subtitle },
+                { key: "popup_description",    value: description },
+                { key: "popup_promo_code",     value: promoCode },
+                { key: "popup_delay_seconds",  value: delay.toString() },
+            ].map((row) => ({ ...row, updated_at: new Date().toISOString() }));
+
+            const { error: upsertError } = await supabase
+                .from("app_settings")
+                .upsert(upserts, { onConflict: "key" });
+
+            if (upsertError) {
+                error = `Error al guardar: ${upsertError.message}`;
+            } else {
+                success = true;
+            }
         }
     } catch (e) {
         error = "Ha ocurrido un error inesperado.";
@@ -70,6 +105,8 @@ if (Astro.request.method === "POST") {
 
 const isFlashOffersEnabled = flashOffersEnabled === "true";
 const currentThreshold = parseInt(lowStockThreshold) || 5;
+const isPopupEnabled = popupEnabled === "true";
+const currentDelay  = parseInt(popupDelay) || 5;
 ---
 
 <AdminLayout title="Configuración">
@@ -292,9 +329,155 @@ const currentThreshold = parseInt(lowStockThreshold) || 5;
             </div>
         </div>
 
-        <!-- Store Info -->
-        <div class="bg-surface-primary rounded-2xl p-6 shadow-soft">
+        <!-- Newsletter Popup Config -->
+        <div class="bg-surface-primary rounded-2xl p-6 shadow-soft lg:col-span-2">
             <div class="flex items-start gap-4">
+                <div class="p-3 bg-purple-100 rounded-xl shrink-0">
+                    <svg
+                        class="w-6 h-6 text-purple-600"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+                        ></path>
+                    </svg>
+                </div>
+                <div class="flex-1">
+                    <h2 class="text-lg font-semibold text-brand-navy mb-1">
+                        Popup de Bienvenida
+                    </h2>
+                    <p class="text-sm text-text-muted mb-5">
+                        Personaliza el mensaje del popup de suscripción al newsletter. No se muestra a usuarios ya suscritos.
+                    </p>
+
+                    <form method="POST" class="space-y-5">
+                        <input type="hidden" name="action" value="popup_settings" />
+
+                        <!-- Enabled toggle -->
+                        <div class="flex items-center justify-between p-4 bg-surface-secondary rounded-xl">
+                            <div>
+                                <p class="font-medium text-text-primary">Popup activo</p>
+                                <p class="text-sm text-text-muted">
+                                    {isPopupEnabled ? "Visible para los visitantes" : "Popup desactivado"}
+                                </p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    name="popup_enabled"
+                                    checked={isPopupEnabled}
+                                    class="sr-only peer"
+                                />
+                                <div class="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-brand-navy/20 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-1 after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-purple-600"></div>
+                            </label>
+                        </div>
+
+                        <div class="grid sm:grid-cols-2 gap-4">
+                            <!-- Título -->
+                            <div>
+                                <label class="block text-sm font-medium text-text-primary mb-1.5">
+                                    Título principal
+                                </label>
+                                <input
+                                    type="text"
+                                    name="popup_title"
+                                    value={popupTitle}
+                                    maxlength="80"
+                                    class="w-full px-4 py-2.5 rounded-xl border border-border-light bg-surface-secondary text-text-primary focus:border-brand-navy focus:outline-none focus:ring-2 focus:ring-brand-navy/20 transition-all"
+                                    placeholder="10% de Descuento Exclusivo"
+                                />
+                            </div>
+
+                            <!-- Subtítulo (banner azul) -->
+                            <div>
+                                <label class="block text-sm font-medium text-text-primary mb-1.5">
+                                    Subtítulo (cabecera oscura)
+                                </label>
+                                <input
+                                    type="text"
+                                    name="popup_subtitle"
+                                    value={popupSubtitle}
+                                    maxlength="80"
+                                    class="w-full px-4 py-2.5 rounded-xl border border-border-light bg-surface-secondary text-text-primary focus:border-brand-navy focus:outline-none focus:ring-2 focus:ring-brand-navy/20 transition-all"
+                                    placeholder="Bienvenido a la excelencia"
+                                />
+                            </div>
+
+                            <!-- Código promocional -->
+                            <div>
+                                <label class="block text-sm font-medium text-text-primary mb-1.5">
+                                    Código promocional
+                                </label>
+                                <input
+                                    type="text"
+                                    name="popup_promo_code"
+                                    value={popupPromoCode}
+                                    maxlength="30"
+                                    class="w-full px-4 py-2.5 rounded-xl border border-border-light bg-surface-secondary text-text-primary uppercase font-mono font-semibold focus:border-brand-navy focus:outline-none focus:ring-2 focus:ring-brand-navy/20 transition-all"
+                                    placeholder="BIENVENIDO10"
+                                />
+                            </div>
+
+                            <!-- Delay -->
+                            <div>
+                                <label class="block text-sm font-medium text-text-primary mb-1.5">
+                                    Retraso de aparición (segundos)
+                                </label>
+                                <div class="flex items-center gap-3">
+                                    <input
+                                        type="number"
+                                        name="popup_delay_seconds"
+                                        value={currentDelay}
+                                        min="0"
+                                        max="60"
+                                        class="w-24 px-4 py-2.5 rounded-xl border border-border-light bg-surface-secondary text-text-primary text-center font-bold focus:border-brand-navy focus:outline-none"
+                                    />
+                                    <span class="text-sm text-text-muted">seg (0-60)</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Descripción -->
+                        <div>
+                            <label class="block text-sm font-medium text-text-primary mb-1.5">
+                                Descripción / Texto del cuerpo
+                            </label>
+                            <textarea
+                                name="popup_description"
+                                rows="3"
+                                maxlength="300"
+                                class="w-full px-4 py-2.5 rounded-xl border border-border-light bg-surface-secondary text-text-primary focus:border-brand-navy focus:outline-none focus:ring-2 focus:ring-brand-navy/20 transition-all resize-none"
+                                placeholder="Suscríbete a nuestra newsletter y recibe un descuento especial en tu primera compra."
+                            >{popupDescription}</textarea>
+                            <p class="text-xs text-text-muted mt-1">Máximo 300 caracteres</p>
+                        </div>
+
+                        <div class="flex items-center gap-3">
+                            <button
+                                type="submit"
+                                class="px-6 py-2.5 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-colors flex items-center gap-2"
+                            >
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                                </svg>
+                                Guardar Popup
+                            </button>
+                            <p class="text-xs text-text-muted">
+                                Los cambios se aplican al instante. El popup no se muestra a usuarios ya suscritos.
+                            </p>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Store Info -->
+        <div class="bg-surface-primary rounded-2xl p-6 shadow-soft">            <div class="flex items-start gap-4">
                 <div class="p-3 bg-blue-100 rounded-xl">
                     <svg
                         class="w-6 h-6 text-blue-600"

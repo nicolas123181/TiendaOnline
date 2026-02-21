@@ -42,53 +42,51 @@ export const POST: APIRoute = async ({ request }) => {
         const sentIds: number[] = [];
         const errors: string[] = [];
 
-        // Agrupar por usuario para no spamear
-        const userNotifications = new Map<string, typeof notifications>();
+        // Ordenar por stock ascendente (más urgentes primero)
+        notifications.sort((a, b) => a.size_stock - b.size_stock);
 
-        for (const notif of notifications) {
-            const existing = userNotifications.get(notif.user_email) || [];
-            existing.push(notif);
-            userNotifications.set(notif.user_email, existing);
-        }
+        // Enviar 1 email por producto por usuario, con delay entre envíos
+        for (let i = 0; i < notifications.length; i++) {
+            const notif = notifications[i];
 
-        // Enviar emails (solo el más urgente por usuario para no spamear)
-        for (const [email, userNotifs] of userNotifications) {
-            // Tomar el de menor stock primero
-            const primaryNotif = userNotifs.sort((a, b) => a.size_stock - b.size_stock)[0];
+            // Pausa entre emails para no saturar Resend (excepto el primero)
+            if (i > 0) {
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
 
             try {
                 const success = await sendWishlistLowStockEmail({
-                    customerEmail: primaryNotif.user_email,
-                    customerName: primaryNotif.user_name || 'Cliente',
-                    productName: primaryNotif.product_name,
-                    productSlug: primaryNotif.product_slug,
-                    productImage: primaryNotif.product_image,
-                    productPrice: primaryNotif.product_price,
-                    size: primaryNotif.size,
-                    stockLeft: primaryNotif.size_stock,
+                    customerEmail: notif.user_email,
+                    customerName: notif.user_name || 'Cliente',
+                    productName: notif.product_name,
+                    productSlug: notif.product_slug,
+                    productImage: notif.product_image,
+                    productPrice: notif.product_price,
+                    size: notif.size,
+                    stockLeft: notif.size_stock,
                     baseUrl: siteUrl
                 });
 
                 if (success) {
-                    // Marcar todos los items de este usuario como notificados
-                    sentIds.push(...userNotifs.map(n => n.wishlist_id));
+                    // Solo marcar este ítem concreto como notificado
+                    sentIds.push(notif.wishlist_id);
                 } else {
-                    errors.push(`Failed to send to ${email}`);
+                    errors.push(`Failed to send to ${notif.user_email} (${notif.product_name})`);
                 }
             } catch (e) {
-                errors.push(`Error sending to ${email}: ${e}`);
+                errors.push(`Error sending to ${notif.user_email}: ${e}`);
             }
         }
 
-        // Marcar como notificados
+        // Marcar como notificados solo los enviados con éxito
         if (sentIds.length > 0) {
             await markWishlistNotified(sentIds);
         }
 
         return new Response(JSON.stringify({
             success: true,
-            message: `Enviadas ${userNotifications.size} notificaciones`,
-            sentCount: userNotifications.size,
+            message: `Enviadas ${sentIds.length} de ${notifications.length} notificaciones`,
+            sentCount: sentIds.length,
             markedCount: sentIds.length,
             errors: errors.length > 0 ? errors : undefined
         }), {

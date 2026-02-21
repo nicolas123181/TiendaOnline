@@ -1,6 +1,14 @@
 import { useState, useEffect } from 'react';
+import { createClient } from '@supabase/supabase-js';
 
-const PROMO_CODE = 'BIENVENIDO10';
+interface PopupConfig {
+    enabled: string;
+    title: string;
+    subtitle: string;
+    description: string;
+    promoCode: string;
+    delaySeconds: number;
+}
 
 export default function NewsletterPopup() {
     const [isOpen, setIsOpen] = useState(false);
@@ -8,20 +16,78 @@ export default function NewsletterPopup() {
     const [isLoading, setIsLoading] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
     const [error, setError] = useState('');
+    const [config, setConfig] = useState<PopupConfig>({
+        enabled: 'true',
+        title: '10% de Descuento Exclusivo',
+        subtitle: 'Bienvenido a la excelencia',
+        description: 'Suscríbete a nuestra newsletter y recibe un descuento especial en tu primera compra.',
+        promoCode: 'BIENVENIDO10',
+        delaySeconds: 5,
+    });
 
     useEffect(() => {
-        // Verificar si ya se mostró el popup
-        const hasSeenPopup = localStorage.getItem('newsletter_popup_seen');
-        const isAuthenticated = document.cookie.includes('sb-access-token');
+        const initPopup = async () => {
+            // No mostrar si ya se cerró esta sesión
+            const hasSeenPopup = localStorage.getItem('newsletter_popup_seen');
+            if (hasSeenPopup) return;
 
-        if (!hasSeenPopup && !isAuthenticated) {
-            // Mostrar después de 5 segundos
+            // Cargar configuración del popup
+            let popupConfig = config;
+            try {
+                const res = await fetch('/api/popup-config');
+                if (res.ok) {
+                    popupConfig = await res.json();
+                    setConfig(popupConfig);
+                }
+            } catch {
+                // usar defaults
+            }
+
+            // Si el popup está desactivado en el admin, no mostrar
+            if (popupConfig.enabled === 'false') return;
+
+            // Comprobar si el usuario está autenticado Y suscrito
+            const supabaseUrl = (import.meta as any).env?.PUBLIC_SUPABASE_URL ||
+                (window as any).__SUPABASE_URL__ || 'https://kggjqbhcvvayqwkbpwvp.supabase.co';
+            const supabaseAnonKey = (import.meta as any).env?.PUBLIC_SUPABASE_ANON_KEY ||
+                (window as any).__SUPABASE_ANON_KEY__;
+
+            if (supabaseUrl && supabaseAnonKey) {
+                try {
+                    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+                    const { data: { session } } = await supabase.auth.getSession();
+
+                    if (session?.user?.email && session.access_token) {
+                        // Pre-rellenar el email
+                        setEmail(session.user.email);
+
+                        // Verificar suscripción vía API segura (evita problemas de RLS)
+                        const statusRes = await fetch('/api/newsletter-status', {
+                            headers: { Authorization: `Bearer ${session.access_token}` },
+                        });
+                        const { subscribed } = statusRes.ok ? await statusRes.json() : { subscribed: false };
+
+                        // Si está suscrito, marcar como visto y no mostrar
+                        if (subscribed) {
+                            localStorage.setItem('newsletter_popup_seen', 'true');
+                            return;
+                        }
+                    }
+                } catch {
+                    // Si falla la comprobación, continuar con la lógica normal
+                }
+            }
+
+            // Mostrar popup tras el delay configurado
+            const delay = (popupConfig.delaySeconds ?? 5) * 1000;
             const timer = setTimeout(() => {
                 setIsOpen(true);
-            }, 5000);
+            }, delay);
 
             return () => clearTimeout(timer);
-        }
+        };
+
+        initPopup();
     }, []);
 
     const handleClose = () => {
@@ -65,7 +131,7 @@ export default function NewsletterPopup() {
         >
             <div className="bg-white rounded-2xl overflow-hidden max-w-md w-full shadow-2xl animate-scale-in">
                 {/* Header - Diseño corporativo premium */}
-                <div className="relative bg-[#1a2744] py-10 px-6">
+                <div className="relative bg-brand-navy py-10 px-6">
                     <button
                         onClick={handleClose}
                         className="absolute top-4 right-4 p-2 text-white/60 hover:text-white transition-colors"
@@ -83,7 +149,7 @@ export default function NewsletterPopup() {
                         </h1>
                         <div className="w-12 h-px bg-amber-600 mx-auto mb-4"></div>
                         <p className="text-white/80 text-sm font-light tracking-wide">
-                            Bienvenido a la excelencia
+                            {config.subtitle}
                         </p>
                     </div>
                 </div>
@@ -93,11 +159,11 @@ export default function NewsletterPopup() {
                     {!showSuccess ? (
                         <>
                             <div className="text-center mb-6">
-                                <h2 className="text-xl font-serif text-[#1a2744] mb-2">
-                                    10% de Descuento Exclusivo
+                                <h2 className="text-xl font-serif text-brand-navy mb-2">
+                                    {config.title}
                                 </h2>
                                 <p className="text-gray-600 text-sm">
-                                    Suscríbete a nuestra newsletter y recibe un descuento especial en tu primera compra.
+                                    {config.description}
                                 </p>
                             </div>
 
@@ -109,7 +175,7 @@ export default function NewsletterPopup() {
                                         onChange={(e) => setEmail(e.target.value)}
                                         placeholder="Tu dirección de email"
                                         required
-                                        className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1a2744]/20 focus:border-[#1a2744] transition-all text-gray-900 placeholder:text-gray-400"
+                                        className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-brand-navy/20 focus:border-brand-navy transition-all text-gray-900 placeholder:text-gray-400"
                                     />
                                 </div>
 
@@ -120,7 +186,7 @@ export default function NewsletterPopup() {
                                 <button
                                     type="submit"
                                     disabled={isLoading}
-                                    className="w-full py-3.5 bg-[#1a2744] text-white font-medium rounded-lg hover:bg-[#243555] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                    className="w-full py-3.5 bg-brand-navy text-white font-medium rounded-lg hover:bg-brand-navy-light transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                                 >
                                     {isLoading ? (
                                         <>
@@ -145,12 +211,12 @@ export default function NewsletterPopup() {
                         </>
                     ) : (
                         <div className="text-center py-2">
-                            <div className="w-16 h-16 mx-auto mb-4 bg-[#1a2744]/10 rounded-full flex items-center justify-center">
-                                <svg className="w-8 h-8 text-[#1a2744]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <div className="w-16 h-16 mx-auto mb-4 bg-brand-navy/10 rounded-full flex items-center justify-center">
+                                <svg className="w-8 h-8 text-brand-navy" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                                 </svg>
                             </div>
-                            <h3 className="text-xl font-serif text-[#1a2744] mb-2">
+                            <h3 className="text-xl font-serif text-brand-navy mb-2">
                                 Suscripción Confirmada
                             </h3>
                             <p className="text-gray-600 text-sm mb-6">
@@ -158,18 +224,18 @@ export default function NewsletterPopup() {
                             </p>
 
                             <div className="bg-gray-50 border border-gray-200 rounded-lg p-5 mb-6">
-                                <p className="text-2xl font-mono font-semibold text-[#1a2744] tracking-widest">
-                                    {PROMO_CODE}
+                                <p className="text-2xl font-mono font-semibold text-brand-navy tracking-widest">
+                                    {config.promoCode}
                                 </p>
-                                <p className="text-sm text-gray-500 mt-2">10% de descuento</p>
+                                <p className="text-sm text-gray-500 mt-2">{config.title}</p>
                             </div>
 
                             <button
                                 onClick={() => {
-                                    navigator.clipboard.writeText(PROMO_CODE);
+                                    navigator.clipboard.writeText(config.promoCode);
                                     handleClose();
                                 }}
-                                className="px-8 py-2.5 bg-[#1a2744] text-white font-medium rounded-lg hover:bg-[#243555] transition-colors"
+                                className="px-8 py-2.5 bg-brand-navy text-white font-medium rounded-lg hover:bg-brand-navy-light transition-colors"
                             >
                                 Copiar código y cerrar
                             </button>
