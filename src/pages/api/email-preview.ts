@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { verifyAdminRequest, unauthorizedResponse } from '../../lib/adminAuth';
 
 const BRAND = { navy: '#1a2744', gold: '#b8860b', success: '#16a34a', purple: '#7c3aed' };
 
@@ -404,7 +405,10 @@ const emails: Record<string, string> = {
     </div>`
 };
 
-export const GET: APIRoute = async ({ url }) => {
+export const GET: APIRoute = async ({ request, url }) => {
+    if (!await verifyAdminRequest(request)) {
+        return unauthorizedResponse();
+    }
     const type = url.searchParams.get('type') || 'order-confirmation';
     const html = emails[type] || '<p>Email no encontrado</p>';
     return new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });

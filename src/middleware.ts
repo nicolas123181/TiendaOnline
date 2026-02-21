@@ -1,5 +1,6 @@
 import { defineMiddleware } from 'astro:middleware';
-import { supabase, isSupabaseConfigured } from './lib/supabase';
+import { isSupabaseConfigured } from './lib/supabase';
+import { verifyAdminRequest } from './lib/adminAuth';
 
 export const onRequest = defineMiddleware(async (context, next) => {
     const isApiRoute = context.url.pathname.startsWith('/api');
@@ -41,20 +42,10 @@ export const onRequest = defineMiddleware(async (context, next) => {
         }
 
         try {
-            // Verificar cookie de sesión admin (se borra al cerrar el navegador)
-            const cookies = context.request.headers.get('cookie') || '';
-            const hasAdminSession = cookies.split(';').some(c => c.trim().startsWith('admin_session='));
-
-            if (!hasAdminSession) {
-                // No hay cookie de sesión admin, forzar login
-                return context.redirect('/admin/login');
-            }
-
-            // Verificar sesión de Supabase
-            const { data: { session } } = await supabase.auth.getSession();
-
-            if (!session) {
-                // No hay sesión, redirigir a login
+            // verifyAdminRequest crea un cliente Supabase per-request (no singleton)
+            // evitando que sesiones de requests concurrentes se mezclen en SSR
+            const isAuthorized = await verifyAdminRequest(context.request);
+            if (!isAuthorized) {
                 return context.redirect('/admin/login');
             }
         } catch (error) {

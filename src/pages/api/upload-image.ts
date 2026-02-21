@@ -1,7 +1,11 @@
 import type { APIRoute } from 'astro';
 import { uploadImage, deleteImage, getPublicIdFromUrl } from '../../lib/cloudinary';
+import { verifyAdminRequest, unauthorizedResponse } from '../../lib/adminAuth';
 
 export const POST: APIRoute = async ({ request }) => {
+    if (!await verifyAdminRequest(request)) {
+        return unauthorizedResponse();
+    }
     try {
         const formData = await request.formData();
         const file = formData.get('file') as File | null;

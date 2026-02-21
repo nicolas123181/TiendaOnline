@@ -7,6 +7,7 @@ import {
     type LowStockProduct,
     type OutOfStockProduct
 } from '../../lib/email';
+import { verifyAdminRequest, unauthorizedResponse } from '../../lib/adminAuth';
 
 /**
  * API para verificar el inventario y enviar alertas de stock
@@ -17,6 +18,9 @@ import {
  * - Email de productos/tallas con stock bajo (stock ≤ 5)
  */
 export const POST: APIRoute = async ({ request }) => {
+    if (!await verifyAdminRequest(request)) {
+        return unauthorizedResponse();
+    }
     console.log('🔍 Manual stock check triggered (including sizes)');
 
     try {
