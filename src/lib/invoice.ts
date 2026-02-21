@@ -725,14 +725,16 @@ export function generateInvoiceHTML(invoice: any, items: any[]): string {
 
 /**
  * Genera un PDF binario de la factura usando pdfkit.
- * Devuelve un Buffer con los bytes del PDF listo para adjuntar o servir.
+ * Diseñado para coincidir fielmente con generateInvoiceHTML(): mismos colores,
+ * misma estructura de secciones y 4 columnas en la tabla de artículos
+ * (la talla aparece como subtexto en la columna Descripción, igual que en el HTML).
  */
 export async function generateInvoicePDF(invoice: any, items: any[]): Promise<Buffer> {
     // Import dinámico para compatibilidad con Vite/Astro SSR
     const PDFDocument = (await import('pdfkit')).default;
 
     return new Promise<Buffer>((resolve, reject) => {
-        const doc = new PDFDocument({ margin: 50, size: 'A4' });
+        const doc = new PDFDocument({ margin: 0, size: 'A4' });
         const chunks: Buffer[] = [];
         doc.on('data', (chunk: Buffer) => chunks.push(chunk));
         doc.on('end', () => resolve(Buffer.concat(chunks)));
@@ -743,175 +745,227 @@ export async function generateInvoicePDF(invoice: any, items: any[]): Promise<Bu
         const formatDate = (dateStr: string) =>
             new Date(dateStr).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
 
-        const navy = '#1a2744';
-        const gold  = '#b8860b';
-        const gray  = '#6b7280';
-        const lGray = '#e5e7eb';
-        const red   = '#dc2626';
-        const pageW = doc.page.width - 100; // width inside margins
+        // Brand colours — identical to BRAND_COLORS used in generateInvoiceHTML()
+        const navy    = '#1a2744';
+        const navyL   = '#2d3f5f';
+        const gold    = '#b8860b';
+        const cream   = '#faf8f5';
+        const gray    = '#6b7280';
+        const lGray   = '#e5e7eb';
+        const green   = '#10b981';
+        const red     = '#dc2626';
 
-        // ── HEADER ──────────────────────────────────────────────
-        doc.rect(0, 0, doc.page.width, 90).fill(navy);
+        const PW  = doc.page.width;   // 595.28
+        const PH  = doc.page.height;  // 841.89
+        const L   = 28;               // left margin (matches 28px padding in HTML)
+        const R   = PW - 28;          // right edge
+        const CW  = R - L;            // content width
 
-        // Logo
-        doc.fontSize(22).fillColor(gold).font('Helvetica-Bold')
-            .text('VANTAGE', 50, 28);
-        doc.fontSize(10).fillColor('white').font('Helvetica')
-            .text('FASHION', 50, 52, { characterSpacing: 4 });
-
-        // Título factura (derecha)
         const isCreditNote = invoice.type === 'credit_note';
+
+        // ── HEADER  (matches .header CSS: navy gradient, padding 36px 28px) ──────
+        const headerH = 95;
+        // gradient simulation: darker left rect + lighter right blend
+        doc.rect(0, 0, PW, headerH).fill(navy);
+        // subtle right-side lightening
+        doc.rect(PW / 2, 0, PW / 2, headerH).fill(navyL).opacity(0.35);
+        doc.opacity(1);
+
+        // Logo: "VANTAGE" in gold (font-weight 300, letter-spacing 0.3em)
+        doc.fontSize(24).fillColor(gold).font('Helvetica')
+            .text('VANTAGE', L, 28, { characterSpacing: 7 });
+
+        // Invoice title & number on the right
         const titleText = isCreditNote ? 'FACTURA RECTIFICATIVA' : 'FACTURA';
-        doc.fontSize(18).fillColor('white').font('Helvetica-Bold')
-            .text(titleText, 50, 25, { width: pageW, align: 'right' });
-        doc.fontSize(11).fillColor('#aab4c8').font('Helvetica')
-            .text(invoice.invoice_number, 50, 50, { width: pageW, align: 'right' });
+        doc.fontSize(20).fillColor('white').font('Helvetica')
+            .text(titleText, L, 22, { width: CW, align: 'right' });
+        doc.fontSize(12).fillColor('rgba(255,255,255,0.8)').font('Helvetica')
+            .text(invoice.invoice_number, L, 50, { width: CW, align: 'right' });
 
-        doc.moveDown(4);
+        // ── INFO SECTION  (cream background, matching .info-section) ─────────────
+        const infoH   = 120;
+        const infoY   = headerH;
+        doc.rect(0, infoY, PW, infoH).fill(cream);
 
-        // ── INFO SECTION ─────────────────────────────────────────
-        const infoY = 110;
-        // Facturar a
-        doc.fontSize(8).fillColor(gray).font('Helvetica-Bold')
-            .text('FACTURAR A', 50, infoY, { characterSpacing: 1 });
-        doc.fontSize(10).fillColor(navy).font('Helvetica-Bold')
-            .text(invoice.customer_name, 50, infoY + 14);
-        doc.fontSize(9).fillColor('#333').font('Helvetica')
-            .text([
-                invoice.customer_address || '',
-                `${invoice.customer_postal_code || ''} ${invoice.customer_city || ''}`.trim(),
-                invoice.customer_email,
-                invoice.customer_phone || ''
-            ].filter(Boolean).join('\n'), 50, infoY + 27, { lineGap: 2 });
+        // — Left block: FACTURAR A —
+        const blockL = L;
+        doc.fontSize(10).fillColor(gray).font('Helvetica-Bold')
+            .text('FACTURAR A', blockL, infoY + 20, { characterSpacing: 1 });
+        doc.fontSize(11).fillColor(navy).font('Helvetica-Bold')
+            .text(invoice.customer_name, blockL, infoY + 35);
+        doc.fontSize(9.5).fillColor('#333333').font('Helvetica');
+        const custLines = [
+            invoice.customer_address || '',
+            `${invoice.customer_postal_code || ''} ${invoice.customer_city || ''}`.trim(),
+            invoice.customer_email,
+            invoice.customer_phone || ''
+        ].filter(Boolean);
+        doc.text(custLines.join('\n'), blockL, infoY + 51, { lineGap: 3 });
 
-        // Datos empresa (derecha)
-        doc.fontSize(8).fillColor(gray).font('Helvetica-Bold')
-            .text('DATOS DEL EMISOR', 430, infoY, { align: 'right', width: 165, characterSpacing: 1 });
-        doc.fontSize(10).fillColor(navy).font('Helvetica-Bold')
-            .text(invoice.company_name || COMPANY_INFO.name, 430, infoY + 14, { align: 'right', width: 165 });
-        doc.fontSize(9).fillColor('#333').font('Helvetica')
-            .text([
-                invoice.company_address || `${COMPANY_INFO.address}, ${COMPANY_INFO.city}`,
-                `NIF: ${invoice.company_nif || COMPANY_INFO.nif}`,
-                invoice.company_email || COMPANY_INFO.email,
-                invoice.company_phone || COMPANY_INFO.phone
-            ].filter(Boolean).join('\n'), 430, infoY + 27, { align: 'right', width: 165, lineGap: 2 });
+        // — Right block: DATOS DE LA EMPRESA —
+        const blockR  = R;
+        const blockRW = 190;
+        doc.fontSize(10).fillColor(gray).font('Helvetica-Bold')
+            .text('DATOS DE LA EMPRESA', blockR - blockRW, infoY + 20,
+                  { width: blockRW, align: 'right', characterSpacing: 1 });
+        doc.fontSize(11).fillColor(navy).font('Helvetica-Bold')
+            .text(invoice.company_name || COMPANY_INFO.name, blockR - blockRW, infoY + 35,
+                  { width: blockRW, align: 'right' });
+        doc.fontSize(9.5).fillColor('#333333').font('Helvetica');
+        const compLines = [
+            invoice.company_address || `${COMPANY_INFO.address}, ${COMPANY_INFO.city}`,
+            `NIF: ${invoice.company_nif || COMPANY_INFO.nif}`,
+            invoice.company_email || COMPANY_INFO.email,
+            invoice.company_phone || COMPANY_INFO.phone
+        ].filter(Boolean);
+        doc.text(compLines.join('\n'), blockR - blockRW, infoY + 51,
+                 { width: blockRW, align: 'right', lineGap: 3 });
 
-        // ── DATES BAR ────────────────────────────────────────────
-        const datesY = 230;
-        doc.rect(50, datesY, pageW, 26).fill('#f9fafb');
-        doc.rect(50, datesY, pageW, 26).stroke(lGray);
+        // ── DATES SECTION  (white bg, bottom border, matches .dates-section) ──────
+        const datesY = infoY + infoH;
+        const datesH = 36;
+        doc.rect(0, datesY, PW, datesH).fill('white');
+        doc.moveTo(0, datesY + datesH).lineTo(PW, datesY + datesH).stroke(lGray);
 
-        doc.fontSize(8).fillColor(gray).font('Helvetica')
-            .text('Fecha de emisión:', 60, datesY + 8);
-        doc.fontSize(8).fillColor(navy).font('Helvetica-Bold')
-            .text(formatDate(invoice.issue_date), 145, datesY + 8);
+        let dx = L;
+        const dateItemGap = 40;
 
-        doc.fontSize(8).fillColor(gray).font('Helvetica')
-            .text('Pedido:', 270, datesY + 8);
-        doc.fontSize(8).fillColor(navy).font('Helvetica-Bold')
-            .text(`#${invoice.order_id}`, 300, datesY + 8);
+        // fecha de emisión
+        doc.fontSize(9).fillColor(gray).font('Helvetica')
+            .text('Fecha de emisión:', dx, datesY + 11);
+        dx += 112;
+        doc.fontSize(9).fillColor(navy).font('Helvetica-Bold')
+            .text(formatDate(invoice.issue_date), dx, datesY + 11);
+        dx += doc.widthOfString(formatDate(invoice.issue_date)) + dateItemGap;
 
-        const statusText = isCreditNote ? 'REEMBOLSADO' : 'PAGADO';
-        const statusColor = isCreditNote ? red : '#16a34a';
-        doc.rect(430, datesY + 4, 80, 18).fill(statusColor);
-        doc.fontSize(7).fillColor('white').font('Helvetica-Bold')
-            .text(statusText, 430, datesY + 9, { width: 80, align: 'center' });
+        // pedido
+        doc.fontSize(9).fillColor(gray).font('Helvetica')
+            .text('Pedido:', dx, datesY + 11);
+        dx += 48;
+        doc.fontSize(9).fillColor(navy).font('Helvetica-Bold')
+            .text(`#${invoice.order_id}`, dx, datesY + 11);
+        dx += doc.widthOfString(`#${invoice.order_id}`) + dateItemGap;
 
+        // estado badge (rounded pill via rect + text)
+        const statusText  = isCreditNote ? 'REEMBOLSADO' : 'PAGADO';
+        const statusColor = isCreditNote ? red : green;
+        const badgeW = 90;
+        const badgeH = 18;
+        dx = Math.max(dx, R - badgeW - 60); // push to right area
+        doc.roundedRect(dx, datesY + 8, badgeW, badgeH, 9).fill(statusColor);
+        doc.fontSize(8).fillColor('white').font('Helvetica-Bold')
+            .text(statusText, dx, datesY + 13, { width: badgeW, align: 'center' });
+
+        // ref. factura original (if credit note)
+        let extraRefH = 0;
         if (invoice.original_invoice_id) {
-            doc.fontSize(8).fillColor(gray).font('Helvetica')
-                .text(`Ref. factura: #${invoice.original_invoice_id}`, 50, datesY + 34);
+            const refY = datesY + datesH + 6;
+            extraRefH = 20;
+            doc.fontSize(8.5).fillColor(gray).font('Helvetica')
+                .text(`Ref. factura original: #${invoice.original_invoice_id}`, L, refY);
+            doc.rect(0, datesY + datesH, PW, extraRefH).fill('#fffbf2');
+            doc.fontSize(8.5).fillColor(gray).font('Helvetica')
+                .text(`Ref. factura original: #${invoice.original_invoice_id}`, L, refY);
         }
 
-        // ── ITEMS TABLE ───────────────────────────────────────────
-        const tableTop = invoice.original_invoice_id ? 282 : 272;
-        const colDesc   = 50;
-        const colSize   = 290;
-        const colQty    = 365;
-        const colUnit   = 420;
-        const colTotal  = 490;
+        // ── ITEMS TABLE  (4 columns matching HTML: Descripción / Cantidad / Precio Unit. / Total) ──
+        // col widths matching roughly HTML % widths (50 / 15 / 17 / 18 of CW)
+        const tableY    = datesY + datesH + extraRefH + 10;
+        const cDesc     = L;
+        const wDesc     = Math.round(CW * 0.50);
+        const cQty      = cDesc + wDesc;
+        const wQty      = Math.round(CW * 0.14);
+        const cUnit     = cQty + wQty;
+        const wUnit     = Math.round(CW * 0.18);
+        const cTotal    = cUnit + wUnit;
+        const wTotal    = R - cTotal;
 
-        // Header row
-        doc.rect(colDesc, tableTop, pageW, 22).fill(navy);
-        doc.fontSize(8).fillColor('white').font('Helvetica-Bold');
-        doc.text('DESCRIPCIÓN',  colDesc + 6,  tableTop + 7);
-        doc.text('TALLA',        colSize,  tableTop + 7);
-        doc.text('CANT.',        colQty,   tableTop + 7);
-        doc.text('PRECIO UNIT.', colUnit,  tableTop + 7);
-        doc.text('TOTAL',        colTotal, tableTop + 7);
+        const thH = 26;
+        doc.rect(0, tableY, PW, thH).fill(navy);
+        doc.fontSize(9).fillColor('white').font('Helvetica-Bold');
+        doc.text('DESCRIPCIÓN',   cDesc + 6,  tableY + 8);
+        doc.text('CANTIDAD',      cQty,       tableY + 8, { width: wQty,  align: 'center' });
+        doc.text('PRECIO UNIT.',  cUnit,      tableY + 8, { width: wUnit, align: 'right'  });
+        doc.text('TOTAL',         cTotal,     tableY + 8, { width: wTotal, align: 'right' });
 
-        // Item rows
-        let rowY = tableTop + 22;
+        let rowY = tableY + thH;
         items.forEach((item, i) => {
-            const rowH = 28;
-            if (i % 2 === 0) {
-                doc.rect(colDesc, rowY, pageW, rowH).fill('#faf8f5');
-            } else {
-                doc.rect(colDesc, rowY, pageW, rowH).fill('white');
-            }
-            doc.rect(colDesc, rowY, pageW, rowH).stroke(lGray);
+            // row height depends on sub-text lines
+            const hasSub = item.product_size || item.product_sku;
+            const rowH   = hasSub ? 42 : 30;
 
-            doc.fontSize(9).fillColor(navy).font('Helvetica-Bold')
-                .text(item.product_name, colDesc + 6, rowY + 6, { width: 225, ellipsis: true });
-            if (item.product_sku) {
-                doc.fontSize(7).fillColor(gray).font('Helvetica')
-                    .text(`SKU: ${item.product_sku}`, colDesc + 6, rowY + 17, { width: 225 });
+            // alternating row background (cream / white — same as HTML)
+            doc.rect(0, rowY, PW, rowH).fill(i % 2 === 0 ? cream : 'white');
+            doc.moveTo(0, rowY + rowH).lineTo(PW, rowY + rowH).stroke(lGray);
+
+            // description + sub-text (talla / sku)
+            doc.fontSize(10).fillColor(navy).font('Helvetica-Bold')
+                .text(item.product_name, cDesc + 6, rowY + 8, { width: wDesc - 10, ellipsis: true });
+            if (item.product_size) {
+                doc.fontSize(9).fillColor(gray).font('Helvetica')
+                    .text(`Talla: ${item.product_size}`, cDesc + 6, rowY + 22, { width: wDesc - 10 });
+            } else if (item.product_sku) {
+                doc.fontSize(8).fillColor('#9ca3af').font('Helvetica')
+                    .text(`SKU: ${item.product_sku}`, cDesc + 6, rowY + 22, { width: wDesc - 10 });
             }
-            doc.fontSize(9).fillColor('#444').font('Helvetica')
-                .text(item.product_size || '—', colSize, rowY + 9)
-                .text(String(item.quantity), colQty + 6, rowY + 9)
-                .text(formatPrice(item.unit_price), colUnit, rowY + 9)
-                .text(formatPrice(item.line_total), colTotal, rowY + 9);
+
+            const midY = rowY + rowH / 2 - 5;
+            doc.fontSize(9.5).fillColor('#4a4a4a').font('Helvetica')
+                .text(String(item.quantity),          cQty,   midY, { width: wQty,  align: 'center' })
+                .text(formatPrice(item.unit_price),   cUnit,  midY, { width: wUnit, align: 'right'  })
+                .text(formatPrice(item.line_total),   cTotal, midY, { width: wTotal, align: 'right' });
 
             rowY += rowH;
         });
 
-        // ── TOTALS ────────────────────────────────────────────────
-        const totalsX = 370;
-        let totY = rowY + 16;
+        // ── TOTALS  (right-aligned table matching .totals-table) ─────────────────
+        const totBlockW = 300;
+        const totX      = R - totBlockW;
+        let totY        = rowY + 20;
 
-        const drawTotalRow = (label: string, value: string, bold = false, lineAbove = false) => {
-            if (lineAbove) {
-                doc.moveTo(totalsX, totY - 4).lineTo(595, totY - 4).stroke(lGray);
+        const drawTotalLine = (label: string, value: string, bold = false, topBorder = false) => {
+            if (topBorder) {
+                const bw = bold ? 2 : 1;
+                doc.moveTo(totX, totY - 5).lineTo(R, totY - 5)
+                   .lineWidth(bw).stroke(bold ? navy : lGray).lineWidth(1);
             }
-            doc.fontSize(bold ? 11 : 9)
-               .fillColor(bold ? navy : gray)
-               .font(bold ? 'Helvetica-Bold' : 'Helvetica')
-               .text(label, totalsX, totY);
-            doc.fontSize(bold ? 11 : 9)
-               .fillColor(bold ? navy : '#333')
-               .font(bold ? 'Helvetica-Bold' : 'Helvetica')
-               .text(value, totalsX, totY, { width: 595 - totalsX, align: 'right' });
-            totY += bold ? 18 : 16;
+            const fs = bold ? 15 : 12;
+            doc.fontSize(fs).fillColor(bold ? navy : gray).font(bold ? 'Helvetica-Bold' : 'Helvetica')
+               .text(label, totX, totY);
+            doc.fontSize(fs).fillColor(bold ? navy : '#333333').font(bold ? 'Helvetica-Bold' : 'Helvetica')
+               .text(value, totX, totY, { width: totBlockW, align: 'right' });
+            totY += bold ? 24 : 20;
         };
 
         const baseImponible = invoice.subtotal - invoice.tax_amount;
-        drawTotalRow('Base imponible', formatPrice(baseImponible));
-        drawTotalRow(`IVA incluido (${invoice.tax_rate}%)`, formatPrice(invoice.tax_amount));
-        drawTotalRow('Subtotal', formatPrice(invoice.subtotal), false, true);
+        drawTotalLine('Base imponible', formatPrice(baseImponible));
+        drawTotalLine(`IVA incluido (${invoice.tax_rate}%)`, formatPrice(invoice.tax_amount));
+        drawTotalLine('Subtotal productos', formatPrice(invoice.subtotal), false, true);
         if (invoice.shipping_cost > 0) {
-            drawTotalRow('Envío', formatPrice(invoice.shipping_cost));
+            drawTotalLine('Envío', formatPrice(invoice.shipping_cost));
         }
         if (invoice.discount > 0) {
-            drawTotalRow('Descuento', `-${formatPrice(invoice.discount)}`);
+            drawTotalLine('Descuento', `-${formatPrice(invoice.discount)}`);
         }
-        totY += 4;
-        drawTotalRow('TOTAL', formatPrice(invoice.total), true, true);
+        totY += 6;
+        drawTotalLine('TOTAL', formatPrice(invoice.total), true, true);
 
-        // ── FOOTER ────────────────────────────────────────────────
-        const footerY = doc.page.height - 70;
-        doc.rect(0, footerY, doc.page.width, 70).fill(navy);
-        doc.fontSize(10).fillColor(gold).font('Helvetica-Bold')
-            .text('¡Gracias por confiar en Vantage!', 50, footerY + 12, { width: pageW, align: 'center' });
-        doc.fontSize(8).fillColor('#9db4cc').font('Helvetica')
+        // ── FOOTER  (navy background, gold thanks text — matches .footer) ─────────
+        const footerH = 72;
+        const footerY = PH - footerH;
+        doc.rect(0, footerY, PW, footerH).fill(navy);
+
+        doc.fontSize(13).fillColor(gold).font('Helvetica-Bold')
+            .text('¡Gracias por confiar en Vantage!', L, footerY + 14, { width: CW, align: 'center' });
+        doc.fontSize(9).fillColor('rgba(255,255,255,0.7)').font('Helvetica')
             .text(
                 'Esta factura ha sido generada electrónicamente y es válida sin firma.',
-                50, footerY + 28, { width: pageW, align: 'center' }
+                L, footerY + 34, { width: CW, align: 'center' }
             );
-        doc.fontSize(8).fillColor('#7a9ab8').font('Helvetica')
+        doc.fontSize(9).fillColor('rgba(255,255,255,0.55)').font('Helvetica')
             .text(
-                `${COMPANY_INFO.website}  •  ${COMPANY_INFO.email}  •  ${COMPANY_INFO.nif}`,
-                50, footerY + 44, { width: pageW, align: 'center' }
+                `${COMPANY_INFO.website}  •  ${COMPANY_INFO.email}`,
+                L, footerY + 52, { width: CW, align: 'center' }
             );
 
         doc.end();
