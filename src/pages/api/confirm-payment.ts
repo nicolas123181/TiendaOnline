@@ -411,6 +411,27 @@ export const POST: APIRoute = async ({ request }) => {
         }
 
         // ==========================================
+        // DETECTAR SI ES RECOGIDA EN TIENDA
+        // ==========================================
+        let isPickup = false;
+        if (shippingMethodId) {
+            try {
+                const { data: shippingMethod } = await db
+                    .from('shipping_methods')
+                    .select('name, cost')
+                    .eq('id', shippingMethodId)
+                    .single();
+                if (shippingMethod) {
+                    const methodName = (shippingMethod.name || '').toLowerCase();
+                    isPickup = methodName.includes('recoger') || methodName.includes('tienda') || methodName.includes('pickup') || shippingMethod.cost === 0;
+                }
+            } catch (e) {
+                console.warn('⚠️ Could not determine shipping method type:', e);
+            }
+        }
+        console.log(`📦 Is pickup order: ${isPickup}`);
+
+        // ==========================================
         // ENVIAR EMAIL DE CONFIRMACIÓN
         // ==========================================
         console.log(`📧 Sending confirmation email to ${customerEmail}`);
@@ -438,6 +459,7 @@ export const POST: APIRoute = async ({ request }) => {
                 city: customerCity,
                 postalCode: customerPostalCode,
                 phone: customerPhone,
+                isPickup: isPickup,
                 invoiceNumber: invoiceData?.invoice_number,
                 invoiceId: invoiceData?.id,
             });

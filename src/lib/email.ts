@@ -47,6 +47,7 @@ interface OrderEmailData {
   city: string;
   postalCode: string;
   phone?: string;
+  isPickup?: boolean;
   baseUrl?: string;
   invoiceNumber?: string;
   invoiceId?: number;
@@ -170,7 +171,19 @@ export async function sendOrderConfirmationEmail(data: OrderEmailData) {
                     </tr>
                   </table>
 
-                  <!-- Shipping Address -->
+                  <!-- Shipping Address / Pickup -->
+                  ${data.isPickup ? `
+                  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #fff7ed; border-left: 4px solid #ea580c; border-radius: 0 12px 12px 0; margin-bottom: 30px;">
+                    <tr>
+                      <td style="padding: 20px;">
+                        <p style="margin: 0 0 10px 0; font-weight: 700; color: #ea580c; font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em;">🏪 Recogida en Tienda</p>
+                        <p style="margin: 0 0 8px 0; color: #374151; line-height: 1.6; font-weight: 600;">Puedes pasar a recoger tu pedido en nuestra tienda.</p>
+                        <p style="margin: 0; color: #6b7280; font-size: 14px;">Te avisaremos por email en cuanto esté listo para recoger.</p>
+                        ${data.phone ? `<p style="margin: 10px 0 0 0; color: #6b7280;">📞 ${data.phone}</p>` : ''}
+                      </td>
+                    </tr>
+                  </table>
+                  ` : `
                   <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f9fafb; border-left: 4px solid ${BRAND_COLORS.navy}; border-radius: 0 12px 12px 0; margin-bottom: 30px;">
                     <tr>
                       <td style="padding: 20px;">
@@ -180,6 +193,7 @@ export async function sendOrderConfirmationEmail(data: OrderEmailData) {
                       </td>
                     </tr>
                   </table>
+                  `}
 
                   <!-- CTA Button -->
                   <table width="100%" cellpadding="0" cellspacing="0">
@@ -210,7 +224,9 @@ export async function sendOrderConfirmationEmail(data: OrderEmailData) {
                   ` : ''}
 
                   <p style="color: #6b7280; font-size: 15px; text-align: center; margin: 30px 0 0 0; line-height: 1.6;">
-                    Recibirás un email cuando tu pedido sea enviado.<br>
+                    ${data.isPickup
+                      ? 'Recibirás un email en cuanto tu pedido esté listo para recoger.'
+                      : 'Recibirás un email cuando tu pedido sea enviado.'}<br>
                     ¿Preguntas? <a href="${siteUrl}/sobre-nosotros" style="color: ${BRAND_COLORS.navy}; text-decoration: underline;">Contáctanos</a>
                   </p>
                 </td>
