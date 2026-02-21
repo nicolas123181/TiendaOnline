@@ -115,6 +115,7 @@ export const POST: APIRoute = async ({ request }) => {
         // PROCESAR REEMBOLSO REAL EN STRIPE
         // ============================================
         let stripeRefundId: string | null = null;
+        let creditNoteInvoice: any = null; // declarado aquí para que sea accesible en el bloque de emails
 
         if (status === 'refunded') {
             updateData.refunded_at = new Date().toISOString();
@@ -224,7 +225,6 @@ export const POST: APIRoute = async ({ request }) => {
             // ============================================
             // 2. GENERAR FACTURA RECTIFICATIVA (Credit Note)
             // ============================================
-            let creditNoteInvoice: any = null;
             try {
                 // Importar dinámicamente para evitar problemas de dependencias circulares
                 const { createInvoice, getInvoiceByOrderId } = await import('../../../lib/invoice');
