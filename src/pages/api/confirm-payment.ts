@@ -159,10 +159,6 @@ export const POST: APIRoute = async ({ request }) => {
         // ==========================================
         console.log('📝 Creating order with status: paid...');
 
-        // Usar solo las columnas que existen en la tabla orders
-        // La tabla original solo tiene: customer_email, customer_name, customer_address, 
-        // customer_city, customer_postal_code, customer_phone, status, total, 
-        // stripe_payment_intent_id, created_at, updated_at
         const { data: order, error: orderError } = await db
             .from('orders')
             .insert({
@@ -174,6 +170,8 @@ export const POST: APIRoute = async ({ request }) => {
                 customer_postal_code: customerPostalCode,
                 status: 'paid',
                 total: total,
+                shipping_method_id: shippingMethodId || null, // CRÍTICO: necesario para detectar recogida en tienda
+                shipping_cost: shipping || 0,
                 stripe_payment_intent_id: paymentIntentId,
             })
             .select()
