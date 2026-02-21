@@ -1,1210 +1,541 @@
-# 📊 INFORME DE PROGRESO - FashionStore
+﻿# Vantage Fashion  Documentación Técnica
 
-**Asignatura**: Desarrollo Web Full-Stack / Arquitectura de Software  
-**Proyecto**: E-commerce de Moda con Gestión de Inventario  
-**Fecha de Entrega**: Enero 2026  
-**Estado Actual**: Hito 2 Completado / Hito 3 en Progreso
+> Tienda online de moda masculina premium con panel de administración completo.  
+> Desarrollada con Astro SSR, React, Supabase, Stripe y Resend.
 
 ---
 
-## 📝 RESUMEN EJECUTIVO
+## Índice
 
-Este informe documenta el progreso actual del proyecto **FashionStore**, una solución e-commerce completa desarrollada según los requerimientos especificados en el enunciado de la práctica. El proyecto se encuentra actualmente en el **75% de completitud**, con los dos primeros hitos completados exitosamente y el tercero en fase avanzada de desarrollo.
-
-### Estado por Hitos:
-- ✅ **Hito 1 (20%)**: Arquitectura - **COMPLETADO**
-- ✅ **Hito 2 (60%)**: Prototipo Funcional - **COMPLETADO**  
-- 🔄 **Hito 3 (100%)**: Tienda Viva - **EN PROGRESO (75%)**
-
----
-
-## 1️⃣ HITO 1: LA ARQUITECTURA (20%) - ✅ COMPLETADO
-
-### 1.1 Decisiones Tecnológicas Justificadas
-
-#### Stack Frontend: **Astro 5.0**
-**Decisión**: Astro 5 en modo híbrido (`output: 'server'`)
-
-**Justificación**:
-- ✅ **SEO Óptimo**: Astro genera HTML estático para el catálogo, crucial para el posicionamiento en Google de una tienda de ropa
-- ✅ **Performance**: "Cero JavaScript por defecto" - Solo carga JS donde se necesita (carrito, checkout)
-- ✅ **Flexibilidad**: Modo híbrido permite SSG para productos (velocidad) y SSR para admin (seguridad)
-- ✅ **Islands Architecture**: React solo en componentes interactivos, reduciendo bundle size
-
-**Evidencia implementada**:
-```javascript
-// astro.config.mjs
-export default defineConfig({
-    output: 'server',  // Modo híbrido
-    adapter: node({ mode: 'standalone' })
-});
-```
-
-#### Estilos: **Tailwind CSS 4.1**
-**Justificación**: Desarrollo rápido, diseño responsivo out-of-the-box, fácil personalización para la estética "Minimalismo Sofisticado" requerida.
-
-#### Backend as a Service: **Supabase**
-**Decisión**: Supabase como backend principal
-
-**Justificación según requerimientos**:
-- ✅ **Base de datos PostgreSQL**: Potente, relacional, con soporte para arrays (imágenes)
-- ✅ **Autenticación integrada**: Login de administradores sin código custom
-- ✅ **Storage para imágenes**: Buckets con URLs públicas, sin necesidad de servidor de archivos
-- ✅ **Row Level Security**: Seguridad a nivel de base de datos
-- ✅ **Compatible con Docker**: Se puede desplegar en VPS con Coolify
-
-**Evidencia implementada**:
-```typescript
-// src/lib/supabase.ts - Cliente configurado
-export const supabase = createClient(
-    import.meta.env.PUBLIC_SUPABASE_URL,
-    import.meta.env.PUBLIC_SUPABASE_ANON_KEY
-);
-```
-
-#### Pasarela de Pago: **Stripe**
-**Decisión**: Stripe como proveedor de pagos
-
-**Justificación**:
-- ✅ **Comisiones competitivas**: 1.5% + 0.25€ por transacción en Europa
-- ✅ **Documentación excelente**: SDK bien mantenido, fácil integración
-- ✅ **Modo test**: Permite desarrollo sin transacciones reales
-- ✅ **Webhooks**: Confirmación asíncrona de pagos
-- ✅ **Cumplimiento PCI**: No necesitamos manejar datos de tarjetas
-
-**Alternativas consideradas**:
-- ❌ PayPal: Comisiones más altas (2.9% + fijo)
-- ❌ Redsys: Integración más compleja, documentación limitada
-
-### 1.2 Arquitectura de Base de Datos
-
-#### Esquema Implementado
-
-**Tabla: `categories`**
-```sql
-CREATE TABLE categories (
-  id SERIAL PRIMARY KEY,
-  name VARCHAR(100) NOT NULL,
-  slug VARCHAR(100) NOT NULL UNIQUE,
-  description TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-```
-**Propósito**: Categorización de productos (Camisas, Pantalones, Trajes, etc.)
-
-**Tabla: `products`**
-```sql
-CREATE TABLE products (
-  id SERIAL PRIMARY KEY,
-  name VARCHAR(255) NOT NULL,
-  slug VARCHAR(255) NOT NULL UNIQUE,
-  description TEXT,
-  price INTEGER NOT NULL,           -- En céntimos (evita problemas de float)
-  sale_price INTEGER,                -- Precio rebajado para ofertas
-  is_on_sale BOOLEAN DEFAULT FALSE,  -- Control del interruptor de ofertas
-  stock INTEGER NOT NULL DEFAULT 0,
-  category_id INTEGER REFERENCES categories(id),
-  images TEXT[],                     -- Array de URLs de Supabase Storage
-  featured BOOLEAN DEFAULT FALSE,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-```
-**Propósito**: Catálogo principal con control de stock y sistema de ofertas flash
-
-**Tabla: `orders`**
-```sql
-CREATE TABLE orders (
-  id SERIAL PRIMARY KEY,
-  customer_email VARCHAR(255) NOT NULL,
-  customer_name VARCHAR(255) NOT NULL,
-  customer_address TEXT NOT NULL,
-  status VARCHAR(50) DEFAULT 'pending',
-  total INTEGER NOT NULL,
-  stripe_payment_intent_id VARCHAR(255),
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-```
-
-**Tabla: `order_items`**
-```sql
-CREATE TABLE order_items (
-  id SERIAL PRIMARY KEY,
-  order_id INTEGER REFERENCES orders(id) ON DELETE CASCADE,
-  product_id INTEGER REFERENCES products(id),
-  product_name VARCHAR(255),    -- Snapshot: preserva nombre si producto se elimina
-  product_price INTEGER,         -- Snapshot: preserva precio al momento de compra
-  quantity INTEGER NOT NULL,
-  size VARCHAR(20)
-);
-```
-**Decisión de diseño**: Guardamos `product_name` y `product_price` como "snapshot" para mantener histórico de pedidos aunque el producto cambie o se elimine.
-
-**Tabla: `app_settings`**
-```sql
-CREATE TABLE app_settings (
-  key VARCHAR(100) UNIQUE,
-  value TEXT,
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-```
-**Propósito**: Configuración dinámica (ofertas flash on/off, banners, etc.)
-
-#### Políticas RLS (Row Level Security)
-```sql
--- Lectura pública de productos
-CREATE POLICY "Public read products" ON products
-  FOR SELECT USING (true);
-
--- Escritura solo para usuarios autenticados
-CREATE POLICY "Auth write products" ON products
-  FOR ALL USING (auth.role() = 'authenticated');
-```
-
-### 1.3 Configuración de Supabase Storage
-
-**Bucket creado**: `products-images`
-
-**Políticas aplicadas**:
-- ✅ **Lectura pública**: Cualquiera puede ver las imágenes (necesario para la tienda)
-- ✅ **Escritura autenticada**: Solo admins pueden subir fotos
-
-**Estructura de URLs**:
-```
-https://[project].supabase.co/storage/v1/object/public/products-images/[filename]
-```
-
-### 1.4 Lógica del "Interruptor de Ofertas"
-
-**Problema**: El cliente necesita activar/desactivar la sección de ofertas al instante.
-
-**Solución implementada**:
-1. Campo `is_on_sale` en tabla `products`
-2. Campo `sale_price` para precio rebajado
-3. Query en homepage filtra productos con `is_on_sale = true`
-4. Admin puede togglear el campo desde el panel
-
-**Evidencia**:
-```typescript
-// Consulta en la homepage
-const { data: ofertas } = await supabase
-  .from('products')
-  .select('*')
-  .eq('is_on_sale', true)
-  .limit(4);
-```
+1. [Visión general del proyecto](#1-visión-general-del-proyecto)
+2. [Stack tecnológico](#2-stack-tecnológico)
+3. [Arquitectura y estructura de archivos](#3-arquitectura-y-estructura-de-archivos)
+4. [Base de datos](#4-base-de-datos)
+5. [Variables de entorno](#5-variables-de-entorno)
+6. [La tienda  funcionalidades para el cliente](#6-la-tienda--funcionalidades-para-el-cliente)
+7. [Panel de administración](#7-panel-de-administración)
+8. [Sistema de emails](#8-sistema-de-emails)
+9. [Sistema de facturas y PDFs](#9-sistema-de-facturas-y-pdfs)
+10. [Seguridad](#10-seguridad)
+11. [Despliegue](#11-despliegue)
+12. [Manual de usuario  Admin](#12-manual-de-usuario--admin)
 
 ---
 
-## 2️⃣ HITO 2: PROTOTIPO FUNCIONAL (60%) - ✅ COMPLETADO
+## 1. Visión general del proyecto
 
-### 2.1 Conexión Base de Datos ↔ Web Funcional
+**Vantage Fashion** es una tienda online completa que permite:
 
-#### ✅ Catálogo de Productos desde Supabase
-**Estado**: Implementado y funcionando
+- A los **clientes**: navegar el catálogo, añadir al carrito y lista de deseos, pagar con tarjeta, hacer seguimiento de sus pedidos y gestionar devoluciones.
+- A los **administradores**: gestionar todo el negocio desde un panel privado: productos, pedidos, envíos, devoluciones, facturas, cupones, newsletter y analíticas.
 
-**Archivos clave**:
-- `src/pages/productos/index.astro` - Listado completo
-- `src/pages/productos/[slug].astro` - Detalle de producto
-- `src/pages/categoria/[slug].astro` - Filtrado por categoría
-
-**Evidencia de funcionamiento**:
-```astro
----
-// src/pages/productos/index.astro
-const { data: products } = await supabase
-  .from('products')
-  .select(`
-    *,
-    categories (name, slug)
-  `)
-  .order('created_at', { ascending: false });
----
-```
-
-Los productos se muestran correctamente con:
-- ✅ Imágenes desde Supabase Storage
-- ✅ Precios formateados
-- ✅ Stock disponible
-- ✅ Categoría asociada
-- ✅ Indicador visual de ofertas
-
-#### ✅ Login de Administrador Funcional
-**Estado**: Implementado con Supabase Auth
-
-**Archivo**: `src/pages/admin/login.astro`
-
-**Flujo implementado**:
-1. Usuario introduce email y contraseña
-2. Supabase Auth valida credenciales
-3. Se crea sesión persistente
-4. Middleware protege rutas `/admin/*`
-5. Redirección automática si no autenticado
-
-**Evidencia - Middleware de protección**:
-```typescript
-// src/middleware.ts
-export const onRequest = defineMiddleware(async (context, next) => {
-    const isAdminRoute = context.url.pathname.startsWith('/admin');
-    const isLoginPage = context.url.pathname === '/admin/login';
-
-    if (isAdminRoute && !isLoginPage) {
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (!session) {
-            return context.redirect('/admin/login');
-        }
-    }
-    return next();
-});
-```
-
-### 2.2 CRUD de Productos Completo
-
-#### ✅ Crear Productos
-**Archivo**: `src/pages/admin/productos/nuevo.astro`
-
-**Funcionalidades**:
-- ✅ Formulario con todos los campos
-- ✅ Selector de categoría
-- ✅ Subida múltiple de imágenes
-- ✅ Preview de imágenes
-- ✅ Validación de campos
-- ✅ Generación automática de slug
-
-#### ✅ Leer/Listar Productos
-**Archivo**: `src/pages/admin/productos/index.astro`
-
-**Funcionalidades**:
-- ✅ Tabla con todos los productos
-- ✅ Búsqueda por nombre
-- ✅ Filtro por categoría
-- ✅ Indicador de stock bajo
-- ✅ Paginación
-
-#### ✅ Actualizar Productos
-**Archivo**: `src/pages/admin/productos/[id].astro`
-
-**Funcionalidades**:
-- ✅ Edición de todos los campos
-- ✅ Añadir/eliminar imágenes
-- ✅ Actualización de stock
-- ✅ Control de ofertas
-
-#### ✅ Eliminar Productos
-**Implementado con confirmación**:
-- ✅ Modal de confirmación
-- ✅ Eliminación de imágenes asociadas en Storage
-- ✅ Verificación de pedidos asociados
-
-### 2.3 Subida de Imágenes a Supabase Storage
-
-**Archivo**: `src/pages/api/upload-image.ts`
-
-**Flujo implementado**:
-1. Admin selecciona imágenes en formulario
-2. Se suben a Supabase Storage vía API
-3. Se obtienen URLs públicas
-4. URLs se guardan en campo `images[]` de producto
-
-**Código clave**:
-```typescript
-const { data, error } = await supabase.storage
-  .from('products-images')
-  .upload(`${Date.now()}-${file.name}`, file);
-
-const publicURL = supabase.storage
-  .from('products-images')
-  .getPublicUrl(data.path).data.publicUrl;
-```
-
-### 2.4 Carrito de Compra Funcional
-
-**Archivo**: `src/stores/cart.ts`
-
-**Tecnología**: Nano Stores (recomendado por Astro)
-
-**Funcionalidades implementadas**:
-- ✅ Añadir productos con talla y cantidad
-- ✅ Eliminar productos
-- ✅ Actualizar cantidades
-- ✅ Calcular totales automáticamente
-- ✅ Persistencia en localStorage
-- ✅ Validación de stock máximo
-- ✅ Panel deslizante (slide-over)
-
-**Evidencia - Store del carrito**:
-```typescript
-// src/stores/cart.ts
-export const cartItems = map<Record<string, CartItem>>({});
-
-export function addToCart(item: CartItem) {
-    const key = `${item.id}-${item.size}`;
-    // Verificar stock máximo
-    const newQuantity = Math.min(
-        existingItem.quantity + quantity,
-        item.maxStock
-    );
-    cartItems.setKey(key, { ...item, quantity: newQuantity });
-    saveCartToStorage(); // Persistencia
-}
-```
-
-**Componente interactivo (React Island)**:
-```tsx
-// src/components/islands/AddToCartButton.tsx
-export default function AddToCartButton({ product }) {
-    const [selectedSize, setSelectedSize] = useState('');
-    
-    const handleAddToCart = () => {
-        addToCart({
-            id: product.id,
-            name: product.name,
-            size: selectedSize,
-            quantity: 1,
-            maxStock: product.stock
-        });
-    };
-}
-```
+La web está desplegada en producción en: `https://nicovantage.victoriafp.online`
 
 ---
 
-## 3️⃣ HITO 3: LA TIENDA VIVA (100%) - 🔄 EN PROGRESO (75%)
+## 2. Stack tecnológico
 
-### 3.1 ✅ Integración de Pagos con Stripe
-
-**Estado**: **COMPLETADO**
-
-**Archivos implementados**:
-- `src/pages/api/stripe-payment.ts` - Crear Payment Intent
-- `src/pages/api/stripe-webhook.ts` - Confirmar pagos
-- `src/pages/checkout.astro` - Página de checkout
-- `src/pages/checkout/exito.astro` - Confirmación
-
-**Flujo completo**:
-1. ✅ Usuario completa formulario de checkout
-2. ✅ Se valida stock disponible
-3. ✅ Se crea Payment Intent en Stripe
-4. ✅ Usuario paga con Stripe Elements
-5. ✅ Webhook confirma pago
-6. ✅ Se crea orden en base de datos
-7. ✅ Se descuenta stock automáticamente
-8. ✅ Se envía email de confirmación
-
-**Evidencia - Control de Stock Atómico**:
-```typescript
-// Transacción para prevenir overselling
-const { data, error } = await supabase.rpc('process_order', {
-    product_id: item.id,
-    quantity: item.quantity
-});
-
-// Función SQL
-CREATE FUNCTION process_order(product_id INT, quantity INT)
-RETURNS void AS $$
-BEGIN
-    UPDATE products 
-    SET stock = stock - quantity
-    WHERE id = product_id AND stock >= quantity;
-    
-    IF NOT FOUND THEN
-        RAISE EXCEPTION 'Insufficient stock';
-    END IF;
-END;
-$$ LANGUAGE plpgsql;
-```
-
-### 3.2 ✅ Control de Stock Implementado
-
-**Características**:
-- ✅ **Prevención de overselling**: Transacciones atómicas en PostgreSQL
-- ✅ **Validación pre-pago**: Verifica stock antes de crear Payment Intent
-- ✅ **Actualización automática**: Stock se descuenta tras pago confirmado
-- ✅ **Alertas de stock bajo**: Admin ve productos con stock < 5
-- ✅ **Bloqueo de compra**: Botón deshabilitado si stock = 0
-
-**Evidencia - Frontend**:
-```tsx
-const isOutOfStock = product.stock <= 0;
-
-<button disabled={isOutOfStock}>
-  {isOutOfStock ? 'Agotado' : 'Añadir al Carrito'}
-</button>
-```
-
-### 3.3 ✅ Sistema de Pedidos
-
-**Gestión completa implementada**:
-- ✅ Creación de pedidos tras pago
-- ✅ Asociación con Payment Intent de Stripe
-- ✅ Estados: pending, paid, shipped, delivered, cancelled
-- ✅ Panel admin para ver todos los pedidos
-- ✅ Vista detallada de cada pedido
-- ✅ Actualización de estados
-- ✅ Email de confirmación al cliente
-
-### 3.4 ❌ Despliegue en Coolify
-
-**Estado**: **PENDIENTE**
-
-**Preparación completada**:
-- ✅ Dockerfile creado y testeado localmente
-- ✅ Variables de entorno documentadas
-- ✅ Modo standalone de Node.js configurado
-- ✅ Build optimizado
-
-**Pendiente**:
-- ❌ Configurar servidor VPS
-- ❌ Instalar Coolify
-- ❌ Conectar repositorio Git
-- ❌ Configurar dominio y SSL
-- ❌ Variables de entorno en producción
-
-**Razón del retraso**: Esperando acceso al servidor VPS para despliegue.
+| Capa | Tecnología | Para qué se usa |
+|---|---|---|
+| Framework | **Astro 5 (SSR)** | Renderizado en servidor, rutas, middleware |
+| UI interactiva | **React 19** | Componentes de carrito, checkout, botones de acción |
+| Base de datos | **Supabase (PostgreSQL)** | Todos los datos del negocio |
+| Autenticación | **Supabase Auth** | Login de clientes y admins |
+| Pagos | **Stripe** | Checkout, cobros, reembolsos |
+| Emails | **Resend** | Confirmaciones, alertas, newsletter |
+| Imágenes | **Cloudinary** | Subida y gestión de imágenes de productos |
+| PDFs | **pdfkit** | Generación de facturas y etiquetas de devolución |
+| Códigos de barras | **bwip-js** | Etiqueta de devolución en el PDF |
+| Estilos | **Tailwind CSS 4** | Diseño y componentes |
+| Despliegue | **Docker / nixpacks** | Contenedor de producción |
 
 ---
 
-## 📊 FUNCIONALIDADES IMPLEMENTADAS VS REQUERIMIENTOS
+## 3. Arquitectura y estructura de archivos
 
-### Requerimientos del Cliente - Tienda Pública
-
-| Requerimiento | Estado | Evidencia |
-|--------------|--------|-----------|
-| Catálogo con filtros por categoría | ✅ Completado | `/productos`, `/categoria/[slug]` |
-| Ficha de producto individual | ✅ Completado | `/productos/[slug].astro` |
-| Carrito persistente y ágil | ✅ Completado | Nano Stores + localStorage |
-| Checkout funcional | ✅ Completado | Integración Stripe completa |
-| Pasarela de pago real | ✅ Completado | Stripe Payment Intents |
-| Sección "Ofertas Flash" | ✅ Completado | Campo `is_on_sale` en productos |
-| Control de stock visible | ✅ Completado | Muestra stock real, bloquea si = 0 |
-
-### Requerimientos del Cliente - Panel Admin
-
-| Requerimiento | Estado | Evidencia |
-|--------------|--------|-----------|
-| Login protegido | ✅ Completado | Supabase Auth + Middleware |
-| CRUD de productos | ✅ Completado | `/admin/productos/*` |
-| Subida múltiple de fotos | ✅ Completado | Storage API + preview |
-| Control de stock | ✅ Completado | Actualización manual y automática |
-| Gestión de categorías | ✅ Completado | Asignación en formularios |
-| Interruptor ofertas | ✅ Completado | Toggle `is_on_sale` |
-| Gestión de pedidos | ✅ Completado | Listado, detalle, actualización |
-
-### Requerimientos Técnicos del CTO
-
-| Requerimiento | Estado | Justificación |
-|--------------|--------|---------------|
-| Usar Supabase | ✅ Completado | Auth, DB, Storage implementados |
-| Compatible con Docker | ✅ Completado | Dockerfile funcional |
-| Despliegue en Coolify | ⏳ Pendiente | Esperando VPS |
-| Control de stock atómico | ✅ Completado | Transacciones SQL + validación |
-| Autenticación admin | ✅ Completado | Supabase Auth |
-| Storage de imágenes | ✅ Completado | Bucket público configurado |
-
----
-
-## 🎯 PORCENTAJE DE COMPLETITUD POR ÁREA
-
-### Frontend (95% completado)
-- ✅ Homepage con productos destacados
-- ✅ Catálogo completo con paginación
-- ✅ Filtrado por categorías
-- ✅ Detalle de producto con galería
-- ✅ Carrito funcional y persistente
-- ✅ Checkout con Stripe
-- ✅ Página de confirmación
-- ✅ Páginas institucionales (términos, privacidad, etc.)
-- ⏳ SEO avanzado (meta tags dinámicos, sitemap) - 70%
-
-### Backend (90% completado)
-- ✅ Base de datos completa
-- ✅ Políticas RLS
-- ✅ API endpoints (checkout, webhooks, upload)
-- ✅ Control de stock atómico
-- ✅ Integración Stripe
-- ✅ Sistema de emails
-- ⏳ Optimización de queries - 80%
-
-### Panel Admin (100% completado)
-- ✅ Login seguro
-- ✅ Dashboard con estadísticas
-- ✅ CRUD productos completo
-- ✅ Gestión de imágenes
-- ✅ Gestión de pedidos
-- ✅ Control de ofertas
-- ✅ Newsletter
-
-### Infraestructura (60% completado)
-- ✅ Dockerfile
-- ✅ Configuración de entorno
-- ✅ Modo standalone
-- ❌ Despliegue en producción
-- ❌ Monitoreo y logs
-- ❌ Backups automatizados
-
----
-
-## 🚀 PRÓXIMOS PASOS PARA COMPLETAR HITO 3
-
-### Crítico (Necesario para entrega)
-1. **Desplegar en Coolify** (3-4 horas estimadas)
-   - Configurar servidor VPS
-   - Deploy con Docker
-   - Configurar variables de entorno de producción
-   - Probar URL pública funcionando
-
-2. **Testing en producción** (2 horas)
-   - Verificar flujo completo de compra en modo test
-   - Confirmar descuento de stock
-   - Validar webhooks de Stripe en producción
-
-3. **Optimizaciones críticas** (2 horas)
-   - Comprimir imágenes de productos
-   - Minificar assets
-   - Configurar caché headers
-
-### Opcional (Mejoras adicionales)
-- [ ] SEO: Sitemap XML y meta tags dinámicos
-- [ ] Analytics: Google Analytics básico
-- [ ] Monitoreo: Configurar logs en producción
-- [ ] Tests automatizados: Playwright E2E básicos
-
----
-
-## 🎯 MEJORAS FUTURAS PLANIFICADAS
-
-### 🔍 **Mejoras de Experiencia de Usuario**
-
-#### 1. Filtrado Avanzado de Productos
-**Prioridad**: Alta  
-**Tiempo estimado**: 6-8 horas
-
-**Funcionalidades**:
-- ✨ Filtro por rango de precio (slider o inputs min/max)
-- ✨ Filtro por tallas disponibles (S, M, L, XL, XXL)
-- ✨ Filtro por colores
-- ✨ Filtro por marcas/colecciones
-- ✨ Ordenamiento múltiple (precio, popularidad, novedades, descuentos)
-- ✨ Filtros persistentes en URL (query params) para compartir búsquedas
-- ✨ Contador de resultados en tiempo real
-- ✨ Botón "Limpiar filtros"
-
-**Implementación técnica**:
-```typescript
-// Query params: /productos?precio_min=20&precio_max=100&talla=M,L&orden=precio_asc
-```
-
-#### 2. Gestión Completa de Tallas
-**Prioridad**: Alta  
-**Tiempo estimado**: 8-10 horas
-
-**Funcionalidades**:
-- ✨ Tabla `product_variants` en BD para stock por talla/color
-- ✨ Stock independiente por cada variante (ej: Camisa Azul M: 5 unidades)
-- ✨ Selector visual de tallas con disponibilidad
-- ✨ Tallas agotadas visibles pero deshabilitadas
-- ✨ Control de stock atómico por variante
-- ✨ Panel admin para gestionar variantes
-- ✨ Guía de tallas profesional con tablas de medidas
-- ✨ Recomendador de tallas (basado en peso/altura)
-
-**Estructura BD sugerida**:
-```sql
-CREATE TABLE product_variants (
-  id SERIAL PRIMARY KEY,
-  product_id INTEGER REFERENCES products(id),
-  size VARCHAR(10) NOT NULL,
-  color VARCHAR(50),
-  sku VARCHAR(100) UNIQUE,
-  stock INTEGER DEFAULT 0,
-  price_adjustment INTEGER DEFAULT 0
-);
-```
-
-#### 3. Lista de Deseos (Wishlist)
-**Prioridad**: Media  
-**Tiempo estimado**: 5-6 horas
-
-**Funcionalidades**:
-- ✨ Botón de "favorito" (corazón) en cada producto
-- ✨ Persistencia en localStorage para invitados
-- ✨ Sincronización con BD para usuarios registrados
-- ✨ Página dedicada `/mi-lista-deseos`
-- ✨ Mover productos de wishlist al carrito
-- ✨ Notificaciones cuando productos bajan de precio
-- ✨ Compartir lista de deseos por link
-
-#### 4. Sistema de Valoraciones y Reviews
-**Prioridad**: Media  
-**Tiempo estimado**: 8-10 horas
-
-**Funcionalidades**:
-- ✨ Sistema de 5 estrellas por producto
-- ✨ Reviews textuales con título y descripción
-- ✨ Subida de fotos del producto por clientes
-- ✨ Verificación "Compra verificada"
-- ✨ Likes/dislikes en reviews (útil/no útil)
-- ✨ Filtrado de reviews (positivas, negativas, recientes)
-- ✨ Moderación desde panel admin
-- ✨ Estadísticas de satisfacción
-
-**Tabla BD**:
-```sql
-CREATE TABLE product_reviews (
-  id SERIAL PRIMARY KEY,
-  product_id INTEGER REFERENCES products(id),
-  user_email VARCHAR(255),
-  rating INTEGER CHECK (rating >= 1 AND rating <= 5),
-  title VARCHAR(200),
-  comment TEXT,
-  verified_purchase BOOLEAN DEFAULT FALSE,
-  helpful_count INTEGER DEFAULT 0,
-  images TEXT[],
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-```
-
-#### 5. Carrusel de Imágenes de Producto
-**Prioridad**: Alta  
-**Tiempo estimado**: 3-4 horas
-
-**Funcionalidades**:
-- ✨ Carrusel interactivo con miniaturas
-- ✨ Zoom al hacer hover
-- ✨ Vista de galería en modal fullscreen
-- ✨ Navegación por teclado (flechas)
-- ✨ Indicadores de posición (dots)
-- ✨ Swipe en móviles (touch gestures)
-- ✨ Lazy loading de imágenes
-
-**Librerías sugeridas**:
-- Swiper.js
-- React Image Gallery
-- Photoswipe
-
-### 📧 **Mejoras de Comunicación**
-
-#### 6. Página de Contacto con Formulario
-**Prioridad**: Media  
-**Tiempo estimado**: 3-4 horas
-
-**Funcionalidades**:
-- ✨ Formulario con: Nombre, Email, Asunto, Mensaje
-- ✨ Selector de categoría (Ventas, Soporte, Devoluciones, Otro)
-- ✨ Validación frontend y backend
-- ✨ Envío por email con Resend
-- ✨ Confirmación al usuario
-- ✨ Notificación al admin
-- ✨ Google reCAPTCHA para anti-spam
-- ✨ Historial de mensajes en panel admin
-
-**Endpoint**:
-```typescript
-// src/pages/api/contact.ts
-POST /api/contact
-```
-
-#### 7. Rate Limiting para Newsletter (TTL en Resend)
-**Prioridad**: Alta (previene errores)  
-**Tiempo estimado**: 2-3 horas
-
-**Problema actual**: Envío masivo sin delay puede causar rate limiting de Resend.
-
-**Solución**:
-- ✨ Cola de envío con delay entre emails (100-200ms)
-- ✨ Lotes de envío (ej: 100 emails cada 10 segundos)
-- ✨ Retry automático en caso de error
-- ✨ Logs de envío exitoso/fallido
-- ✨ Progress bar en admin mostrando progreso
-- ✨ Cancelar envío masivo en curso
-
-**Implementación**:
-```typescript
-async function sendNewsletterBatch(emails, delayMs = 150) {
-  for (const email of emails) {
-    await sendEmail(email);
-    await sleep(delayMs); // Delay entre envíos
-  }
-}
-```
-
-### 🔐 **Mejoras de Autenticación**
-
-#### 8. Recuperación de Contraseña
-**Prioridad**: Alta  
-**Tiempo estimado**: 4-5 horas
-
-**Funcionalidades**:
-- ✨ Enlace "¿Olvidaste tu contraseña?" en login
-- ✨ Formulario para solicitar reset
-- ✨ Email con token de recuperación (expira en 1 hora)
-- ✨ Página para ingresar nueva contraseña
-- ✨ Validación de contraseña segura
-- ✨ Confirmación de cambio exitoso
-- ✨ Invalidación de sesiones anteriores
-
-**Flujo**:
-1. Usuario ingresa email
-2. Supabase envía email con magic link
-3. Usuario hace click y llega a `/reset-password?token=xxx`
-4. Ingresa nueva contraseña
-5. Supabase actualiza credenciales
-
-**API de Supabase**:
-```typescript
-const { error } = await supabase.auth.resetPasswordForEmail(email, {
-  redirectTo: 'https://tudominio.com/reset-password'
-});
-```
-
-### ⚙️ **Mejoras del Panel de Administración**
-
-#### 9. Gestión Completa de la Web desde Admin
-**Prioridad**: Media  
-**Tiempo estimado**: 10-12 horas
-
-**Funcionalidades**:
-- ✨ **Gestión de contenido del home**: Editar banners, textos, secciones
-- ✨ **Gestión de categorías**: CRUD completo (actualmente solo lectura)
-- ✨ **Gestión de cupones de descuento**: Crear códigos promocionales
-- ✨ **Gestión de páginas estáticas**: Editar "Sobre nosotros", "Términos", etc.
-- ✨ **Configuración de envío**: Costos, zonas, tiempos
-- ✨ **Gestión de usuarios**: Ver clientes registrados, pedidos por cliente
-- ✨ **Personalización de emails**: Templates editables
-- ✨ **SEO por página**: Meta tags, descriptions desde admin
-- ✨ **Modo mantenimiento**: Activar/desactivar tienda
-
-**Tabla para contenido dinámico**:
-```sql
-CREATE TABLE page_contents (
-  id SERIAL PRIMARY KEY,
-  page_key VARCHAR(100) UNIQUE, -- 'home_banner', 'about_us', etc.
-  content JSONB, -- Contenido flexible
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-```
-
-#### 10. Exportación de Pedidos a Excel/CSV
-**Prioridad**: Media  
-**Tiempo estimado**: 3-4 horas
-
-**Funcionalidades**:
-- ✨ Botón "Exportar" en listado de pedidos
-- ✨ Filtrar por rango de fechas antes de exportar
-- ✨ Filtrar por estado (pendiente, pagado, enviado, etc.)
-- ✨ Seleccionar columnas a exportar
-- ✨ Formato Excel (.xlsx) con estilos
-- ✨ Formato CSV para análisis
-- ✨ Incluir datos del cliente, productos, totales
-- ✨ Descarga directa del archivo
-
-**Librerías recomendadas**:
-- `xlsx` (SheetJS) para Excel
-- `papaparse` para CSV
-
-**Endpoint**:
-```typescript
-// src/pages/api/admin/export-orders.ts
-GET /api/admin/export-orders?format=xlsx&fecha_desde=2026-01-01&estado=paid
-```
-
-### 🖼️ **Mejoras de Infraestructura de Imágenes**
-
-#### 11. Integración con Cloudinary
-**Prioridad**: Media  
-**Tiempo estimado**: 5-6 horas
-
-**Ventajas sobre Supabase Storage**:
-- ✨ Transformación automática de imágenes (resize, crop, compress)
-- ✨ Optimización WebP/AVIF automática
-- ✨ CDN global incluido
-- ✨ Lazy loading inteligente
-- ✨ Responsive images automáticas
-- ✨ Backup y redundancia
-- ✨ Dashboard con analytics de imágenes
-
-**Migración**:
-```typescript
-// Antes (Supabase)
-const url = supabase.storage.from('products-images').getPublicUrl(path);
-
-// Después (Cloudinary)
-const url = cloudinary.url('products/image.jpg', {
-  transformation: [
-    { width: 500, height: 500, crop: 'fill' },
-    { quality: 'auto' },
-    { fetch_format: 'auto' }
-  ]
-});
-```
-
-**Pasos de implementación**:
-1. Crear cuenta en Cloudinary
-2. Instalar SDK: `npm install cloudinary`
-3. Configurar credenciales en `.env`
-4. Crear API endpoint para upload
-5. Migrar imágenes existentes
-6. Actualizar componentes de imagen
-
-### 📄 **Mejoras de Contenido**
-
-#### 12. Página de Guía de Tallas Profesional
-**Prioridad**: Media  
-**Tiempo estimado**: 4-5 horas
-
-**Funcionalidades**:
-- ✨ Tablas de medidas por categoría (camisas, pantalones, etc.)
-- ✨ Ilustraciones de cómo medir correctamente
-- ✨ Conversor de tallas (EU, US, UK)
-- ✨ Consejos de ajuste por tipo de prenda
-- ✨ FAQs sobre tallas
-- ✨ Video tutorial (opcional)
-- ✨ Calculadora interactiva de talla
-- ✨ Diseño responsive y visual
-
-**Ruta**: `/guia-de-tallas`
-
----
-
-## 📊 RESUMEN DE MEJORAS FUTURAS
-
-### Por Prioridad
-
-#### 🔴 Prioridad Alta (8 mejoras - ~40 horas)
-1. Desplegar en Coolify
-2. Filtrado avanzado de productos
-3. Gestión completa de tallas
-4. Carrusel de imágenes
-5. Rate limiting newsletter
-6. Recuperación de contraseña
-7. Testing en producción
-8. Optimizaciones críticas
-
-#### 🟡 Prioridad Media (7 mejoras - ~50 horas)
-1. Lista de deseos
-2. Sistema de reviews
-3. Página de contacto
-4. Gestión completa desde admin
-5. Exportar pedidos Excel/CSV
-6. Cloudinary
-7. Guía de tallas profesional
-
-#### 🟢 Prioridad Baja (Mejoras mencionadas anteriormente)
-- SEO avanzado
-- Analytics
-- PWA
-- Multilenguaje
-- Modo oscuro
-
-**Total de mejoras planificadas**: 20+  
-**Tiempo estimado total**: ~100-120 horas adicionales
-
----
-
-## 📚 EVIDENCIAS DE CÓDIGO
-
-### Estructura de Carpetas Implementada
 ```
 FashionShop/
-├── src/
-│   ├── components/
-│   │   ├── islands/          # React islands (interactividad)
-│   │   │   ├── AddToCartButton.tsx ✅
-│   │   │   ├── CartContent.tsx ✅
-│   │   │   ├── CartIcon.tsx ✅
-│   │   │   └── CheckoutForm.tsx ✅
-│   │   ├── product/          # Componentes de producto
-│   │   │   ├── ProductCard.astro ✅
-│   │   │   └── ProductGallery.astro ✅
-│   │   └── ui/               # UI genérico
-│   │       ├── Button.astro ✅
-│   │       └── CartSlideOver.astro ✅
-│   ├── layouts/              # Layouts
-│   │   ├── BaseLayout.astro ✅
-│   │   ├── PublicLayout.astro ✅
-│   │   └── AdminLayout.astro ✅
-│   ├── lib/                  # Clientes y utilidades
-│   │   ├── supabase.ts ✅
-│   │   ├── auth.ts ✅
-│   │   └── utils.ts ✅
-│   ├── pages/               # Rutas
-│   │   ├── index.astro ✅
-│   │   ├── productos/
-│   │   │   ├── index.astro ✅
-│   │   │   └── [slug].astro ✅
-│   │   ├── categoria/
-│   │   │   └── [slug].astro ✅
-│   │   ├── carrito.astro ✅
-│   │   ├── checkout.astro ✅
-│   │   ├── admin/          # Panel admin
-│   │   │   ├── index.astro ✅
-│   │   │   ├── login.astro ✅
-│   │   │   ├── productos/ ✅
-│   │   │   └── pedidos/ ✅
-│   │   └── api/            # Endpoints
-│   │       ├── stripe-payment.ts ✅
-│   │       ├── stripe-webhook.ts ✅
-│   │       └── upload-image.ts ✅
-│   ├── stores/
-│   │   └── cart.ts ✅       # Nano Store del carrito
-│   └── middleware.ts ✅     # Protección de rutas
-├── sql/
-│   ├── supabase-schema.sql ✅
-│   └── rls-policies.sql ✅
-├── Dockerfile ✅
-└── package.json ✅
+ src/
+    middleware.ts          # Protección de rutas admin + headers de seguridad
+    lib/
+       supabase.ts        # Clientes Supabase (anon, service role, per-request)
+       auth.ts            # Helpers de sesión de usuario
+       adminAuth.ts       # Verificación de sesión admin para APIs
+       email.ts           # Todas las funciones de envío de email (Resend)
+       invoice.ts         # Generación de facturas HTML y PDF (pdfkit)
+       cloudinary.ts      # Subida y borrado de imágenes
+       utils.ts           # Formateo de precios y utilidades comunes
+    pages/
+       index.astro        # Home  hero, categorías, productos destacados
+       productos/         # Catálogo y ficha de producto
+       categoria/         # Página de categoría filtrada
+       carrito.astro      # Carrito de compra
+       checkout.astro     # Proceso de pago con Stripe
+       checkout/          # Páginas de éxito y cancelación post-pago
+       pedido/[id].astro  # Detalle de pedido del cliente + factura web
+       perfil.astro       # Cuenta del cliente, historial de pedidos
+       favoritos.astro    # Lista de deseos
+       login.astro        # Login de clientes
+       registro.astro     # Registro de clientes
+       admin/             # Panel de administración (protegido)
+       api/               # Endpoints del servidor (REST)
+    components/
+       islands/           # Componentes React interactivos
+       product/           # Tarjetas de producto, galería
+       ui/                # Navbar, footer, popup newsletter, etc.
+    layouts/               # BaseLayout, AdminLayout, PublicLayout
+    stores/
+        cart.ts            # Estado del carrito (nanostores)
+ sql/                       # Scripts SQL de migraciones y configuración
+ Dockerfile                 # Imagen Docker para producción
+ nixpacks.toml              # Config para despliegue en Railway/nixpacks
+ astro.config.mjs           # Configuración de Astro (SSR, node adapter)
 ```
 
-### Archivos SQL Ejecutados en Supabase
-1. ✅ `supabase-schema.sql` - Schema completo con todas las tablas
-2. ✅ `rls-policies.sql` - Políticas de seguridad
-3. ✅ `seed-data.sql` - Datos de prueba (categorías y productos de ejemplo)
+### Cómo funciona el renderizado
+
+Astro funciona en modo **SSR completo** (`output: 'server'`). Cada página se renderiza en el servidor en cada petición. Los componentes marcados con `client:load` o `client:only` son islas React que se hidratan en el navegador para la interactividad (carrito, botones de añadir al carrito, etc.).
 
 ---
 
-## 🔧 CONFIGURACIÓN ACTUAL
+## 4. Base de datos
 
-### Variables de Entorno Configuradas
+### Tablas principales
+
+| Tabla | Descripción |
+|---|---|
+| `products` | Catálogo de productos con precio, stock, imágenes, descripción |
+| `product_sizes` | Stock por talla para cada producto |
+| `categories` | Categorías del catálogo con imagen |
+| `orders` | Pedidos realizados por los clientes |
+| `order_items` | Líneas de cada pedido (producto, cantidad, precio, talla) |
+| `customers` | Perfil extendido de clientes (vinculado a Supabase Auth) |
+| `returns` | Solicitudes de devolución |
+| `invoices` | Facturas generadas para cada pedido |
+| `invoice_items` | Líneas de cada factura |
+| `coupons` | Códigos de descuento |
+| `coupon_usages` | Registro de usos de cada cupón por cliente |
+| `shipping_methods` | Métodos de envío (Estándar, Express, Recogida en tienda) |
+| `shipping_carriers` | Transportistas disponibles |
+| `user_shipping_addresses` | Direcciones guardadas de cada cliente |
+| `wishlist` | Lista de deseos por usuario |
+| `wishlist_notifications` | Control de notificaciones enviadas por wishlist |
+| `newsletter_subscribers` | Suscriptores al newsletter |
+| `admin_users` | Usuarios con acceso al panel admin |
+| `app_settings` | Configuración dinámica de la aplicación (popup, etc.) |
+
+### Seguridad de base de datos (RLS)
+
+Todas las tablas tienen **Row Level Security** activado en Supabase. Las políticas garantizan que:
+- Los clientes solo ven y modifican sus propios datos.
+- Las operaciones de administración usan el cliente `service_role` (bypass de RLS) solo desde el servidor.
+
+---
+
+## 5. Variables de entorno
+
+Crea un archivo `.env` en la raíz con estas variables:
+
 ```env
-# Supabase (funcionando)
-PUBLIC_SUPABASE_URL=https://[proyecto].supabase.co ✅
-PUBLIC_SUPABASE_ANON_KEY=eyJ... ✅
-SUPABASE_SERVICE_ROLE_KEY=eyJ... ✅
+# Supabase
+PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
+PUBLIC_SUPABASE_ANON_KEY=eyJ...
+SUPABASE_SERVICE_ROLE_KEY=eyJ...
 
-# Stripe (modo test funcionando)
-PUBLIC_STRIPE_PUBLIC_KEY=pk_test_... ✅
-STRIPE_SECRET_KEY=sk_test_... ✅
-STRIPE_WEBHOOK_SECRET=whsec_... ✅
+# Stripe
+STRIPE_SECRET_KEY=sk_live_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_...
 
-# Resend (emails funcionando)
-RESEND_API_KEY=re_... ✅
+# Resend (emails)
+RESEND_API_KEY=re_...
+ADMIN_EMAIL=admin@vantage.com
 
-# App
-PUBLIC_SITE_URL=http://localhost:4321 ✅
-```
+# Cloudinary (imágenes)
+CLOUDINARY_CLOUD_NAME=...
+CLOUDINARY_API_KEY=...
+CLOUDINARY_API_SECRET=...
 
-### Supabase - Recursos Configurados
-- ✅ Proyecto creado y configurado
-- ✅ Base de datos con schema ejecutado
-- ✅ Storage bucket `products-images` público
-- ✅ Auth habilitado (Email/Password)
-- ✅ Usuario admin creado para testing
-- ✅ RLS policies activas
-
-### Stripe - Configuración
-- ✅ Cuenta en modo test
-- ✅ API keys generadas
-- ✅ Webhook endpoint local configurado (Stripe CLI)
-- ⏳ Webhook endpoint producción (pendiente despliegue)
-
----
-
-## 📈 MÉTRICAS DEL PROYECTO
-
-### Líneas de Código
-- **Frontend (Astro/React)**: ~2,500 líneas
-- **TypeScript/JavaScript**: ~1,200 líneas
-- **SQL**: ~400 líneas
-- **Estilos (Tailwind)**: Utility-first (inline)
-- **Configuración**: ~150 líneas
-
-### Archivos Creados
-- **Componentes**: 15 archivos
-- **Páginas**: 25+ rutas
-- **API Endpoints**: 10 archivos
-- **Stores**: 1 archivo (cart.ts)
-- **Layouts**: 4 archivos
-- **Utils/Libs**: 4 archivos
-
-### Dependencias Instaladas
-```json
-{
-  "dependencies": {
-    "astro": "^5.16.7",
-    "@astrojs/react": "^4.4.2",
-    "@astrojs/node": "^9.5.1",
-    "@supabase/supabase-js": "^2.90.0",
-    "stripe": "^14.10.0",
-    "@stripe/stripe-js": "^3.1.0",
-    "nanostores": "^1.1.0",
-    "@nanostores/react": "^1.0.0",
-    "react": "^19.2.3",
-    "tailwindcss": "^4.1.18",
-    "resend": "^6.7.0",
-    "typescript": "^5.9.3"
-  }
-}
+# General
+PUBLIC_SITE_URL=https://nicovantage.victoriafp.online
+ADMIN_API_KEY=clave-secreta-para-apis-externas
 ```
 
 ---
 
-## 🎓 APRENDIZAJES Y DECISIONES TÉCNICAS
+## 6. La tienda  funcionalidades para el cliente
 
-### 1. Astro Islands Architecture
-**Aprendizaje**: Permite tener páginas ultra-rápidas (SSG) con islas de interactividad (React) solo donde se necesita.
+### 6.1 Home (`/`)
 
-**Aplicación práctica**:
-- Páginas de productos: 100% estáticas (SEO)
-- Botón "Añadir al Carrito": React island (interactivo)
-- Resultado: Carga inicial de 50kb vs 500kb+ de SPA tradicional
+La página principal muestra:
+- **Hero** con imagen de fondo y llamada a la acción.
+- **Categorías destacadas** con imagen (Camisas, Pantalones, Chaquetas, etc.).
+- **Productos más vendidos** y **nuevas llegadas**.
+- **Popup de newsletter** con código promocional de bienvenida (configurable desde el panel admin). Solo aparece si el visitante no está ya suscrito y pasado el tiempo de espera configurado.
 
-### 2. Nano Stores para Estado Global
-**Aprendizaje**: Alternativa ligera a Redux/Zustand, diseñada para Astro.
+### 6.2 Catálogo y ficha de producto (`/productos`, `/productos/[slug]`)
 
-**Ventajas experimentadas**:
-- Solo 334 bytes
-- Funciona across frameworks (Astro + React)
-- Persistencia sencilla con localStorage
-- API simple e intuitiva
+- Listado de productos con filtros por categoría, precio y talla.
+- Buscador en tiempo real.
+- Ficha de producto con galería de imágenes, selector de talla, stock en tiempo real, botón de añadir al carrito y botón de lista de deseos.
+- Indicador de "Pocas unidades" cuando el stock es bajo.
+- Precio original tachado cuando el producto está en oferta.
 
-### 3. Precios en Céntimos (Integer)
-**Decisión**: Guardar precios como `INTEGER` en céntimos, no como `FLOAT`.
+### 6.3 Carrito (`/carrito`)
 
-**Razón**: Evitar errores de precisión de punto flotante.
-```typescript
-// ❌ INCORRECTO
-const price = 19.90; // Puede almacenarse como 19.899999...
+- Gestionado con **nanostores** (estado compartido entre islas React).
+- Persiste en `localStorage` del navegador.
+- Muestra productos, cantidades, subtotal, método de envío seleccionado y descuento de cupón.
+- Permite aplicar códigos de cupón (validados en el servidor).
 
-// ✅ CORRECTO
-const priceInCents = 1990; // Siempre exacto
-const displayPrice = priceInCents / 100; // 19.90 en frontend
-```
+### 6.4 Checkout y pago (`/checkout`)
 
-### 4. Transacciones para Stock
-**Decisión**: Usar funciones SQL con transacciones en lugar de lógica en Node.js.
+Flujo completo de compra:
 
-**Razón**: Prevenir race conditions cuando dos usuarios compran el último producto simultáneamente.
+1. El cliente rellena dirección, elige método de envío y aplica cupón (opcional).
+2. Al confirmar, se llama a `/api/create-checkout-session` que:
+   - **Valida los precios desde la BD** (no acepta precios del frontend).
+   - **Valida el coste de envío desde la BD**.
+   - **Valida el cupón server-side**.
+   - Crea una sesión de Stripe Checkout con los datos verificados.
+3. El cliente es redirigido a la página de pago de Stripe.
+4. Tras el pago exitoso, Stripe redirige a `/checkout/success` que llama a `/api/confirm-payment`.
+5. `confirm-payment` verifica con Stripe que el pago realmente se completó, crea el pedido en BD, genera la factura y envía el email de confirmación.
 
-### 5. Snapshot de Productos en Pedidos
-**Decisión**: Guardar `product_name` y `product_price` en `order_items`, no solo `product_id`.
+**Métodos de pago aceptados**: Tarjeta de crédito/débito (vía Stripe).
 
-**Razón**: Si el admin cambia el precio o elimina un producto, los pedidos históricos mantienen la información correcta.
+### 6.5 Métodos de envío
+
+| Método | Precio | Plazo |
+|---|---|---|
+| Envío Estándar | 4,99 € | 57 días laborables |
+| Envío Express | 9,99 € | 2448 horas (pedido mínimo 30 €) |
+| Recogida en tienda | Gratis | 1 día |
+
+### 6.6 Perfil y mis pedidos (`/perfil`)
+
+El cliente puede:
+- Ver y editar sus datos personales.
+- Consultar el historial completo de pedidos con estado en tiempo real.
+- Acceder a la factura de cada pedido.
+- Iniciar una solicitud de devolución para pedidos entregados (plazo de 30 días).
+
+### 6.7 Lista de deseos (`/favoritos`)
+
+- Guarda productos favoritos (requiere estar registrado).
+- El sistema notifica automáticamente al usuario si un producto en su lista baja de stock o entra en oferta.
+
+### 6.8 Devoluciones
+
+El cliente solicita una devolución desde su perfil. El sistema:
+1. Genera un número de devolución único (`RET-XXXXX`).
+2. Crea un PDF con etiqueta de envío y código de barras.
+3. Envía el PDF por email al cliente para que lo imprima y lo lleve a Correos.
+4. Alerta al admin por email de la nueva devolución.
+
+### 6.9 Cuenta de usuario
+
+- Registro con email y contraseña (Supabase Auth).
+- Login / logout.
+- Recuperación de contraseña por email.
+- Direcciones de envío guardadas (autocompletado en checkout).
 
 ---
 
-## 🐛 PROBLEMAS ENCONTRADOS Y SOLUCIONES
+## 7. Panel de administración
 
-### Problema 1: CORS en Stripe Webhooks
-**Error**: Webhooks bloqueados por CORS en desarrollo local.
+Acceso en `/admin/login`. Requiere cuenta en Supabase Auth + registro en la tabla `admin_users`.
 
-**Solución**: Usar Stripe CLI para tunneling:
+### 7.1 Dashboard (`/admin`)
+
+Vista general del negocio en tiempo real:
+- Ventas totales del mes, número de pedidos, clientes nuevos, ingresos.
+- Gráfico de ventas de los últimos 30 días.
+- Actividad reciente (últimos pedidos).
+- **Panel de automatización de wishlist**: muestra cuántos usuarios tienen en su lista de deseos productos con stock bajo o en oferta, y permite enviarles las notificaciones manualmente.
+
+### 7.2 Gestión de pedidos (`/admin/pedidos`)
+
+Los pedidos se organizan en tres secciones según el método de envío:
+
+**Envío Express**  Pedidos prioritarios 2448h  
+**Envío Estándar**  Pedidos ordinarios  
+**Recogida en Tienda**  Pedidos para recoger en local
+
+Dentro de cada sección, los pedidos aparecen ordenados: primero los que requieren acción (`paid`), luego los `listo/enviado`.
+
+**Estados de un pedido**:
+
+| Estado | Significado |
+|---|---|
+| `paid` | Pagado, pendiente de preparar |
+| `ready_for_pickup` | Preparado, listo para recoger en tienda |
+| `shipped` | Enviado con número de seguimiento |
+| `delivered` | Entregado al cliente |
+| `cancelled` | Cancelado (con reembolso automático si aplica) |
+
+**Acciones disponibles desde el panel**:
+- Marcar como listo para recoger  envía email al cliente automáticamente.
+- Marcar como enviado  introduce transportista y número de seguimiento  envía email al cliente.
+- Marcar como entregado.
+- Ver detalle completo del pedido (artículos, dirección, factura).
+- Historial de pedidos entregados y cancelados con buscador.
+
+### 7.3 Gestión de productos (`/admin/productos`)
+
+- Listado de todos los productos con stock, precio y estado.
+- Crear producto nuevo: nombre, descripción, precio, categoría, imágenes (Cloudinary), tallas y stock por talla.
+- Editar producto existente.
+- Activar / desactivar producto.
+- Poner producto en oferta: precio de oferta + fecha de inicio y fin.
+- Gestión de tallas: añadir/editar stock por talla.
+
+### 7.4 Gestión de categorías (`/admin/categorias`)
+
+- Crear, editar y eliminar categorías.
+- Cada categoría tiene nombre, descripción e imagen.
+
+### 7.5 Devoluciones (`/admin/devoluciones`)
+
+Lista de todas las solicitudes de devolución activas. Para cada una el admin puede:
+
+| Acción | Qué hace |
+|---|---|
+| Marcar como recibido | El paquete llegó al almacén  email al cliente |
+| Marcar como reembolsado | Procesa el reembolso real en Stripe + restaura stock + genera factura rectificativa + envía email con PDF adjunto |
+| Rechazar | Envía email al cliente con el motivo |
+
+### 7.6 Facturas (`/admin/facturas`)
+
+- Listado de todas las facturas generadas.
+- Vista previa en HTML (igual al PDF que recibe el cliente).
+- Descarga de la factura en PDF.
+- Creación manual de facturas.
+
+### 7.7 Cupones (`/admin/cupones`)
+
+- Crear códigos de descuento (porcentaje o importe fijo).
+- Configurar: número máximo de usos total, usos por cliente, importe mínimo de compra, fecha de expiración.
+- Ver estadísticas de uso de cada cupón.
+
+### 7.8 Newsletter (`/admin/newsletter`)
+
+- Lista completa de suscriptores con fecha de alta.
+- Redactor de newsletter con editor HTML + vista previa en tiempo real.
+- Envío a todos los suscriptores activos.
+- El envío se hace en lotes con delay entre emails para respetar los límites de Resend.
+
+### 7.9 Usuarios (`/admin/usuarios`)
+
+- Lista de clientes registrados.
+- Información de cada cliente: nombre, email, fecha de registro, número de pedidos.
+
+### 7.10 Tallas (`/admin/tallas`)
+
+- Gestión del sistema de tallas global.
+- Guía de tallas que se muestra en la tienda.
+
+### 7.11 Configuración (`/admin/configuracion`)
+
+Configuración general de la aplicación mediante clave-valor en BD:
+- Activar/desactivar el popup de newsletter.
+- Cambiar el título, subtítulo, descripción del popup y el código promocional que ofrece.
+- Ajustar el tiempo de espera en segundos antes de que aparezca el popup.
+
+### 7.12 Preview de emails (`/admin/email-preview`)
+
+Visualización de todos los templates de email en el navegador para revisión sin necesidad de enviarlos.
+
+---
+
+## 8. Sistema de emails
+
+Todos los emails se envían con **Resend** desde `Vantage <onboarding@resend.dev>`.
+
+### Emails al cliente
+
+| Cuándo se envía | Contenido |
+|---|---|
+| Pedido confirmado | Resumen del pedido, artículos, total, dirección de envío, enlace a la factura |
+| Pedido listo para recoger | Aviso de que el pedido está en tienda |
+| Pedido enviado | Número de seguimiento y transportista |
+| Pedido entregado | Confirmación de entrega |
+| Pedido cancelado | Confirmación + importe reembolsado + factura rectificativa en PDF adjunta |
+| Devolución creada | Confirmación + etiqueta de devolución en PDF adjunta |
+| Devolución recibida | El paquete llegó al almacén, se está revisando |
+| Devolución reembolsada | Importe reembolsado + factura rectificativa en PDF adjunta |
+| Devolución rechazada | Motivo del rechazo |
+| Wishlist  stock bajo | Aviso de que un producto favorito se está agotando |
+| Wishlist  oferta | Aviso de que un producto favorito ha entrado en oferta |
+| Newsletter | Contenido redactado por el admin |
+
+### Emails al administrador
+
+| Cuándo se envía | Contenido |
+|---|---|
+| Nuevo pedido | Resumen del pedido con artículos e importe total |
+| Stock bajo | Lista de productos/tallas con stock  5 unidades |
+| Stock agotado | Lista de productos/tallas con stock = 0 |
+| Nueva devolución solicitada | Datos del cliente y artículos a devolver |
+
+---
+
+## 9. Sistema de facturas y PDFs
+
+### Factura estándar
+
+Se genera automáticamente al confirmar el pago. Incluye:
+- Datos de la empresa (NIF, dirección, contacto).
+- Datos del cliente.
+- Tabla de artículos con talla, precio unitario y total.
+- Desglose: base imponible, IVA (21%), subtotal, envío, descuento, total.
+- Número de factura único (`VNT-YYYY-NNNNN`).
+
+### Factura rectificativa (nota de crédito)
+
+Se genera cuando se cancela un pedido o se aprueba una devolución. Referencia la factura original e indica el importe negativo (a devolver).
+
+### Visualización web vs PDF adjunto
+
+- **Web** (`/pedido/[id]`): la factura se renderiza en HTML con estilos CSS completos en el navegador.
+- **Email**: se adjunta un PDF generado con pdfkit que replica el mismo diseño (cabecera navy, logo VANTAGE en dorado, tabla de artículos, totales, pie de página).
+
+### Etiqueta de devolución
+
+El PDF de devolución incluye:
+- Número de devolución y datos del cliente.
+- Dirección de devoluciones de Vantage.
+- Código de barras Code128 imprimible (generado con bwip-js).
+- Instrucciones para el envío por Correos.
+
+---
+
+## 10. Seguridad
+
+### Autenticación y autorización
+
+- Las páginas `/admin/*` están protegidas por el middleware: requieren cookie `admin_session` activa + sesión Supabase válida.
+- Todos los endpoints `/api/admin/*` verifican la sesión con `verifyAdminRequest()` que crea un cliente Supabase per-request (evita que sesiones concurrentes se mezclen en SSR).
+- Los endpoints de cliente (`/api/orders/cancel`, `/api/returns/*`) verifican que el usuario autenticado es el propietario del recurso.
+
+### Validación de pagos
+
+- Los **precios** se leen de la BD en el servidor, nunca se aceptan del frontend.
+- El **coste de envío** se lee de la BD según el método seleccionado.
+- Los **cupones** se validan server-side (monto mínimo, expiración, usos por usuario).
+- Tras el pago, se **verifica con Stripe** que el PaymentIntent realmente tiene estado `succeeded` antes de crear el pedido.
+- **Idempotencia**: si el usuario recarga la página de éxito, se detecta el pedido existente y no se crea un duplicado.
+
+### Headers de seguridad
+
+El middleware aplica en todas las respuestas:
+- `X-Content-Type-Options: nosniff`
+- `X-Frame-Options: DENY` (protección contra clickjacking)
+- `Strict-Transport-Security` (fuerza HTTPS)
+- `Referrer-Policy: strict-origin-when-cross-origin`
+- `Permissions-Policy` (desactiva cámara, micrófono, geolocalización, etc.)
+
+### Protección de endpoints sensibles
+
+| Endpoint | Protección |
+|---|---|
+| `/api/admin/*` | `verifyAdminRequest`  sesión admin obligatoria |
+| `/api/upload-image` | `verifyAdminRequest`  solo admins pueden subir imágenes |
+| `/api/check-stock-alerts` | `verifyAdminRequest`  evita spam de emails hacia el admin |
+| `/api/email-preview` | `verifyAdminRequest`  solo visible para admins |
+| `/api/stripe-webhook` | Verificación de firma `stripe-signature` de Stripe |
+
+---
+
+## 11. Despliegue
+
+### Con Docker
+
 ```bash
-stripe listen --forward-to localhost:4321/api/stripe-webhook
+docker build -t vantage-fashion .
+docker run -p 4321:4321 --env-file .env vantage-fashion
 ```
 
-### Problema 2: Imágenes no cargaban en producción build
-**Error**: URLs relativas no resolvían correctamente en SSG.
+### Con nixpacks (Railway, Render, etc.)
 
-**Solución**: Usar URLs absolutas desde Supabase Storage:
-```typescript
-const publicURL = supabase.storage
-  .from('products-images')
-  .getPublicUrl(path).data.publicUrl;
-```
+El archivo `nixpacks.toml` ya está configurado. Solo conecta el repositorio en la plataforma y añade las variables de entorno.
 
-### Problema 3: Middleware bloqueaba assets estáticos
-**Error**: CSS y JS no cargaban en rutas `/admin`.
+### Variables de entorno en producción
 
-**Solución**: Filtrar por `.pathname` excluyendo assets:
-```typescript
-if (context.url.pathname.startsWith('/admin') && 
-    !context.url.pathname.includes('.')) {
-    // Verificar auth
-}
-```
+Todas las variables del apartado 5 deben configurarse en la plataforma de despliegue. **Nunca subir el archivo `.env` al repositorio.**
 
-### Problema 4: Cart state no persistía entre recargas
-**Error**: Carrito se vaciaba al recargar página.
+### Webhook de Stripe en producción
 
-**Solución**: Sincronizar Nano Store con localStorage:
-```typescript
-function saveCartToStorage() {
-    localStorage.setItem('cart', JSON.stringify(cartItems.get()));
-}
-
-function loadCartFromStorage() {
-    const saved = localStorage.getItem('cart');
-    if (saved) cartItems.set(JSON.parse(saved));
-}
-```
+Registrar el webhook en el dashboard de Stripe:
+- URL: `https://[tu-dominio]/api/stripe-webhook`
+- Eventos: `payment_intent.succeeded`, `payment_intent.payment_failed`
+- Copiar el `Signing secret` a la variable `STRIPE_WEBHOOK_SECRET`
 
 ---
 
-## ⏱️ TIEMPO INVERTIDO (Estimado)
+## 12. Manual de usuario  Admin
 
-| Fase | Horas | Descripción |
-|------|-------|-------------|
-| Hito 1: Investigación y diseño | 6h | Comparación de stacks, diseño DB, docs |
-| Setup inicial del proyecto | 3h | Configuración Astro, Tailwind, dependencias |
-| Configuración Supabase | 4h | Schema, RLS, Storage, Auth |
-| Desarrollo del catálogo (frontend) | 8h | Páginas productos, categorías, cards |
-| Sistema de carrito | 6h | Nano Store, persistencia, UI del carrito |
-| Panel admin - CRUD productos | 10h | Formularios, listados, edición, imágenes |
-| Panel admin - Gestión pedidos | 5h | Listado, detalle, estados |
-| Integración Stripe | 8h | Payment Intents, webhooks, checkout |
-| Control de stock | 4h | Transacciones SQL, validaciones |
-| Sistema de emails | 3h | Resend, templates, confirmaciones |
-| Testing y debugging | 6h | Pruebas, corrección de bugs |
-| Documentación | 3h | Este README, comentarios en código |
-| **TOTAL** | **~66 horas** | |
+### Acceso al panel
 
----
+1. Ve a `https://[tu-dominio]/admin/login`
+2. Introduce tu email y contraseña de administrador.
+3. Serás redirigido al dashboard.
 
-## 📝 CONCLUSIONES Y REFLEXIÓN
+### Gestionar un pedido nuevo
 
-### Logros Principales
-1. ✅ Arquitectura sólida y escalable implementada
-2. ✅ Aplicación funcional end-to-end (catálogo → pago → confirmación)
-3. ✅ Panel admin completo y usable
-4. ✅ Integración real con servicios de producción (Supabase, Stripe)
-5. ✅ Control de stock robusto sin overselling
+1. Entra en **Pedidos** desde el menú lateral.
+2. Los pedidos nuevos aparecen en la parte superior de su sección.
+3. Prepara el paquete físicamente.
+4. Si es **recogida en tienda**: pulsa **"Marcar listo para recoger"**  el cliente recibirá un email automáticamente.
+5. Si es **envío**: selecciona el transportista, introduce el número de seguimiento y pulsa **"Marcar como enviado"**  el cliente recibirá un email con el tracking.
+6. Cuando se entregue: pulsa **"Marcar entregado"**.
 
-### Desafíos Superados
-1. Aprender Astro y su arquitectura de islands
-2. Implementar transacciones atómicas en PostgreSQL
-3. Configurar correctamente Stripe webhooks
-4. Gestionar estado compartido entre Astro y React
+### Procesar una devolución
 
-### Áreas de Mejora Identificadas
-1. **Testing**: Falta cobertura de tests automatizados
-2. **Performance**: Imágenes sin optimizar (podrían usar WebP)
-3. **Accesibilidad**: No se ha auditado con herramientas a11y
-4. **Responsive**: Funciona pero podría refinarse en móviles
-5. **SEO**: Faltan meta tags dinámicos y sitemap
+1. Entra en **Devoluciones** desde el menú lateral.
+2. Cuando el paquete llegue al almacén, haz clic en **"Recibido"**  el cliente recibe confirmación.
+3. Inspecciona los artículos devueltos.
+4. Si todo está correcto: haz clic en **"Reembolsar"** e introduce el importe (puede ser parcial).
+   - El sistema procesa el reembolso en Stripe automáticamente.
+   - Restaura el stock de los artículos.
+   - Genera y envía la factura rectificativa al cliente por email.
+5. Si el artículo no cumple las condiciones: haz clic en **"Rechazar"**, escribe el motivo y el cliente recibirá el email.
 
-### Pendiente para Entrega Final
-- [ ] Desplegar en Coolify y obtener URL pública
-- [ ] Completar pruebas en modo test con transacciones reales
-- [ ] Optimizar imágenes para producción
-- [ ] Documentar proceso de despliegue
+### Añadir un producto nuevo
 
----
+1. Entra en **Productos**  botón **"Nuevo producto"**.
+2. Rellena: nombre, descripción, precio, categoría.
+3. Sube una o varias imágenes (se guardan en Cloudinary automáticamente).
+4. Añade las tallas disponibles con su stock inicial.
+5. Activa "En oferta" si procede e introduce el precio de oferta.
+6. Pulsa **Guardar**.
 
-## 📞 INFORMACIÓN DE CONTACTO Y RECURSOS
+### Crear un cupón de descuento
 
-### Repositorio
-- 📦 **GitHub**: [Pendiente subir repositorio público]
+1. Entra en **Cupones**  **"Nuevo cupón"**.
+2. Introduce el código (ej: `VERANO20`), el tipo (porcentaje o importe fijo) y el valor.
+3. Configura opcionalmente: usos máximos totales, usos máximos por cliente, importe mínimo de compra, fecha de expiración.
+4. Pulsa **Crear**.
 
-### URLs (Desarrollo)
-- 🌐 **Local**: http://localhost:4321
-- 🔐 **Admin Local**: http://localhost:4321/admin/login
-- 🧪 **Supabase Dashboard**: [URL del proyecto]
+### Enviar un newsletter
 
-### URLs (Producción - Pendiente)
-- 🚀 **Producción**: [Pendiente despliegue Coolify]
-- 🔐 **Admin Producción**: [Pendiente]
+1. Entra en **Newsletter**.
+2. Escribe el asunto y el contenido HTML del email.
+3. Usa la vista previa para revisar el diseño.
+4. Pulsa **"Enviar a todos los suscriptores"**.
 
-### Documentación de Referencia Utilizada
-- [Astro Docs](https://docs.astro.build)
-- [Supabase Docs](https://supabase.com/docs)
-- [Stripe API Reference](https://stripe.com/docs/api)
-- [Nano Stores](https://github.com/nanostores/nanostores)
+### Configurar el popup de bienvenida
 
----
+1. Entra en **Configuración**.
+2. Activa o desactiva el popup con el interruptor.
+3. Cambia el título, subtítulo, descripción y el código promocional que ofrece.
+4. Ajusta el tiempo de espera en segundos.
+5. Guarda los cambios  se aplican en tiempo real.
 
-**Estado Final**: 🟢 Proyecto avanzado y funcional, listo para despliegue en cuanto se tenga acceso al VPS.
+### Notificaciones de wishlist
 
-**Fecha de este informe**: Enero 13, 2026
-
-**Siguiente revisión**: Tras despliegue en Coolify (estimado: 1-2 días)
+Desde el **Dashboard**, en la sección "Automatización de Wishlist":
+- La columna ámbar muestra usuarios con productos de stock bajo en su lista de deseos.
+- La columna rosa muestra usuarios con productos en oferta en su lista de deseos.
+- Pulsa **"Enviar notificaciones"** en la columna correspondiente para enviar los emails de aviso.
+- El sistema lleva registro de los envíos para no mandar el mismo aviso dos veces.
