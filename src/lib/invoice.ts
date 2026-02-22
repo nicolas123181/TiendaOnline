@@ -151,13 +151,6 @@ export async function createInvoice(data: InvoiceData, dbClient?: SupabaseClient
         // El total es subtotal + envío (el IVA ya está incluido en el subtotal)
         const total = subtotalConDescuento + (data.shippingCost || 0);
 
-            invoiceNumber,
-            orderId: data.orderId,
-            customerName: data.customerName,
-            subtotal: data.subtotal,
-            total
-        });
-
         // Campos base (siempre presentes en la tabla)
         const invoiceRecord: Record<string, any> = {
             invoice_number: invoiceNumber,
