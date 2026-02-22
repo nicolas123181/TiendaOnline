@@ -1,4 +1,4 @@
-import type { APIRoute } from 'astro';
+﻿import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
@@ -63,7 +63,6 @@ export const POST: APIRoute = async ({ request }) => {
                 });
 
             if (insertError) {
-                console.error('Error inserting subscriber:', insertError);
                 throw new Error('Error al guardar la suscripción');
             }
         }
@@ -75,7 +74,6 @@ export const POST: APIRoute = async ({ request }) => {
         }), { status: 200 });
 
     } catch (error) {
-        console.error('Newsletter subscribe error:', error);
         return new Response(JSON.stringify({
             success: false,
             error: 'Error al procesar la suscripción'

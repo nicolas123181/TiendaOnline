@@ -1,4 +1,4 @@
-import type { APIRoute } from 'astro';
+﻿import type { APIRoute } from 'astro';
 import { supabase } from '../../lib/supabase';
 
 /**
@@ -44,7 +44,6 @@ export const GET: APIRoute = async ({ url }) => {
         }
 
         if (error) {
-            console.error('Search error:', error);
             return new Response(JSON.stringify({
                 success: false,
                 error: 'Error en la búsqueda'
@@ -74,7 +73,6 @@ export const GET: APIRoute = async ({ url }) => {
         });
 
     } catch (error) {
-        console.error('Search error:', error);
         return new Response(JSON.stringify({
             success: false,
             error: (error as Error).message

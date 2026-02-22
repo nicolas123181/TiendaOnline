@@ -1,4 +1,4 @@
-import type { APIRoute } from 'astro';
+﻿import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
@@ -35,7 +35,6 @@ export const GET: APIRoute = async ({ request }) => {
             headers: { 'Content-Type': 'application/json' },
         });
     } catch (err) {
-        console.error('newsletter-status error:', err);
         return new Response(JSON.stringify({ subscribed: false }), { status: 200 });
     }
 };

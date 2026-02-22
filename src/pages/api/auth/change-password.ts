@@ -1,4 +1,4 @@
-import type { APIRoute } from 'astro';
+﻿import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
@@ -69,7 +69,6 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         );
 
         if (updateError) {
-            console.error('Error updating password:', updateError);
             return new Response(JSON.stringify({
                 success: false,
                 error: 'Error al actualizar la contraseña. Inténtalo de nuevo.'
@@ -82,7 +81,6 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         }), { status: 200 });
 
     } catch (error) {
-        console.error('Change password error:', error);
         return new Response(JSON.stringify({
             success: false,
             error: 'Error interno del servidor'

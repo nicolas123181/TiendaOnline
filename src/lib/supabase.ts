@@ -1,4 +1,4 @@
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+﻿import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { AstroCookies } from 'astro';
 
 const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
@@ -195,12 +195,10 @@ export async function getProducts(includeInactive = false): Promise<Product[]> {
         }
 
         if (error) {
-            console.error('Error fetching products:', error);
             return [];
         }
         return data || [];
     } catch (e) {
-        console.error('Error fetching products:', e);
         return [];
     }
 }
@@ -257,7 +255,6 @@ export async function getProductsByCategory(categorySlug: string): Promise<Produ
     }
 
     if (error) {
-        console.error('Error fetching products by category:', error);
         return [];
     }
     return data || [];
@@ -289,12 +286,10 @@ export async function getFeaturedProducts(): Promise<Product[]> {
         }
 
         if (error) {
-            console.error('Error fetching featured products:', error);
             return [];
         }
         return data || [];
     } catch (e) {
-        console.error('Error fetching featured products:', e);
         return [];
     }
 }
@@ -312,12 +307,10 @@ export async function getProductSizes(productId: number): Promise<ProductSize[]>
             .order('size');
 
         if (error) {
-            console.error('Error fetching product sizes:', error);
             return [];
         }
         return data || [];
     } catch (e) {
-        console.error('Error fetching product sizes:', e);
         return [];
     }
 }
@@ -333,7 +326,6 @@ export async function updateProductSizes(productId: number, sizes: SizeStock[]):
             .eq('product_id', productId);
 
         if (deleteError) {
-            console.error('Error deleting old sizes:', deleteError);
             return false;
         }
 
@@ -350,7 +342,6 @@ export async function updateProductSizes(productId: number, sizes: SizeStock[]):
                 .insert(sizesToInsert);
 
             if (insertError) {
-                console.error('Error inserting sizes:', insertError);
                 return false;
             }
         }
@@ -358,7 +349,6 @@ export async function updateProductSizes(productId: number, sizes: SizeStock[]):
         // El trigger de la BD actualizará automáticamente el stock total en products
         return true;
     } catch (e) {
-        console.error('Error updating product sizes:', e);
         return false;
     }
 }
@@ -394,12 +384,10 @@ export async function decrementSizeStock(productId: number, size: string, quanti
             });
 
         if (error) {
-            console.error('Error decrementing size stock:', error);
             return false;
         }
         return data === true;
     } catch (e) {
-        console.error('Error decrementing size stock:', e);
         return false;
     }
 }
@@ -415,12 +403,10 @@ export async function getCategories(): Promise<Category[]> {
             .order('name');
 
         if (error) {
-            console.error('Error fetching categories:', error);
             return [];
         }
         return data || [];
     } catch (e) {
-        console.error('Error fetching categories:', e);
         return [];
     }
 }
@@ -492,12 +478,10 @@ export async function getOrders(): Promise<(Order & { items?: OrderItem[] })[]> 
             .order('created_at', { ascending: false });
 
         if (error) {
-            console.error('Error fetching orders:', error);
             return [];
         }
         return data || [];
     } catch (e) {
-        console.error('Error fetching orders:', e);
         return [];
     }
 }
@@ -542,12 +526,10 @@ export async function updateOrderStatus(
             .eq('id', orderId);
 
         if (error) {
-            console.error('Error updating order:', error);
             return false;
         }
         return true;
     } catch (e) {
-        console.error('Error updating order:', e);
         return false;
     }
 }
@@ -573,7 +555,6 @@ export async function createOrder(orderData: Omit<Order, 'id' | 'created_at' | '
             .single();
 
         if (orderError || !order) {
-            console.error('Error creating order:', orderError);
             return null;
         }
 
@@ -588,13 +569,11 @@ export async function createOrder(orderData: Omit<Order, 'id' | 'created_at' | '
             .insert(orderItems);
 
         if (itemsError) {
-            console.error('Error creating order items:', itemsError);
             return null;
         }
 
         return order;
     } catch (e) {
-        console.error('Error creating order:', e);
         return null;
     }
 }
@@ -611,12 +590,10 @@ export async function updateProductStock(productId: number, newStock: number): P
             .eq('id', productId);
 
         if (error) {
-            console.error('Error updating stock:', error);
             return false;
         }
         return true;
     } catch (e) {
-        console.error('Error updating stock:', e);
         return false;
     }
 }
@@ -632,12 +609,10 @@ export async function createProduct(productData: Omit<Product, 'id' | 'created_a
             .single();
 
         if (error) {
-            console.error('Error creating product:', error);
             return null;
         }
         return data;
     } catch (e) {
-        console.error('Error creating product:', e);
         return null;
     }
 }
@@ -654,12 +629,10 @@ export async function updateProduct(productId: number, productData: Partial<Prod
             .single();
 
         if (error) {
-            console.error('Error updating product:', error);
             return null;
         }
         return data;
     } catch (e) {
-        console.error('Error updating product:', e);
         return null;
     }
 }
@@ -674,12 +647,10 @@ export async function deleteProduct(productId: number): Promise<boolean> {
             .eq('id', productId);
 
         if (error) {
-            console.error('Error deleting product:', error);
             return false;
         }
         return true;
     } catch (e) {
-        console.error('Error deleting product:', e);
         return false;
     }
 }
@@ -697,12 +668,10 @@ export async function getShippingMethods(): Promise<ShippingMethod[]> {
             .order('display_order');
 
         if (error) {
-            console.error('Error fetching shipping methods:', error);
             return [];
         }
         return data || [];
     } catch (e) {
-        console.error('Error fetching shipping methods:', e);
         return [];
     }
 }
@@ -799,7 +768,6 @@ export async function validateCoupon(code: string, orderTotal: number, userEmail
 
         return { valid: true, discount, message: 'Cupón aplicado correctamente', couponId: data.id };
     } catch (e) {
-        console.error('Error validating coupon:', e);
         return { valid: false, discount: 0, message: 'Error al validar el cupón' };
     }
 }
@@ -881,15 +849,12 @@ export async function addToWishlist(
         if (error) {
             // Si ya existe, no es un error grave
             if (error.code === '23505') {
-                console.log('Item already in wishlist');
                 return true;
             }
-            console.error('Error adding to wishlist:', error);
             return false;
         }
         return true;
     } catch (e) {
-        console.error('Error adding to wishlist:', e);
         return false;
     }
 }
@@ -913,12 +878,10 @@ export async function removeFromWishlist(
             .eq('size', size);
 
         if (error) {
-            console.error('Error removing from wishlist:', error);
             return false;
         }
         return true;
     } catch (e) {
-        console.error('Error removing from wishlist:', e);
         return false;
     }
 }
@@ -945,7 +908,6 @@ export async function toggleWishlist(
             return { isInWishlist: true, success };
         }
     } catch (e) {
-        console.error('Error toggling wishlist:', e);
         return { isInWishlist: false, success: false };
     }
 }
@@ -1004,7 +966,6 @@ export async function getUserWishlist(userId: string): Promise<WishlistItemWithP
 
         return itemsWithStock;
     } catch (e) {
-        console.error('Error getting user wishlist:', e);
         return [];
     }
 }
@@ -1057,13 +1018,11 @@ export async function getWishlistLowStockNotifications(
             });
 
         if (error) {
-            console.error('Error getting low stock notifications:', error);
             return [];
         }
 
         return data || [];
     } catch (e) {
-        console.error('Error getting low stock notifications:', e);
         return [];
     }
 }
@@ -1081,12 +1040,10 @@ export async function markWishlistNotified(wishlistIds: number[]): Promise<boole
             });
 
         if (error) {
-            console.error('Error marking wishlist as notified:', error);
             return false;
         }
         return true;
     } catch (e) {
-        console.error('Error marking wishlist as notified:', e);
         return false;
     }
 }
@@ -1121,13 +1078,11 @@ export async function getWishlistSaleNotifications(): Promise<WishlistSaleNotifi
             .rpc('get_wishlist_sale_notifications');
 
         if (error) {
-            console.error('Error getting sale notifications:', error);
             return [];
         }
 
         return data || [];
     } catch (e) {
-        console.error('Error getting sale notifications:', e);
         return [];
     }
 }
@@ -1145,12 +1100,10 @@ export async function markWishlistSaleNotified(wishlistIds: number[]): Promise<b
             });
 
         if (error) {
-            console.error('Error marking wishlist sale as notified:', error);
             return false;
         }
         return true;
     } catch (e) {
-        console.error('Error marking wishlist sale as notified:', e);
         return false;
     }
 }
@@ -1166,12 +1119,10 @@ export async function resetWishlistSaleNotifications(): Promise<boolean> {
             .rpc('reset_wishlist_sale_notifications');
 
         if (error) {
-            console.error('Error resetting wishlist sale notifications:', error);
             return false;
         }
         return true;
     } catch (e) {
-        console.error('Error resetting wishlist sale notifications:', e);
         return false;
     }
 }

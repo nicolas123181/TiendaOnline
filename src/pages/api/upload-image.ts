@@ -1,4 +1,4 @@
-import type { APIRoute } from 'astro';
+﻿import type { APIRoute } from 'astro';
 import { uploadImage, deleteImage, getPublicIdFromUrl } from '../../lib/cloudinary';
 import { verifyAdminRequest, unauthorizedResponse } from '../../lib/adminAuth';
 
@@ -66,7 +66,6 @@ export const POST: APIRoute = async ({ request }) => {
         );
 
     } catch (error) {
-        console.error('Error in upload-image API:', error);
         return new Response(
             JSON.stringify({ error: 'Error interno del servidor al subir la imagen' }),
             { status: 500, headers: { 'Content-Type': 'application/json' } }
@@ -116,7 +115,6 @@ export const DELETE: APIRoute = async ({ request }) => {
         );
 
     } catch (error) {
-        console.error('Error in delete-image API:', error);
         return new Response(
             JSON.stringify({ error: 'Error interno del servidor' }),
             { status: 500, headers: { 'Content-Type': 'application/json' } }

@@ -1,4 +1,4 @@
-import type { APIRoute } from 'astro';
+﻿import type { APIRoute } from 'astro';
 import { supabase } from '../../lib/supabase';
 
 /**
@@ -6,7 +6,6 @@ import { supabase } from '../../lib/supabase';
  * NO crea la orden aquí. La orden se crea cuando Stripe confirma el pago.
  */
 export const POST: APIRoute = async ({ request }) => {
-    console.log('📦 Checkout API called');
 
     try {
         const formData = await request.formData();
@@ -25,7 +24,6 @@ export const POST: APIRoute = async ({ request }) => {
         const subtotal = parseInt(formData.get("subtotal")?.toString() || "0");
         const discount = parseInt(formData.get("discount")?.toString() || "0");
 
-        console.log('📋 Checkout data:', { email: customerEmail.replace(/(.{2}).+(@.+)/, '$1***$2'), itemCount: cartItems.length, total });
 
         // Validar datos
         if (!customerName || !customerEmail || !customerAddress || !customerCity || !customerPostalCode) {
@@ -110,13 +108,10 @@ export const POST: APIRoute = async ({ request }) => {
                     }), { status: 400, headers: { 'Content-Type': 'application/json' } });
                 }
 
-                console.log(`✅ Stock por talla OK: ${item.name} (${item.size}) → ${sizeData.stock} disponibles`);
             }
 
-            console.log(`✅ Stock OK para ${product.name}: ${product.stock} disponibles`);
         }
 
-        console.log('✅ Stock verificado correctamente, listo para Stripe');
 
         // Devolver éxito - NO se crea orden aquí
         // Los datos del pedido se pasan a Stripe y la orden se crea al confirmar pago
@@ -141,7 +136,6 @@ export const POST: APIRoute = async ({ request }) => {
         }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
     } catch (error) {
-        console.error('❌ Checkout error:', error);
         return new Response(JSON.stringify({
             success: false,
             error: 'Error al procesar el pedido: ' + (error as Error).message

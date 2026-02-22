@@ -1,4 +1,4 @@
-import { useStore } from '@nanostores/react';
+﻿import { useStore } from '@nanostores/react';
 import { addToCart, type CartItem } from '../../stores/cart';
 import { useState, useMemo } from 'react';
 import SizeRecommender from './SizeRecommender';
@@ -82,7 +82,6 @@ export default function AddToCartButton({
                 setIsInWishlist(data.isInWishlist);
             }
         } catch (e) {
-            console.error('Error checking wishlist status:', e);
         }
     };
 
@@ -141,7 +140,6 @@ export default function AddToCartButton({
                 }
             }
         } catch (e) {
-            console.error('Error toggling wishlist:', e);
             setWishlistToastMessage('Error de conexión');
         } finally {
             setIsWishlistLoading(false);

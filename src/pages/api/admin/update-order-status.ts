@@ -1,4 +1,4 @@
-import type { APIRoute } from 'astro';
+﻿import type { APIRoute } from 'astro';
 import { supabase } from '../../../lib/supabase';
 import { sendDeliveryConfirmationEmail, SITE_URL } from '../../../lib/email';
 import { Resend } from 'resend';
@@ -42,7 +42,6 @@ export const POST: APIRoute = async ({ request }) => {
             }), { status: 400, headers: { 'Content-Type': 'application/json' } });
         }
 
-        console.log(`📦 Updating order #${orderId} to status: ${status}`);
 
         // Preparar datos de actualización
         const updateData: any = {
@@ -63,7 +62,6 @@ export const POST: APIRoute = async ({ request }) => {
             .eq('id', orderId);
 
         if (updateError) {
-            console.error('Error updating order:', updateError);
             return new Response(JSON.stringify({
                 success: false,
                 error: 'Error al actualizar el pedido'
@@ -85,7 +83,6 @@ export const POST: APIRoute = async ({ request }) => {
                 });
                 emailSent = true;
                 emailMessage = 'Email de recogida enviado';
-                console.log(`✅ Ready for pickup email sent to ${customerEmail}`);
 
             } else if (status === 'shipped' && resend) {
                 // Email de ENVÍO CON TRACKING
@@ -101,7 +98,6 @@ export const POST: APIRoute = async ({ request }) => {
                 });
                 emailSent = true;
                 emailMessage = 'Email de envío con tracking enviado';
-                console.log(`✅ Shipping email with tracking sent to ${customerEmail}`);
 
             } else if (status === 'delivered') {
                 // Email de entrega
@@ -112,10 +108,8 @@ export const POST: APIRoute = async ({ request }) => {
                 });
                 emailSent = true;
                 emailMessage = 'Email de entrega enviado';
-                console.log(`✅ Delivery email sent to ${customerEmail}`);
             }
         } catch (emailError) {
-            console.error('Error sending email:', emailError);
             emailMessage = 'Pedido actualizado pero el email falló';
         }
 
@@ -126,7 +120,6 @@ export const POST: APIRoute = async ({ request }) => {
         }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
     } catch (error) {
-        console.error('Error:', error);
         return new Response(JSON.stringify({
             success: false,
             error: (error as Error).message

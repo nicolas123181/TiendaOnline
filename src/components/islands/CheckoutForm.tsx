@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import type { FormEvent, ChangeEvent } from 'react';
 import { useStore } from '@nanostores/react';
 import { cartItemsArray, cartSubtotal, clearCart } from '../../stores/cart';
@@ -114,7 +114,6 @@ export default function CheckoutForm({ shippingMethods }: CheckoutFormProps) {
                         setSavedAddress(address);
                     }
                 } catch (err) {
-                    console.log('No saved address found');
                 }
             } else {
                 setIsLoggedIn(false);
@@ -189,7 +188,6 @@ export default function CheckoutForm({ shippingMethods }: CheckoutFormProps) {
             }
         } catch (error) {
             setError('Error al validar el cupón');
-            console.error(error);
         }
     };
 
@@ -336,7 +334,6 @@ export default function CheckoutForm({ shippingMethods }: CheckoutFormProps) {
         } catch (err) {
             const msg = err instanceof Error ? err.message : 'Error desconocido';
             setError(msg);
-            console.error('Checkout error:', err);
             setCurrentStep(4); // Volver al resumen si hay error
         } finally {
             setLoading(false);

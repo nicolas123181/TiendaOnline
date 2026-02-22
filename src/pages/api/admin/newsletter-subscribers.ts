@@ -1,4 +1,4 @@
-import type { APIRoute } from 'astro';
+﻿import type { APIRoute } from 'astro';
 import { getServiceSupabase } from '../../../lib/supabase';
 import { verifyAdminRequest, unauthorizedResponse } from '../../../lib/adminAuth';
 
@@ -20,7 +20,6 @@ export const GET: APIRoute = async ({ request }) => {
             .order('created_at', { ascending: false });
 
         if (error) {
-            console.error('Error fetching newsletter subscribers:', error);
             return new Response(JSON.stringify({
                 success: false,
                 error: 'Error al obtener suscriptores: ' + error.message
@@ -39,7 +38,6 @@ export const GET: APIRoute = async ({ request }) => {
         });
 
     } catch (error) {
-        console.error('Newsletter subscribers error:', error);
         return new Response(JSON.stringify({
             success: false,
             error: (error as Error).message

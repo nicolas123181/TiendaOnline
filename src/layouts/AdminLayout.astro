@@ -1,4 +1,4 @@
----
+﻿---
 import BaseLayout from "./BaseLayout.astro";
 
 interface Props {
@@ -408,7 +408,6 @@ function isActive(href: string): boolean {
                     window.location.href = "/";
                 }
             } catch (error) {
-                console.error("Logout error:", error);
                 window.location.href = "/";
             }
         });
@@ -420,7 +419,6 @@ function isActive(href: string): boolean {
                 await fetch("/api/auth/logout", { method: "POST" });
                 window.location.href = "/";
             } catch (error) {
-                console.error("Logout error:", error);
                 window.location.href = "/";
             }
         });

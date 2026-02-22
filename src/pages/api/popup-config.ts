@@ -1,4 +1,4 @@
-import type { APIRoute } from 'astro';
+﻿import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
@@ -44,7 +44,6 @@ export const GET: APIRoute = async () => {
             headers: { 'Content-Type': 'application/json' },
         });
     } catch (err) {
-        console.error('popup-config error:', err);
         // Return safe defaults on error so the popup still works
         return new Response(JSON.stringify({
             enabled: 'true',

@@ -1,4 +1,4 @@
-import type { APIRoute } from 'astro';
+﻿import type { APIRoute } from 'astro';
 import { sendWishlistSaleEmail, sendWishlistLowStockEmail } from '../../../lib/email';
 import { verifyAdminRequest, unauthorizedResponse } from '../../../lib/adminAuth';
 
@@ -55,7 +55,6 @@ export const POST: APIRoute = async ({ request }) => {
             headers: { 'Content-Type': 'application/json' },
         });
     } catch (e) {
-        console.error('Error in test email:', e);
         return new Response(JSON.stringify({ error: String(e) }), {
             status: 500,
             headers: { 'Content-Type': 'application/json' },

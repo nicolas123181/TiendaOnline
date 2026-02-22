@@ -1,4 +1,4 @@
-import type { APIRoute } from 'astro';
+﻿import type { APIRoute } from 'astro';
 import { supabase } from '../../lib/supabase';
 import {
     sendLowStockAlert,
@@ -21,7 +21,6 @@ export const POST: APIRoute = async ({ request }) => {
     if (!await verifyAdminRequest(request)) {
         return unauthorizedResponse();
     }
-    console.log('🔍 Manual stock check triggered (including sizes)');
 
     try {
         const outOfStockItems: OutOfStockProduct[] = [];
@@ -46,9 +45,7 @@ export const POST: APIRoute = async ({ request }) => {
             .order('stock', { ascending: true });
 
         if (sizesError) {
-            console.error('❌ Error fetching product sizes:', sizesError);
         } else if (sizesWithLowStock && sizesWithLowStock.length > 0) {
-            console.log(`📏 Found ${sizesWithLowStock.length} sizes with low stock`);
 
             for (const sizeItem of sizesWithLowStock) {
                 const product = sizeItem.products as any;
@@ -85,7 +82,6 @@ export const POST: APIRoute = async ({ request }) => {
             .order('stock', { ascending: true });
 
         if (productsError) {
-            console.error('❌ Error fetching products:', productsError);
         } else if (productsWithLowStock) {
             // Verificar si este producto ya fue añadido por las tallas
             const existingProductIds = new Set([
@@ -124,10 +120,8 @@ export const POST: APIRoute = async ({ request }) => {
             }
         }
 
-        console.log(`📊 Stock check results: ${outOfStockItems.length} agotados, ${lowStockItems.length} stock bajo`);
 
         if (outOfStockItems.length === 0 && lowStockItems.length === 0) {
-            console.log('✅ No products/sizes with low stock found');
             return new Response(JSON.stringify({
                 success: true,
                 message: 'No hay productos ni tallas con stock bajo ni agotados',
@@ -142,23 +136,17 @@ export const POST: APIRoute = async ({ request }) => {
 
         // Enviar email de productos agotados
         if (outOfStockItems.length > 0) {
-            console.log('🚨 Sending out of stock alert...');
             try {
                 outOfStockEmailSent = await sendOutOfStockAlert(outOfStockItems);
-                console.log('✅ Out of stock email sent:', outOfStockEmailSent);
             } catch (e) {
-                console.error('❌ Error sending out of stock email:', e);
             }
         }
 
         // Enviar email de stock bajo
         if (lowStockItems.length > 0) {
-            console.log('⚠️ Sending low stock alert...');
             try {
                 lowStockEmailSent = await sendLowStockAlert(lowStockItems);
-                console.log('✅ Low stock email sent:', lowStockEmailSent);
             } catch (e) {
-                console.error('❌ Error sending low stock email:', e);
             }
         }
 
@@ -183,7 +171,6 @@ export const POST: APIRoute = async ({ request }) => {
         }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
     } catch (error) {
-        console.error('❌ Stock check error:', error);
         return new Response(JSON.stringify({
             success: false,
             error: 'Error al verificar inventario: ' + (error as Error).message

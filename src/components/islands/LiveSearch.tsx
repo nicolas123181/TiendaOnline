@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+﻿import { useState, useEffect, useRef, useCallback } from 'react';
 
 interface SearchResult {
     id: number;
@@ -47,7 +47,6 @@ export default function LiveSearch() {
                     setIsOpen(true);
                 }
             } catch (error) {
-                console.error('Search error:', error);
             } finally {
                 setIsLoading(false);
             }

@@ -1,4 +1,4 @@
-import type { APIRoute } from 'astro';
+﻿import type { APIRoute } from 'astro';
 import { validateCoupon } from '../../lib/supabase';
 
 export const POST: APIRoute = async (context) => {
@@ -25,7 +25,6 @@ export const POST: APIRoute = async (context) => {
             { status: 200, headers: { 'Content-Type': 'application/json' } }
         );
     } catch (error) {
-        console.error('Coupon validation error:', error);
         return new Response(
             JSON.stringify({
                 valid: false,

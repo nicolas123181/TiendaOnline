@@ -41,7 +41,6 @@ export const GET: APIRoute = async ({ params }) => {
         });
 
     } catch (error) {
-        console.error('Error generating invoice PDF:', error);
         return new Response(JSON.stringify({ error: 'Error al generar el PDF de la factura' }), {
             status: 500,
             headers: { 'Content-Type': 'application/json' }

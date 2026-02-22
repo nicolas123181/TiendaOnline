@@ -1,4 +1,4 @@
-/**
+﻿/**
  * SISTEMA DE FACTURAS - VANTAGE
  * Generación de facturas y PDFs premium
  */
@@ -99,7 +99,6 @@ export async function generateInvoiceNumber(dbClient?: SupabaseClient): Promise<
         const { data, error } = await db.rpc('generate_invoice_number');
 
         if (error) {
-            console.error('Error generating invoice number:', error);
             // Fallback: generar número basado en timestamp + random para evitar colisiones
             const timestamp = Date.now().toString().slice(-5);
             const random = Math.floor(Math.random() * 100).toString().padStart(2, '0');
@@ -108,7 +107,6 @@ export async function generateInvoiceNumber(dbClient?: SupabaseClient): Promise<
 
         return data;
     } catch (e) {
-        console.error('Error in generateInvoiceNumber:', e);
         const timestamp = Date.now().toString().slice(-5);
         const random = Math.floor(Math.random() * 100).toString().padStart(2, '0');
         return `VNT-${new Date().getFullYear()}-${timestamp}${random}`;
@@ -120,10 +118,8 @@ export async function generateInvoiceNumber(dbClient?: SupabaseClient): Promise<
  * Usa service role para bypasear RLS (operación server-side de confianza)
  */
 export async function createInvoice(data: InvoiceData, dbClient?: SupabaseClient): Promise<Invoice | null> {
-    console.log('📋 createInvoice called with orderId:', data.orderId);
 
     if (!isSupabaseConfigured) {
-        console.warn('⚠️ Supabase no configurado, factura no creada');
         return null;
     }
 
@@ -135,16 +131,13 @@ export async function createInvoice(data: InvoiceData, dbClient?: SupabaseClient
         try {
             db = getServiceSupabase();
         } catch (e) {
-            console.warn('⚠️ Service role not available, using anonymous client for invoice');
             db = supabase;
         }
     }
 
     try {
         // Generar número de factura (usar el mismo cliente db para permisos)
-        console.log('📋 Generating invoice number...');
         const invoiceNumber = await generateInvoiceNumber(db);
-        console.log('📋 Invoice number generated:', invoiceNumber);
 
         // Calcular impuestos (IVA YA INCLUIDO en el precio)
         // El precio del producto ya tiene el IVA incluido, así que:
@@ -158,8 +151,6 @@ export async function createInvoice(data: InvoiceData, dbClient?: SupabaseClient
         // El total es subtotal + envío (el IVA ya está incluido en el subtotal)
         const total = subtotalConDescuento + (data.shippingCost || 0);
 
-        console.log('📋 Inserting invoice into database...');
-        console.log('📋 Data:', {
             invoiceNumber,
             orderId: data.orderId,
             customerName: data.customerName,
@@ -211,8 +202,6 @@ export async function createInvoice(data: InvoiceData, dbClient?: SupabaseClient
 
         // Si falla por columnas inexistentes (type/original_invoice_id), reintentar sin ellas
         if (error && (error.message?.includes('column') || error.code === '42703' || error.message?.includes('type'))) {
-            console.warn('⚠️ Columnas type/original_invoice_id no encontradas, reintentando sin ellas...');
-            console.warn('⚠️ Ejecuta sql/fix_invoices_missing_columns.sql en Supabase para añadirlas.');
             
             // Eliminar columnas opcionales que pueden no existir
             delete invoiceRecord.type;
@@ -232,11 +221,9 @@ export async function createInvoice(data: InvoiceData, dbClient?: SupabaseClient
         }
 
         if (error) {
-            console.error('❌ Error inserting invoice:', error.message, error.details, error.hint);
             return null;
         }
 
-        console.log('📋 Invoice inserted, ID:', invoice?.id);
 
         // Crear líneas de factura
         const invoiceItems = data.items.map(item => ({
@@ -256,16 +243,12 @@ export async function createInvoice(data: InvoiceData, dbClient?: SupabaseClient
             .insert(invoiceItems);
 
         if (itemsError) {
-            console.error('❌ Error creating invoice items:', itemsError.message);
         } else {
-            console.log('📋 Invoice items created:', invoiceItems.length);
         }
 
-        console.log(`✅ Factura ${invoiceNumber} creada para pedido #${data.orderId}`);
         return invoice;
 
     } catch (e) {
-        console.error('❌ Exception in createInvoice:', e);
         return null;
     }
 }
@@ -295,7 +278,6 @@ export async function getInvoiceById(id: number): Promise<Invoice | null> {
         .single();
 
     if (error) {
-        console.error('Error fetching invoice:', error);
         return null;
     }
 
@@ -316,7 +298,6 @@ export async function getInvoiceByNumber(invoiceNumber: string): Promise<Invoice
         .single();
 
     if (error) {
-        console.error('Error fetching invoice by number:', error);
         return null;
     }
 
@@ -342,7 +323,6 @@ export async function getInvoiceByOrderId(orderId: number): Promise<Invoice | nu
         .maybeSingle();
 
     if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching invoice by order:', error);
     }
 
     return data || null;
@@ -361,7 +341,6 @@ export async function getInvoiceItems(invoiceId: number): Promise<any[]> {
         .eq('invoice_id', invoiceId);
 
     if (error) {
-        console.error('Error fetching invoice items:', error);
         return [];
     }
 
@@ -985,7 +964,6 @@ export async function updateInvoiceStatus(invoiceId: number, status: string): Pr
         .eq('id', invoiceId);
 
     if (error) {
-        console.error('Error updating invoice status:', error);
         return false;
     }
 
@@ -1008,7 +986,6 @@ export async function updateInvoicePdfUrl(invoiceId: number, pdfUrl: string): Pr
         .eq('id', invoiceId);
 
     if (error) {
-        console.error('Error updating invoice PDF URL:', error);
         return false;
     }
 

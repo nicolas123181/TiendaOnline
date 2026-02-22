@@ -1,4 +1,4 @@
-import type { APIRoute } from 'astro';
+﻿import type { APIRoute } from 'astro';
 import { supabase } from '../../../lib/supabase';
 import { Resend } from 'resend';
 import { verifyAdminRequest, unauthorizedResponse } from '../../../lib/adminAuth';
@@ -58,7 +58,6 @@ export const POST: APIRoute = async ({ request }) => {
                 .eq('is_active', true);
 
             if (subError) {
-                console.error('Error fetching subscribers:', subError);
                 return new Response(JSON.stringify({
                     success: false,
                     error: 'Error al obtener suscriptores'
@@ -75,7 +74,6 @@ export const POST: APIRoute = async ({ request }) => {
             }), { status: 400, headers: { 'Content-Type': 'application/json' } });
         }
 
-        console.log(`📧 Sending newsletter to ${subscribers.length} subscribers`);
 
         // Generar HTML del newsletter
         const htmlContent = generateNewsletterHtml(subject, content, preview);
@@ -93,14 +91,11 @@ export const POST: APIRoute = async ({ request }) => {
                     html: htmlContent.replace('{{name}}', sub.name || 'Cliente'),
                 });
                 sentCount++;
-                console.log(`✅ Sent to ${sub.email}`);
             } catch (e) {
-                console.error(`❌ Failed to send to ${sub.email}:`, e);
                 errors.push(sub.email);
             }
         }
 
-        console.log(`📧 Newsletter sent: ${sentCount}/${subscribers.length}`);
 
         return new Response(JSON.stringify({
             success: true,
@@ -110,7 +105,6 @@ export const POST: APIRoute = async ({ request }) => {
         }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
     } catch (error) {
-        console.error('Newsletter error:', error);
         return new Response(JSON.stringify({
             success: false,
             error: (error as Error).message

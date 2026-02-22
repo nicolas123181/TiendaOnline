@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 
 interface WishlistButtonProps {
     productId: number;
@@ -42,7 +42,6 @@ export default function WishlistButton({
                 setIsInWishlist(data.isInWishlist);
             }
         } catch (e) {
-            console.error('Error checking wishlist status:', e);
         }
     };
 
@@ -93,7 +92,6 @@ export default function WishlistButton({
                 }
             }
         } catch (e) {
-            console.error('Error toggling wishlist:', e);
             setToastMessage('Error de conexión');
         } finally {
             setIsLoading(false);

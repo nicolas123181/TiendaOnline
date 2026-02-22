@@ -1,4 +1,4 @@
-import type { APIRoute } from 'astro';
+﻿import type { APIRoute } from 'astro';
 import { supabase } from '../../../lib/supabase';
 import { verifyAdminRequest, unauthorizedResponse } from '../../../lib/adminAuth';
 
@@ -166,7 +166,6 @@ export const GET: APIRoute = async ({ request }) => {
         });
 
     } catch (error) {
-        console.error('Analytics error:', error);
         return new Response(JSON.stringify({
             success: false,
             error: (error as Error).message

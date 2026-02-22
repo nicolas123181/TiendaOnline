@@ -1,10 +1,9 @@
-import { Resend } from 'resend';
+﻿import { Resend } from 'resend';
 
 const resendApiKey = import.meta.env.RESEND_API_KEY;
 
 // Verificar que la API key existe
 if (!resendApiKey) {
-  console.warn('⚠️ RESEND_API_KEY no está configurada. Los emails no se enviarán.');
 }
 
 const resend = resendApiKey ? new Resend(resendApiKey) : null;
@@ -58,7 +57,6 @@ interface OrderEmailData {
  */
 export async function sendOrderConfirmationEmail(data: OrderEmailData) {
   if (!resend) {
-    console.warn('⚠️ Resend no configurado, email no enviado');
     return null;
   }
   try {
@@ -261,10 +259,8 @@ export async function sendOrderConfirmationEmail(data: OrderEmailData) {
       html,
     });
 
-    console.log('Email sent successfully:', result);
     return result;
   } catch (error) {
-    console.error('Error sending email:', error);
     throw error;
   }
 }
@@ -281,7 +277,6 @@ export async function sendShippingNotificationEmail(data: {
   baseUrl?: string;
 }) {
   if (!resend) {
-    console.warn('⚠️ Resend no configurado, shipping notification no enviado');
     return null;
   }
   try {
@@ -399,10 +394,8 @@ export async function sendShippingNotificationEmail(data: {
       html,
     });
 
-    console.log('Shipping notification sent:', result);
     return result;
   } catch (error) {
-    console.error('Error sending shipping notification:', error);
     throw error;
   }
 }
@@ -417,7 +410,6 @@ export async function sendDeliveryConfirmationEmail(data: {
   baseUrl?: string;
 }) {
   if (!resend) {
-    console.warn('⚠️ Resend no configurado, delivery confirmation no enviado');
     return null;
   }
   try {
@@ -530,10 +522,8 @@ export async function sendDeliveryConfirmationEmail(data: {
       html,
     });
 
-    console.log('Delivery confirmation sent:', result);
     return result;
   } catch (error) {
-    console.error('Error sending delivery confirmation:', error);
     throw error;
   }
 }
@@ -563,7 +553,6 @@ interface NewOrderAlertData {
  */
 export async function sendNewOrderAdminAlert(data: NewOrderAlertData): Promise<boolean> {
   if (!resend) {
-    console.warn('⚠️ Resend no configurado, alerta de nuevo pedido no enviada');
     return false;
   }
 
@@ -687,10 +676,8 @@ export async function sendNewOrderAdminAlert(data: NewOrderAlertData): Promise<b
       html,
     });
 
-    console.log('✅ New order admin alert sent:', result);
     return true;
   } catch (error) {
-    console.error('❌ Error sending new order admin alert:', error);
     return false;
   }
 }
@@ -744,8 +731,6 @@ export async function sendLowStockAlert(products: LowStockProduct[]): Promise<bo
   }
 
   if (!resend) {
-    console.warn('⚠️ Resend no configurado, alerta de stock bajo no enviada');
-    console.log('Productos con stock bajo:', products);
     return false;
   }
 
@@ -876,10 +861,8 @@ export async function sendLowStockAlert(products: LowStockProduct[]): Promise<bo
       html,
     });
 
-    console.log(`Low stock alert sent for ${products.length} products:`, result);
     return true;
   } catch (error) {
-    console.error('Error sending low stock alert:', error);
     return false;
   }
 }
@@ -905,8 +888,6 @@ export async function sendOutOfStockAlert(products: OutOfStockProduct[]): Promis
   }
 
   if (!resend) {
-    console.warn('⚠️ Resend no configurado, alerta de productos agotados no enviada');
-    console.log('Productos agotados:', products);
     return false;
   }
 
@@ -1036,10 +1017,8 @@ export async function sendOutOfStockAlert(products: OutOfStockProduct[]): Promis
       html,
     });
 
-    console.log(`Out of stock alert sent for ${products.length} products:`, result);
     return true;
   } catch (error) {
-    console.error('Error sending out of stock alert:', error);
     return false;
   }
 }
@@ -1082,7 +1061,6 @@ function extractNameFromEmail(email: string, providedName?: string): string {
  */
 export async function sendWishlistLowStockEmail(data: WishlistLowStockEmailData): Promise<boolean> {
   if (!resend) {
-    console.warn('⚠️ Resend no configurado, email de wishlist stock bajo no enviado');
     return false;
   }
 
@@ -1202,10 +1180,8 @@ export async function sendWishlistLowStockEmail(data: WishlistLowStockEmailData)
       html,
     });
 
-    console.log(`Wishlist low stock email sent to ${data.customerEmail}:`, result);
     return true;
   } catch (error) {
-    console.error('Error sending wishlist low stock email:', error);
     return false;
   }
 }
@@ -1232,7 +1208,6 @@ export interface WishlistSaleEmailData {
  */
 export async function sendWishlistSaleEmail(data: WishlistSaleEmailData): Promise<boolean> {
   if (!resend) {
-    console.warn('⚠️ Resend no configurado, email de wishlist en oferta no enviado');
     return false;
   }
 
@@ -1357,10 +1332,8 @@ export async function sendWishlistSaleEmail(data: WishlistSaleEmailData): Promis
       html,
     });
 
-    console.log(`Wishlist sale email sent to ${data.customerEmail}:`, result);
     return true;
   } catch (error) {
-    console.error('Error sending wishlist sale email:', error);
     return false;
   }
 }
@@ -1388,7 +1361,6 @@ interface CancelledOrderAlertData {
  */
 export async function sendCancelledOrderAdminAlert(data: CancelledOrderAlertData): Promise<boolean> {
   if (!resend) {
-    console.warn('⚠️ Resend no configurado, alerta de cancelación no enviada');
     return false;
   }
 
@@ -1498,10 +1470,8 @@ export async function sendCancelledOrderAdminAlert(data: CancelledOrderAlertData
       html,
     });
 
-    console.log('✅ Cancelled order admin alert sent:', result);
     return true;
   } catch (error) {
-    console.error('❌ Error sending cancelled order admin alert:', error);
     return false;
   }
 }

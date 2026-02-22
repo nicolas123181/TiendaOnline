@@ -1,4 +1,4 @@
-import type { APIRoute } from 'astro';
+﻿import type { APIRoute } from 'astro';
 import { createServerClient, createServerClientFromAuthHeader, getServiceSupabase } from '../../../lib/supabase';
 import { Resend } from 'resend';
 import Stripe from 'stripe';
@@ -70,7 +70,6 @@ export const POST: APIRoute = async ({ request, cookies }) => {
             .eq('id', orderId)
             .single();
 
-        console.log('🔍 Debug Cancel:', {
             orderId,
             userEmail: user.email,
             orderEmail: order?.customer_email,
@@ -112,9 +111,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
                     subject: `⏳ Procesando tu cancelación - Pedido #${orderId}`,
                     html: getProcessingEmailHtml(order.customer_name, orderId.toString())
                 });
-                console.log('📧 Email "En proceso" enviado');
             } catch (e) {
-                console.error('Error enviando email en proceso:', e);
             }
         }
 
@@ -129,9 +126,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
                     reason: 'requested_by_customer'
                 });
                 stripeRefundId = refund.id;
-                console.log('💰 Reembolso Stripe exitoso:', refund.id);
             } catch (stripeError) {
-                console.error('Error Stripe:', stripeError);
                 // Continuamos con la cancelación aunque falle Stripe (se puede arreglar manual)
                 // O podríamos abortar. En este caso continuamos para liberar stock.
             }
@@ -243,11 +238,9 @@ export const POST: APIRoute = async ({ request, cookies }) => {
                 });
 
                 if (creditNoteInvoice) {
-                    console.log('✅ Factura rectificativa de cancelación generada:', creditNoteInvoice.invoice_number);
                 }
             }
         } catch (invoiceError) {
-            console.error('Error generando factura rectificativa:', invoiceError);
         }
 
         // ============================================
@@ -267,7 +260,6 @@ export const POST: APIRoute = async ({ request, cookies }) => {
                             content: pdfBuffer
                         });
                     } catch (attachErr) {
-                        console.error('Error preparando adjunto PDF de factura:', attachErr);
                     }
                 }
 
@@ -278,9 +270,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
                     html: getCancelledEmailHtml(order.customer_name, orderId.toString(), order.total, order.order_items),
                     ...(attachments.length > 0 && { attachments })
                 });
-                console.log('📧 Email "Cancelado" enviado al cliente');
             } catch (e) {
-                console.error('Error enviando email cancelado:', e);
             }
         }
 
@@ -306,12 +296,9 @@ export const POST: APIRoute = async ({ request, cookies }) => {
                 });
 
                 if (adminAlertSent) {
-                    console.log('📧 Email de alerta al administrador enviado correctamente');
                 } else {
-                    console.warn('⚠️ Fallo al enviar email al administrador pero la cancelación fue procesada');
                 }
             } catch (emailError) {
-                console.error('❌ Error enviando alerta al admin:', emailError);
                 // No bloqueamos la respuesta al cliente si falla el email al admin
             }
         }, 2000); // Retardo de 2 segundos para evitar límites de Resend
@@ -323,11 +310,9 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        console.error('Cancel order error:', errorMessage);
 
         // Log detallado del error
         if (error instanceof Error) {
-            console.error('Error stack:', error.stack);
         }
 
         return new Response(JSON.stringify({

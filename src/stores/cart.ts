@@ -1,4 +1,4 @@
-import { atom, map, computed } from 'nanostores';
+﻿import { atom, map, computed } from 'nanostores';
 
 export interface CartItem {
     id: number;
@@ -140,7 +140,6 @@ export function saveCartToStorage() {
         const items = cartItems.get();
         localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
     } catch (error) {
-        console.error('Error saving cart to storage:', error);
     }
 }
 
@@ -154,7 +153,6 @@ export function loadCartFromStorage() {
             cartItems.set(items);
         }
     } catch (error) {
-        console.error('Error loading cart from storage:', error);
     }
 }
 

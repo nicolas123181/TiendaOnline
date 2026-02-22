@@ -1,4 +1,4 @@
-import type { APIRoute } from 'astro';
+﻿import type { APIRoute } from 'astro';
 import Stripe from 'stripe';
 import { supabase } from '../../lib/supabase';
 
@@ -144,7 +144,6 @@ export const GET: APIRoute = async ({ request, redirect }) => {
                 });
                 stripeCouponId = coupon.id;
             } catch (couponError) {
-                console.error('Error creating Stripe coupon:', couponError);
             }
         }
 
@@ -216,7 +215,6 @@ export const GET: APIRoute = async ({ request, redirect }) => {
         return redirect(session.url, 302);
 
     } catch (error) {
-        console.error('Stripe Checkout redirect error:', error);
         return new Response(
             JSON.stringify({ error: (error as Error).message }),
             { status: 500, headers: { 'Content-Type': 'application/json' } }

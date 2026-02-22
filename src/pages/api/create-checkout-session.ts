@@ -1,4 +1,4 @@
-import type { APIRoute } from 'astro';
+﻿import type { APIRoute } from 'astro';
 import Stripe from 'stripe';
 import { supabase, validateCoupon } from '../../lib/supabase';
 
@@ -94,7 +94,6 @@ export const POST: APIRoute = async ({ request }) => {
             if (shippingMethod) {
                 validatedShippingCost = shippingMethod.cost;
             } else {
-                console.error(`❌ Shipping method ${shipping_method_id} not found or inactive`);
                 return new Response(
                     JSON.stringify({ error: 'Método de envío no disponible. Por favor, recarga la página.' }),
                     { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
@@ -118,9 +117,7 @@ export const POST: APIRoute = async ({ request }) => {
             );
             if (couponResult.valid) {
                 validatedDiscount = couponResult.discount;
-                console.log(`✅ Coupon '${coupon_code}' validated: -${validatedDiscount} cents`);
             } else {
-                console.warn(`⚠️ Coupon '${coupon_code}' invalid: ${couponResult.message}`);
             }
         } else if (discount && discount > 0) {
             // Backward compat para clientes que aún no envían coupon_code (e.g. Flutter)
@@ -128,7 +125,6 @@ export const POST: APIRoute = async ({ request }) => {
             const maxAllowedDiscount = Math.floor(verifiedSubtotal * 0.5);
             validatedDiscount = Math.min(discount, maxAllowedDiscount);
             if (validatedDiscount !== discount) {
-                console.warn(`⚠️ Discount ${discount} capped to ${validatedDiscount} (no coupon_code provided)`);
             }
         }
 
@@ -173,9 +169,7 @@ export const POST: APIRoute = async ({ request }) => {
                     max_redemptions: 1,
                 });
                 stripeCouponId = coupon.id;
-                console.log(`✅ Stripe coupon created: ${coupon.id} for ${validatedDiscount} cents`);
             } catch (couponError) {
-                console.error('Error creating Stripe coupon:', couponError);
                 // Continuar sin el cupón si falla
             }
         }
@@ -248,7 +242,6 @@ export const POST: APIRoute = async ({ request }) => {
             }
         );
     } catch (error) {
-        console.error('Stripe Checkout error:', error);
         return new Response(
             JSON.stringify({ error: (error as Error).message }),
             {

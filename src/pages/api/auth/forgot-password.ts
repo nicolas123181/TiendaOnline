@@ -1,4 +1,4 @@
-import type { APIRoute } from 'astro';
+﻿import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
@@ -36,7 +36,6 @@ export const POST: APIRoute = async ({ request, url }) => {
         });
 
         if (error) {
-            console.error('Password reset error:', error);
             // No revelar si el email existe o no por seguridad
             return new Response(JSON.stringify({
                 success: true,
@@ -50,7 +49,6 @@ export const POST: APIRoute = async ({ request, url }) => {
         }), { status: 200 });
 
     } catch (error) {
-        console.error('Forgot password error:', error);
         return new Response(JSON.stringify({
             success: false,
             error: 'Error al procesar la solicitud'

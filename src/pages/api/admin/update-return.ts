@@ -1,4 +1,4 @@
-import type { APIRoute } from 'astro';
+﻿import type { APIRoute } from 'astro';
 import { supabase } from '../../../lib/supabase';
 import { Resend } from 'resend';
 import Stripe from 'stripe';
@@ -36,14 +36,12 @@ async function processStripeRefund(
             reason: 'requested_by_customer'
         });
 
-        console.log(`✅ Reembolso Stripe creado: ${refund.id} - ${amountCents / 100}€`);
 
         return {
             success: true,
             refundId: refund.id
         };
     } catch (error: any) {
-        console.error('Error en reembolso Stripe:', error);
 
         // Manejar errores específicos de Stripe
         let errorMessage = 'Error al procesar el reembolso en Stripe';
@@ -133,7 +131,6 @@ export const POST: APIRoute = async ({ request }) => {
                 .single();
 
             if (orderError || !orderData) {
-                console.error('Error obteniendo pedido:', orderError);
                 return new Response(JSON.stringify({
                     success: false,
                     error: 'No se pudo obtener la información del pedido'
@@ -166,13 +163,11 @@ export const POST: APIRoute = async ({ request }) => {
                 updateData.stripe_refund_id = stripeRefundId;
             }
 
-            console.log(`💰 Reembolso procesado para devolución ${returnData.return_number}: ${stripeRefundId}`);
 
             // ============================================
             // 1. RESTAURAR STOCK AUTOMÁTICAMENTE
             // ============================================
             if (returnData.items && Array.isArray(returnData.items)) {
-                console.log('🔄 Restaurando stock de productos devueltos...');
                 for (const item of returnData.items) {
                     try {
                         // Obtener product_id original desde order_items
@@ -217,7 +212,6 @@ export const POST: APIRoute = async ({ request }) => {
                             }
                         }
                     } catch (stockError) {
-                        console.error('Error restaurando stock para item:', item, stockError);
                     }
                 }
             }
@@ -233,7 +227,6 @@ export const POST: APIRoute = async ({ request }) => {
                 const originalInvoice = await getInvoiceByOrderId(returnData.order_id);
 
                 if (originalInvoice) {
-                    console.log('📄 Generando factura rectificativa...');
 
                     // Crear items de factura con importes negativos
                     const invoiceItems = returnData.items.map((item: any) => ({
@@ -255,10 +248,8 @@ export const POST: APIRoute = async ({ request }) => {
                         type: 'credit_note',
                         originalInvoiceId: originalInvoice.id
                     });
-                    console.log('✅ Factura rectificativa generada');
                 }
             } catch (invoiceError) {
-                console.error('Error generando factura rectificativa:', invoiceError);
             }
         }
 
@@ -269,7 +260,6 @@ export const POST: APIRoute = async ({ request }) => {
             .eq('id', returnId);
 
         if (updateError) {
-            console.error('Error updating return:', updateError);
             return new Response(JSON.stringify({
                 success: false,
                 error: 'Error al actualizar la devolución en la base de datos'
@@ -305,7 +295,6 @@ export const POST: APIRoute = async ({ request }) => {
                                 content: pdfBuffer
                             });
                         } catch (attachErr) {
-                            console.error('Error preparando adjunto PDF de factura rectificativa:', attachErr);
                         }
                     }
 
@@ -327,7 +316,6 @@ export const POST: APIRoute = async ({ request }) => {
                     emailSent = true;
                 }
             } catch (emailError) {
-                console.error('Error sending email:', emailError);
             }
         }
 
@@ -350,7 +338,6 @@ export const POST: APIRoute = async ({ request }) => {
         });
 
     } catch (error) {
-        console.error('Error:', error);
         return new Response(JSON.stringify({
             success: false,
             error: (error as Error).message

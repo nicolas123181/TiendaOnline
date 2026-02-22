@@ -1,4 +1,4 @@
-import { getServiceSupabase } from './supabase';
+﻿import { getServiceSupabase } from './supabase';
 import type { Session, User } from '@supabase/supabase-js';
 
 export interface AuthContext {
@@ -28,7 +28,6 @@ export async function getServerSession(request: Request): Promise<Session | null
         // Este es un enfoque simplificado
         return null;
     } catch (error) {
-        console.error('Error getting server session:', error);
         return null;
     }
 }
@@ -49,7 +48,6 @@ export async function verifyAdminAccess(email: string | undefined): Promise<bool
 
         return !!data;
     } catch (error) {
-        console.error('Error verifying admin access:', error);
         return false;
     }
 }
@@ -104,7 +102,6 @@ export async function getAdminUsers() {
         if (error) return [];
         return data || [];
     } catch (error) {
-        console.error('Error fetching admin users:', error);
         return [];
     }
 }

@@ -1,4 +1,4 @@
-import type { APIRoute } from 'astro';
+﻿import type { APIRoute } from 'astro';
 import {
     getWishlistLowStockNotifications,
     markWishlistNotified,
@@ -95,7 +95,6 @@ export const POST: APIRoute = async ({ request }) => {
         });
 
     } catch (e) {
-        console.error('Error processing wishlist notifications:', e);
         return new Response(JSON.stringify({ error: 'Internal server error' }), {
             status: 500,
             headers: { 'Content-Type': 'application/json' },
@@ -127,7 +126,6 @@ export const GET: APIRoute = async ({ request }) => {
             headers: { 'Content-Type': 'application/json' },
         });
     } catch (e) {
-        console.error('Error getting wishlist notifications:', e);
         return new Response(JSON.stringify({ error: 'Internal server error' }), {
             status: 500,
             headers: { 'Content-Type': 'application/json' },

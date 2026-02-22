@@ -1,4 +1,4 @@
-import { defineMiddleware } from 'astro:middleware';
+﻿import { defineMiddleware } from 'astro:middleware';
 import { isSupabaseConfigured } from './lib/supabase';
 import { verifyAdminRequest } from './lib/adminAuth';
 
@@ -37,7 +37,6 @@ export const onRequest = defineMiddleware(async (context, next) => {
     if (isAdminRoute && !isLoginPage) {
         // Si Supabase no está configurado, permitir acceso (modo desarrollo)
         if (!isSupabaseConfigured) {
-            console.warn('Supabase not configured - admin routes unprotected');
             return next();
         }
 
@@ -49,7 +48,6 @@ export const onRequest = defineMiddleware(async (context, next) => {
                 return context.redirect('/admin/login');
             }
         } catch (error) {
-            console.error('Auth error:', error);
             // En caso de error, redirigir a login
             return context.redirect('/admin/login');
         }

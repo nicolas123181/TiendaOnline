@@ -1,4 +1,4 @@
-import type { APIRoute } from 'astro';
+﻿import type { APIRoute } from 'astro';
 import { supabase, isSupabaseConfigured, addToWishlist, removeFromWishlist, isInWishlist } from '../../lib/supabase';
 
 export const prerender = false;
@@ -123,7 +123,6 @@ export const POST: APIRoute = async ({ request, cookies }) => {
             });
         }
     } catch (e) {
-        console.error('Error adding to wishlist:', e);
         return new Response(JSON.stringify({ error: 'Internal server error' }), {
             status: 500,
             headers: { 'Content-Type': 'application/json' },
@@ -193,7 +192,6 @@ export const DELETE: APIRoute = async ({ url, cookies }) => {
             });
         }
     } catch (e) {
-        console.error('Error removing from wishlist:', e);
         return new Response(JSON.stringify({ error: 'Internal server error' }), {
             status: 500,
             headers: { 'Content-Type': 'application/json' },

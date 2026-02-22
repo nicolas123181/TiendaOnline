@@ -1,4 +1,4 @@
-import type { APIRoute } from 'astro';
+﻿import type { APIRoute } from 'astro';
 import Stripe from 'stripe';
 
 const stripe = new Stripe(import.meta.env.STRIPE_SECRET_KEY || '');
@@ -42,7 +42,6 @@ export const POST: APIRoute = async (context) => {
             { status: 200, headers: { 'Content-Type': 'application/json' } }
         );
     } catch (error) {
-        console.error('Stripe Payment Intent error:', error);
         return new Response(
             JSON.stringify({
                 error: 'Error al crear el pago: ' + (error as Error).message,

@@ -1,4 +1,4 @@
-import type { APIRoute } from 'astro';
+﻿import type { APIRoute } from 'astro';
 import Stripe from 'stripe';
 import { supabase, getServiceSupabase } from '../../lib/supabase';
 import {
@@ -66,7 +66,6 @@ export const POST: APIRoute = async ({ request }) => {
         const body = await request.json();
         const { orderData, paymentIntentId } = body;
 
-        console.log(`💳 Payment confirmed, creating order...`);
 
         if (!orderData) {
             return new Response(JSON.stringify({
@@ -80,7 +79,6 @@ export const POST: APIRoute = async ({ request }) => {
         // Sin esto, cualquier cliente podía forjar un pedido en estado 'paid'
         // ==========================================
         if (!paymentIntentId) {
-            console.error('❌ No paymentIntentId provided — rejecting request for security');
             return new Response(JSON.stringify({
                 success: false,
                 error: 'Se requiere el identificador de pago'
@@ -94,16 +92,13 @@ export const POST: APIRoute = async ({ request }) => {
             const paymentIntent = await stripeClient.paymentIntents.retrieve(paymentIntentId);
 
             if (paymentIntent.status !== 'succeeded') {
-                console.error(`❌ PaymentIntent ${paymentIntentId} status is '${paymentIntent.status}', not 'succeeded'`);
                 return new Response(JSON.stringify({
                     success: false,
                     error: 'El pago no fue completado correctamente'
                 }), { status: 402, headers: { 'Content-Type': 'application/json' } });
             }
 
-            console.log(`✅ Stripe verified: PaymentIntent ${paymentIntentId} succeeded`);
         } catch (stripeError) {
-            console.error('❌ Error verifying PaymentIntent with Stripe:', stripeError);
             return new Response(JSON.stringify({
                 success: false,
                 error: 'No se pudo verificar el pago. Por favor, contacta con soporte.'
@@ -131,7 +126,6 @@ export const POST: APIRoute = async ({ request }) => {
             db = getServiceSupabase();
         } catch (e) {
             // Fallback al cliente anónimo si service role no está configurado
-            console.warn('⚠️ Service role not configured, falling back to anonymous client');
             db = supabase;
         }
 
@@ -146,7 +140,6 @@ export const POST: APIRoute = async ({ request }) => {
             .maybeSingle();
 
         if (existingOrder) {
-            console.log(`⚠️ Order already exists for payment ${paymentIntentId}: #${existingOrder.id}`);
             return new Response(JSON.stringify({
                 success: true,
                 message: 'Pedido ya existente',
@@ -157,7 +150,6 @@ export const POST: APIRoute = async ({ request }) => {
         // ==========================================
         // CREAR LA ORDEN (ya pagada)
         // ==========================================
-        console.log('📝 Creating order with status: paid...');
 
         const { data: order, error: orderError } = await db
             .from('orders')
@@ -180,7 +172,6 @@ export const POST: APIRoute = async ({ request }) => {
         if (orderError || !order) {
             // Si el error es por duplicado (constraint unique), intentar recuperar el pedido existente
             if (orderError?.code === '23505' && paymentIntentId) {
-                console.log(`⚠️ Duplicate insert detected for payment ${paymentIntentId}, fetching existing order...`);
                 const { data: existingOrder } = await db
                     .from('orders')
                     .select('id')
@@ -196,14 +187,12 @@ export const POST: APIRoute = async ({ request }) => {
                 }
             }
 
-            console.error('❌ Error creating order:', orderError);
             return new Response(JSON.stringify({
                 success: false,
                 error: 'Error al crear el pedido: ' + (orderError?.message || 'Unknown error')
             }), { status: 500, headers: { 'Content-Type': 'application/json' } });
         }
 
-        console.log(`✅ Order created: #${order.id}`);
 
         // ==========================================
         // CREAR ORDER ITEMS
@@ -222,15 +211,12 @@ export const POST: APIRoute = async ({ request }) => {
             .insert(orderItems);
 
         if (itemsError) {
-            console.error('❌ Error creating order items:', itemsError);
         } else {
-            console.log(`✅ Order items created: ${orderItems.length} items`);
         }
 
         // ==========================================
         // CREAR FACTURA
         // ==========================================
-        console.log(`🧾 Creating invoice for order #${order.id}...`);
         let invoiceData = null;
         try {
             const invoiceItems: InvoiceItem[] = cartItems.map((item: any) => ({
@@ -257,13 +243,10 @@ export const POST: APIRoute = async ({ request }) => {
             });
 
             if (invoice) {
-                console.log(`✅ Invoice created: ${invoice.invoice_number}`);
                 invoiceData = invoice;
             } else {
-                console.warn('⚠️ Invoice creation returned null');
             }
         } catch (invoiceError) {
-            console.error('❌ Error creating invoice:', invoiceError);
             // No fallamos el proceso si la factura no se crea
         }
 
@@ -273,10 +256,8 @@ export const POST: APIRoute = async ({ request }) => {
         const lowStockProducts: LowStockProduct[] = [];
         const outOfStockProducts: OutOfStockProduct[] = [];
 
-        console.log(`📦 Processing ${cartItems.length} items for stock decrement`);
 
         for (const item of cartItems) {
-            console.log(`📦 Processing item: ${item.name} (ID: ${item.id}), Size: ${item.size || 'N/A'}, Qty: ${item.quantity}`);
 
             // Obtener información del producto
             const { data: product, error: productError } = await db
@@ -286,16 +267,13 @@ export const POST: APIRoute = async ({ request }) => {
                 .single();
 
             if (productError || !product) {
-                console.error(`❌ Product not found: ${item.id}, error:`, productError?.message);
                 continue;
             }
 
-            console.log(`📦 Product found: ${product.name}, current stock: ${product.stock}`);
             const productImage = product.images?.[0] || null;
 
             // Si el item tiene talla, decrementar stock de la talla específica
             if (item.size) {
-                console.log(`📏 Looking for size ${item.size} for product ${product.name} (ID: ${item.id})`);
 
                 // Obtener stock actual de la talla
                 const { data: sizeData, error: sizeError } = await db
@@ -306,11 +284,9 @@ export const POST: APIRoute = async ({ request }) => {
                     .single();
 
                 if (sizeError) {
-                    console.error(`❌ Error fetching size data:`, sizeError.message, sizeError.details);
                 }
 
                 if (sizeError || !sizeData) {
-                    console.warn(`⚠️ Size ${item.size} not found for product ${item.id}, falling back to product stock`);
 
                     const { data: updatedProductRows, error: productUpdateError } = await db
                         .from('products')
@@ -320,17 +296,12 @@ export const POST: APIRoute = async ({ request }) => {
                         .select('id');
 
                     if (productUpdateError) {
-                        console.error(`❌ Error updating product stock:`, productUpdateError.message);
                     } else if (!updatedProductRows || updatedProductRows.length === 0) {
-                        console.warn(`⚠️ Race condition: stock for ${product.name} claimed concurrently (oversell prevented)`);
                     } else {
-                        console.log(`✅ Product stock updated (fallback): ${product.stock} → ${product.stock - item.quantity}`);
                     }
                 } else {
                     // Decrementar stock de la talla específica (actualización condicional)
-                    console.log(`📏 Size found: ID ${sizeData.id}, current stock: ${sizeData.stock}`);
                     const newSizeStock = sizeData.stock - item.quantity;
-                    console.log(`📏 Updating size stock: ${sizeData.stock} -> ${newSizeStock}`);
 
                     const { data: updatedSizeRows, error: updateError } = await db
                         .from('product_sizes')
@@ -340,11 +311,8 @@ export const POST: APIRoute = async ({ request }) => {
                         .select('id');
 
                     if (updateError) {
-                        console.error(`❌ Error updating size stock for ${item.name} (${item.size}):`, updateError.message);
                     } else if (!updatedSizeRows || updatedSizeRows.length === 0) {
-                        console.warn(`⚠️ Race condition: size stock for ${item.name} (${item.size}) claimed concurrently (oversell prevented)`);
                     } else {
-                        console.log(`✅ Size stock updated for ${item.name} (${item.size}): ${sizeData.stock} -> ${newSizeStock}`);
                     }
 
                     // Verificar si esta TALLA específica tiene stock bajo
@@ -382,11 +350,8 @@ export const POST: APIRoute = async ({ request }) => {
                     .select('id');
 
                 if (updateError) {
-                    console.error(`❌ Error updating stock for ${item.name}:`, updateError);
                 } else if (!updatedRows || updatedRows.length === 0) {
-                    console.warn(`⚠️ Race condition: stock for ${item.name} claimed concurrently (oversell prevented)`);
                 } else {
-                    console.log(`✅ Stock updated for ${item.name}: ${product.stock} -> ${newStock}`);
                 }
 
                 if (newStock === 0) {
@@ -424,16 +389,12 @@ export const POST: APIRoute = async ({ request }) => {
                     isPickup = methodName.includes('recoger') || methodName.includes('tienda') || methodName.includes('pickup') || shippingMethod.cost === 0;
                 }
             } catch (e) {
-                console.warn('⚠️ Could not determine shipping method type:', e);
             }
         }
-        console.log(`📦 Is pickup order: ${isPickup}`);
 
         // ==========================================
         // ENVIAR EMAIL DE CONFIRMACIÓN
         // ==========================================
-        console.log(`📧 Sending confirmation email to ${customerEmail}`);
-        console.log('Cart items with images:', cartItems.map((item: any) => ({
             name: item.name,
             originalImage: item.image || item.images?.[0],
             processedImage: getPublicImageUrl(item.image || item.images?.[0])
@@ -461,11 +422,9 @@ export const POST: APIRoute = async ({ request }) => {
                 invoiceNumber: invoiceData?.invoice_number,
                 invoiceId: invoiceData?.id,
             });
-            console.log(`✅ Confirmation email sent`);
             // Delay de 2 segundos antes del siguiente email para evitar rate limiting
             await delay(2000);
         } catch (emailError) {
-            console.error('❌ Error sending confirmation email:', emailError);
         }
 
         // ==========================================
@@ -474,30 +433,24 @@ export const POST: APIRoute = async ({ request }) => {
         if (outOfStockProducts.length > 0) {
             try {
                 await sendOutOfStockAlert(outOfStockProducts);
-                console.log(`✅ Out of stock alert sent`);
                 // Delay de 2 segundos antes del siguiente email
                 await delay(2000);
             } catch (e) {
-                console.error('❌ Error sending out of stock alert:', e);
             }
         }
 
         if (lowStockProducts.length > 0) {
             try {
                 await sendLowStockAlert(lowStockProducts);
-                console.log(`✅ Low stock alert sent`);
                 // Delay de 2 segundos antes del siguiente email
                 await delay(2000);
             } catch (e) {
-                console.error('❌ Error sending low stock alert:', e);
             }
         }
 
         // ==========================================
         // ENVIAR NOTIFICACIÓN DE NUEVO PEDIDO AL ADMIN
         // ==========================================
-        console.log(`📧 Sending new order alert to admin...`);
-        console.log(`📧 Admin alert data:`, {
             orderId: order.id,
             customerName: customerName,
             itemCount: cartItems.length,
@@ -518,13 +471,9 @@ export const POST: APIRoute = async ({ request }) => {
                     size: item.size,
                 })),
             });
-            console.log(`✅ Admin alert sent. Result:`, adminAlertResult);
         } catch (e) {
-            console.error('❌ Error sending admin alert:', e);
-            console.error('❌ Error details:', e instanceof Error ? e.message : 'Unknown error');
         }
 
-        console.log(`🎉 Order #${order.id} completed successfully`);
 
         return new Response(JSON.stringify({
             success: true,
@@ -533,7 +482,6 @@ export const POST: APIRoute = async ({ request }) => {
         }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
     } catch (error) {
-        console.error('❌ Confirm payment error:', error);
         return new Response(JSON.stringify({
             success: false,
             error: 'Error confirmando el pago: ' + (error as Error).message

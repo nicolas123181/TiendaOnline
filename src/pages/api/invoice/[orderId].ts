@@ -34,7 +34,6 @@ export const GET: APIRoute = async ({ params, redirect }) => {
     // Redirigir al endpoint de PDF real
     return redirect(`/api/invoice/${invoice.id}/pdf`, 302);
   } catch (error) {
-    console.error("Error:", error);
     return new Response(JSON.stringify({ error: "Internal error" }), { status: 500, headers: { "Content-Type": "application/json" } });
   }
 };

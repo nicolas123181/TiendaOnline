@@ -1,4 +1,4 @@
-import type { APIRoute } from 'astro';
+﻿import type { APIRoute } from 'astro';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 type SitemapUrl = {
@@ -75,7 +75,6 @@ export const GET: APIRoute = async ({ site }) => {
                 });
             }
         } catch (error) {
-            console.error('Failed to enrich sitemap from Supabase:', error);
         }
     }
 

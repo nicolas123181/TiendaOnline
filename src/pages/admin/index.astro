@@ -1,4 +1,4 @@
----
+﻿---
 import AdminLayout from "../../layouts/AdminLayout.astro";
 import { getProducts, getCategories, supabase } from "../../lib/supabase";
 import { formatPrice } from "../../lib/utils";
@@ -947,7 +947,6 @@ function getStockBadgeClass(stock: number): string {
                 }
             }
         } catch (e) {
-            console.error('Error loading wishlist status:', e);
         } finally {
             refreshIcon?.classList.remove('animate-spin');
         }

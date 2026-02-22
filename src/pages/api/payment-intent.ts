@@ -1,4 +1,4 @@
-import type { APIRoute } from 'astro';
+﻿import type { APIRoute } from 'astro';
 import Stripe from 'stripe';
 
 const stripeSecretKey = import.meta.env.STRIPE_SECRET_KEY;
@@ -36,7 +36,6 @@ export const POST: APIRoute = async ({ request }) => {
             { status: 200, headers: { 'Content-Type': 'application/json' } }
         );
     } catch (error) {
-        console.error('Stripe error:', error);
         return new Response(
             JSON.stringify({ error: (error as Error).message }),
             { status: 500, headers: { 'Content-Type': 'application/json' } }

@@ -1,4 +1,4 @@
-import type { APIRoute } from 'astro';
+﻿import type { APIRoute } from 'astro';
 import { supabase, isSupabaseConfigured } from '../../../lib/supabase';
 
 export const prerender = false;
@@ -83,7 +83,6 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
         });
 
     } catch (e) {
-        console.error('Login error:', e);
         return new Response(JSON.stringify({ error: 'Error interno del servidor' }), {
             status: 500,
             headers: { 'Content-Type': 'application/json' },

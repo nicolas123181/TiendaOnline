@@ -1,4 +1,4 @@
-import type { APIRoute } from 'astro';
+﻿import type { APIRoute } from 'astro';
 import { createServerClient, createServerClientFromAuthHeader } from '../../../lib/supabase';
 import { Resend } from 'resend';
 import PDFDocument from 'pdfkit';
@@ -310,7 +310,6 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         }
 
         // Obtener el pedido
-        console.log('Buscando pedido con ID:', orderId, 'tipo:', typeof orderId);
 
         const { data: order, error: orderError } = await supabase
             .from('orders')
@@ -318,10 +317,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
             .eq('id', orderId)
             .single();
 
-        console.log('Resultado consulta order:', { order: order?.id, error: orderError });
 
         if (orderError || !order) {
-            console.error('Error detallado:', orderError);
             return new Response(JSON.stringify({
                 success: false,
                 error: 'Pedido no encontrado',
@@ -398,7 +395,6 @@ export const POST: APIRoute = async ({ request, cookies }) => {
             .single();
 
         if (insertError) {
-            console.error('Error creating return:', insertError);
             return new Response(JSON.stringify({
                 success: false,
                 error: 'Error al crear la devolución'
@@ -439,7 +435,6 @@ export const POST: APIRoute = async ({ request, cookies }) => {
                     html: getAdminReturnEmailHtml(order.customer_name, order.customer_email, returnNumber, returnItems, reason, RETURN_REASONS[reason])
                 });
             } catch (emailError) {
-                console.error('Error sending email:', emailError);
                 // No fallamos la request por el email
             }
         }
@@ -451,7 +446,6 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
     } catch (error) {
-        console.error('Error:', error);
         return new Response(JSON.stringify({
             success: false,
             error: (error as Error).message
