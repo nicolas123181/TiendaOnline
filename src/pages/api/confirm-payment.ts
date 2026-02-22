@@ -447,11 +447,6 @@ export const POST: APIRoute = async ({ request }) => {
         // ==========================================
         // ENVIAR NOTIFICACIÓN DE NUEVO PEDIDO AL ADMIN
         // ==========================================
-            orderId: order.id,
-            customerName: customerName,
-            itemCount: cartItems.length,
-            total: total
-        });
         try {
             const adminAlertResult = await sendNewOrderAdminAlert({
                 orderId: order.id,

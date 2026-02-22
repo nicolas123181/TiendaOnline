@@ -70,13 +70,6 @@ export const POST: APIRoute = async ({ request, cookies }) => {
             .eq('id', orderId)
             .single();
 
-            orderId,
-            userEmail: user.email,
-            orderEmail: order?.customer_email,
-            found: !!order,
-            error: orderError?.message
-        });
-
         if (orderError || !order) {
             return new Response(JSON.stringify({
                 success: false,
