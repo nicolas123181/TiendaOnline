@@ -7,23 +7,16 @@ import {
     getCategoryBySlug,
 } from "../../lib/supabase";
 
-// SSG
-export const prerender = true;
+// SSR - Fetch live data on each request so new products appear immediately
+export const prerender = false;
 
-export async function getStaticPaths() {
-    const categories = await getCategories();
+const { slug } = Astro.params;
 
-    return categories.map((category) => ({
-        params: { slug: category.slug },
-        props: { category },
-    }));
+if (!slug) {
+    return Astro.redirect("/404");
 }
 
-interface Props {
-    category: Awaited<ReturnType<typeof getCategoryBySlug>>;
-}
-
-const { category } = Astro.props;
+const category = await getCategoryBySlug(slug);
 
 if (!category) {
     return Astro.redirect("/404");
