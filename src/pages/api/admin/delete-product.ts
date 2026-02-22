@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getServiceSupabase } from '../../../lib/supabase';
+import { supabase, getServiceSupabase } from '../../../lib/supabase';
 import { verifyAdminRequest, unauthorizedResponse } from '../../../lib/adminAuth';
 
 /**
@@ -16,8 +16,27 @@ export const DELETE: APIRoute = async ({ request }) => {
         return unauthorizedResponse();
     }
 
+    // Intentar usar el cliente service-role; si no está configurado,
+    // usar el cliente anon (ya estamos autenticados como admin)
+    let db = supabase;
     try {
-        const { productId } = await request.json();
+        db = getServiceSupabase();
+    } catch {
+        // SUPABASE_SERVICE_ROLE_KEY no configurado → seguimos con cliente anon
+    }
+
+    try {
+        let body: any;
+        try {
+            body = await request.json();
+        } catch {
+            return new Response(JSON.stringify({
+                success: false,
+                error: 'Body JSON inválido'
+            }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        }
+
+        const { productId } = body;
 
         if (!productId || isNaN(Number(productId))) {
             return new Response(JSON.stringify({
@@ -27,10 +46,9 @@ export const DELETE: APIRoute = async ({ request }) => {
         }
 
         const id = Number(productId);
-        const adminDb = getServiceSupabase();
 
         // 1. Verificar que el producto existe
-        const { data: product, error: fetchError } = await adminDb
+        const { data: product, error: fetchError } = await db
             .from('products')
             .select('id, name')
             .eq('id', id)
@@ -39,12 +57,12 @@ export const DELETE: APIRoute = async ({ request }) => {
         if (fetchError || !product) {
             return new Response(JSON.stringify({
                 success: false,
-                error: 'Producto no encontrado'
+                error: `Producto no encontrado${fetchError ? ': ' + fetchError.message : ''}`
             }), { status: 404, headers: { 'Content-Type': 'application/json' } });
         }
 
         // 2. Comprobar si tiene ventas asociadas
-        const { count: salesCount, error: salesError } = await adminDb
+        const { count: salesCount, error: salesError } = await db
             .from('order_items')
             .select('id', { count: 'exact', head: true })
             .eq('product_id', id);
@@ -65,25 +83,14 @@ export const DELETE: APIRoute = async ({ request }) => {
             }), { status: 409, headers: { 'Content-Type': 'application/json' } });
         }
 
-        // 3. Eliminar stock por tallas (product_sizes) si existe la tabla
-        const { error: sizesError } = await adminDb
-            .from('product_sizes')
-            .delete()
-            .eq('product_id', id);
+        // 3. Eliminar stock por tallas (ignorar si la tabla no existe)
+        await db.from('product_sizes').delete().eq('product_id', id);
 
-        // Ignorar error si la tabla no existe (columna desconocida, etc.)
-        if (sizesError && !sizesError.message.includes('does not exist') && !sizesError.message.includes('relation')) {
-            return new Response(JSON.stringify({
-                success: false,
-                error: `Error al eliminar tallas: ${sizesError.message}`
-            }), { status: 500, headers: { 'Content-Type': 'application/json' } });
-        }
-
-        // 4. Eliminar wishlist items asociados (por si acaso hay FK)
-        await adminDb.from('wishlist').delete().eq('product_id', id);
+        // 4. Eliminar wishlist items asociados
+        await db.from('wishlist').delete().eq('product_id', id);
 
         // 5. Eliminar el producto
-        const { error: deleteError } = await adminDb
+        const { error: deleteError } = await db
             .from('products')
             .delete()
             .eq('id', id);
@@ -101,9 +108,10 @@ export const DELETE: APIRoute = async ({ request }) => {
         }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
     } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
         return new Response(JSON.stringify({
             success: false,
-            error: 'Error inesperado en el servidor'
+            error: `Error en el servidor: ${msg}`
         }), { status: 500, headers: { 'Content-Type': 'application/json' } });
     }
 };
