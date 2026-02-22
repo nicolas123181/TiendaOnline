@@ -3,7 +3,8 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
 import {
     getCategories,
     supabase,
-    getServiceSupabase,
+    updateProductSizes,
+    type SizeStock,
 } from "../../../lib/supabase";
 import { slugify } from "../../../lib/utils";
 
@@ -11,6 +12,12 @@ import { slugify } from "../../../lib/utils";
 export const prerender = false;
 
 const categories = await getCategories();
+
+// Mapa slug → tallas para pasar al cliente
+const categorySlugMap: Record<number, string> = {};
+categories.forEach((cat) => {
+    categorySlugMap[cat.id] = cat.slug;
+});
 
 let success = false;
 let error = "";
@@ -25,12 +32,23 @@ if (Astro.request.method === "POST") {
         const description = formData.get("description")?.toString() || "";
         const priceStr = formData.get("price")?.toString() || "0";
         const price = Math.round(parseFloat(priceStr) * 100); // Convertir a céntimos
-        const stock = parseInt(formData.get("stock")?.toString() || "0");
         const category_id = parseInt(
             formData.get("category_id")?.toString() || "0",
         );
         const featured = formData.get("featured") === "on";
         const imagesStr = formData.get("images")?.toString() || "[]";
+
+        // Procesar stock por tallas
+        const sizesJson = formData.get("sizes_stock")?.toString() || "[]";
+        let sizesStock: SizeStock[] = [];
+        try {
+            sizesStock = JSON.parse(sizesJson);
+        } catch {
+            sizesStock = [];
+        }
+
+        // Calcular stock total desde las tallas
+        const stock = sizesStock.reduce((sum, s) => sum + (s.stock || 0), 0);
 
         let images: string[] = [];
         try {
@@ -46,10 +64,10 @@ if (Astro.request.method === "POST") {
             error = "El nombre del producto es obligatorio";
         } else if (price <= 0) {
             error = "El precio debe ser mayor que 0";
-        } else if (stock < 0) {
-            error = "El stock no puede ser negativo";
         } else if (!category_id) {
             error = "Debes seleccionar una categoría";
+        } else if (sizesStock.length === 0) {
+            error = "Debes introducir el stock por tallas";
         } else {
             // Insertar producto
             const { data, error: insertError } = await supabase
@@ -71,6 +89,8 @@ if (Astro.request.method === "POST") {
             if (insertError) {
                 error = `Error al crear el producto: ${insertError.message}`;
             } else {
+                // Guardar stock por tallas
+                await updateProductSizes(data.id, sizesStock);
                 success = true;
                 newProductId = data.id;
             }
@@ -267,68 +287,42 @@ if (Astro.request.method === "POST") {
 
             <!-- Sidebar -->
             <div class="space-y-6">
-                <!-- Pricing & Stock -->
+                <!-- Precio -->
                 <div class="bg-surface-primary rounded-2xl p-6 shadow-soft">
                     <h2 class="text-lg font-semibold text-brand-navy mb-6">
-                        Precio y Stock
+                        Precio
                     </h2>
 
-                    <div class="space-y-4">
-                        <!-- Price -->
-                        <div>
-                            <label
-                                for="price"
-                                class="block text-sm font-medium text-text-primary mb-2"
+                    <div>
+                        <label
+                            for="price"
+                            class="block text-sm font-medium text-text-primary mb-2"
+                        >
+                            Precio (€) <span class="text-status-error">*</span>
+                        </label>
+                        <div class="relative">
+                            <span
+                                class="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted"
+                                >€</span
                             >
-                                Precio (€) <span class="text-status-error"
-                                    >*</span
-                                >
-                            </label>
-                            <div class="relative">
-                                <span
-                                    class="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted"
-                                    >€</span
-                                >
-                                <input
-                                    type="number"
-                                    id="price"
-                                    name="price"
-                                    required
-                                    min="0.01"
-                                    step="0.01"
-                                    class="w-full pl-10 pr-4 py-3 rounded-xl border border-border-light bg-surface-primary focus:border-brand-navy focus:outline-none focus:ring-2 focus:ring-brand-navy/20"
-                                    placeholder="0.00"
-                                />
-                            </div>
-                        </div>
-
-                        <!-- Stock -->
-                        <div>
-                            <label
-                                for="stock"
-                                class="block text-sm font-medium text-text-primary mb-2"
-                            >
-                                Stock disponible <span class="text-status-error"
-                                    >*</span
-                                >
-                            </label>
                             <input
                                 type="number"
-                                id="stock"
-                                name="stock"
+                                id="price"
+                                name="price"
                                 required
-                                min="0"
-                                class="w-full px-4 py-3 rounded-xl border border-border-light bg-surface-primary focus:border-brand-navy focus:outline-none focus:ring-2 focus:ring-brand-navy/20"
-                                placeholder="0"
+                                min="0.01"
+                                step="0.01"
+                                class="w-full pl-10 pr-4 py-3 rounded-xl border border-border-light bg-surface-primary focus:border-brand-navy focus:outline-none focus:ring-2 focus:ring-brand-navy/20"
+                                placeholder="0.00"
                             />
                         </div>
                     </div>
                 </div>
 
-                <!-- Category -->
+                <!-- Categoría -->
                 <div class="bg-surface-primary rounded-2xl p-6 shadow-soft">
-                    <h2 class="text-lg font-semibold text-brand-navy mb-6">
-                        Categoría
+                    <h2 class="text-lg font-semibold text-brand-navy mb-4">
+                        Categoría <span class="text-status-error">*</span>
                     </h2>
 
                     <select
@@ -340,10 +334,93 @@ if (Astro.request.method === "POST") {
                         <option value="">Selecciona una categoría</option>
                         {
                             categories.map((cat) => (
-                                <option value={cat.id}>{cat.name}</option>
+                                <option value={cat.id} data-slug={cat.slug}>{cat.name}</option>
                             ))
                         }
                     </select>
+                </div>
+
+                <!-- Stock por Tallas (se actualiza al elegir categoría) -->
+                <div
+                    id="sizes-section"
+                    class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 shadow-soft border border-blue-200 hidden"
+                >
+                    <div class="flex items-center justify-between mb-4">
+                        <h2
+                            class="text-lg font-semibold text-brand-navy flex items-center gap-2"
+                        >
+                            <svg
+                                class="w-5 h-5 text-blue-600"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
+                                ></path>
+                            </svg>
+                            Stock por Tallas
+                        </h2>
+                        <span
+                            id="total-stock-badge"
+                            class="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-semibold"
+                        >
+                            Total: 0
+                        </span>
+                    </div>
+
+                    <p class="text-sm text-blue-700 mb-4">
+                        Ingresa el stock disponible para cada talla. El stock
+                        total se calcula automáticamente.
+                    </p>
+
+                    <div class="grid grid-cols-2 gap-3" id="sizes-grid">
+                        <!-- Se rellena dinámicamente con JS -->
+                    </div>
+
+                    <input
+                        type="hidden"
+                        name="sizes_stock"
+                        id="sizes-stock-input"
+                        value="[]"
+                    />
+
+                    <div class="mt-4 pt-4 border-t border-blue-200">
+                        <a
+                            href="/guia-tallas"
+                            target="_blank"
+                            class="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 transition-colors"
+                        >
+                            <svg
+                                class="w-4 h-4"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                ></path>
+                            </svg>
+                            Ver guía de tallas
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Indicador: elige categoría primero -->
+                <div
+                    id="sizes-placeholder"
+                    class="bg-surface-secondary rounded-2xl p-6 shadow-soft border border-dashed border-border-medium text-center"
+                >
+                    <svg class="w-8 h-8 text-text-muted mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                    </svg>
+                    <p class="text-sm text-text-muted">Selecciona una categoría para ver las tallas disponibles y introducir el stock</p>
                 </div>
 
                 <!-- Featured -->
@@ -389,17 +466,109 @@ if (Astro.request.method === "POST") {
     </form>
 </AdminLayout>
 
-<script>
-    // File upload handling - Subida a Cloudinary
+<script define:vars={{ categorySlugMap }}>
+    // ====== TALLAS POR CATEGORÍA ======
+    const sizeMappings = {
+        'camisas':    ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
+        'camisetas':  ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
+        'pantalones': ['38', '40', '42', '44', '46', '48', '50'],
+        'trajes':     ['46', '48', '50', '52', '54', '56'],
+        'chalecos':   ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
+        'abrigos':    ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
+    };
+
+    function getSizes(slug) {
+        return sizeMappings[slug] || ['S', 'M', 'L', 'XL'];
+    }
+
+    const categorySelect = document.getElementById('category_id');
+    const sizesSection = document.getElementById('sizes-section');
+    const sizesPlaceholder = document.getElementById('sizes-placeholder');
+    const sizesGrid = document.getElementById('sizes-grid');
+    const sizesStockInput = document.getElementById('sizes-stock-input');
+    const totalStockBadge = document.getElementById('total-stock-badge');
+
+    function updateSizesStock() {
+        const inputs = sizesGrid.querySelectorAll('.size-stock-input');
+        const sizesData = [];
+        let totalStock = 0;
+
+        inputs.forEach((input) => {
+            const size = input.getAttribute('data-size');
+            const stock = parseInt(input.value) || 0;
+            sizesData.push({ size, stock });
+            totalStock += stock;
+        });
+
+        sizesStockInput.value = JSON.stringify(sizesData);
+
+        // Badge de color
+        if (totalStock === 0) {
+            totalStockBadge.className = 'px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-semibold';
+        } else if (totalStock < 10) {
+            totalStockBadge.className = 'px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm font-semibold';
+        } else {
+            totalStockBadge.className = 'px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold';
+        }
+        totalStockBadge.textContent = `Total: ${totalStock}`;
+    }
+
+    function renderSizes(slug) {
+        const sizes = getSizes(slug);
+        sizesGrid.innerHTML = '';
+
+        sizes.forEach((size) => {
+            const div = document.createElement('div');
+            div.className = 'bg-white rounded-lg p-3 border border-blue-100 hover:border-blue-300 transition-colors';
+            div.innerHTML = `
+                <label class="flex items-center justify-between">
+                    <span class="text-sm font-bold text-brand-navy w-12">${size}</span>
+                    <input
+                        type="number"
+                        min="0"
+                        value="0"
+                        data-size="${size}"
+                        class="size-stock-input w-20 px-3 py-2 text-center rounded-lg border border-gray-200 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 text-sm font-medium"
+                    />
+                </label>
+            `;
+            sizesGrid.appendChild(div);
+        });
+
+        // Añadir listeners
+        sizesGrid.querySelectorAll('.size-stock-input').forEach((input) => {
+            input.addEventListener('input', updateSizesStock);
+            input.addEventListener('change', updateSizesStock);
+        });
+
+        updateSizesStock();
+    }
+
+    categorySelect?.addEventListener('change', () => {
+        const selectedOption = categorySelect.options[categorySelect.selectedIndex];
+        const slug = selectedOption.getAttribute('data-slug') || '';
+
+        if (slug) {
+            sizesSection.classList.remove('hidden');
+            sizesPlaceholder.classList.add('hidden');
+            renderSizes(slug);
+        } else {
+            sizesSection.classList.add('hidden');
+            sizesPlaceholder.classList.remove('hidden');
+            sizesStockInput.value = '[]';
+        }
+    });
+
+    // ====== FILE UPLOAD - Subida a Cloudinary ======
     const dropZone = document.getElementById("drop-zone");
-    const fileInput = document.getElementById("file-input") as HTMLInputElement;
+    const fileInput = document.getElementById("file-input");
     const browseBtn = document.getElementById("browse-btn");
     const previewsContainer = document.getElementById("image-previews");
-    const imagesInput = document.getElementById(
-        "images-input",
-    ) as HTMLInputElement;
+    const imagesInput = document.getElementById("images-input");
 
-    let uploadedImages: string[] = [];
+
+
+    let uploadedImages = [];
     let isUploading = false;
 
     browseBtn?.addEventListener("click", () => {
@@ -420,7 +589,7 @@ if (Astro.request.method === "POST") {
         e.preventDefault();
         dropZone.classList.remove("border-brand-navy", "bg-surface-secondary");
 
-        const files = (e as DragEvent).dataTransfer?.files;
+        const files = e.dataTransfer?.files;
         if (files) handleFiles(files);
     });
 
@@ -428,7 +597,7 @@ if (Astro.request.method === "POST") {
         if (fileInput.files) handleFiles(fileInput.files);
     });
 
-    async function handleFiles(files: FileList) {
+    async function handleFiles(files) {
         if (uploadedImages.length >= 5) {
             alert("Máximo 5 imágenes por producto");
             return;
@@ -459,7 +628,7 @@ if (Astro.request.method === "POST") {
         }
     }
 
-    async function uploadToCloudinary(file: File) {
+    async function uploadToCloudinary(file) {
         isUploading = true;
 
         // Mostrar indicador de carga
@@ -484,9 +653,9 @@ if (Astro.request.method === "POST") {
             uploadedImages.push(result.url);
             updatePreviews();
             imagesInput.value = JSON.stringify(uploadedImages);
-        } catch (error) {
+        } catch (err) {
             alert(
-                `Error al subir ${file.name}: ${error instanceof Error ? error.message : "Error desconocido"}`,
+                `Error al subir ${file.name}: ${err instanceof Error ? err.message : "Error desconocido"}`,
             );
         } finally {
             isUploading = false;
@@ -564,10 +733,10 @@ if (Astro.request.method === "POST") {
     }
 
     // ====== DRAG & DROP PARA REORDENAR IMÁGENES ======
-    let draggedElement: HTMLElement | null = null;
+    let draggedElement = null;
     let draggedIndex = -1;
 
-    function setupImageDragAndDrop(imageDiv: HTMLElement) {
+    function setupImageDragAndDrop(imageDiv) {
         imageDiv.addEventListener('dragstart', handleDragStart);
         imageDiv.addEventListener('dragend', handleDragEnd);
         imageDiv.addEventListener('dragover', handleDragOver);
@@ -576,8 +745,8 @@ if (Astro.request.method === "POST") {
         imageDiv.addEventListener('dragleave', handleDragLeave);
     }
 
-    function handleDragStart(e: DragEvent) {
-        draggedElement = (e.target as HTMLElement).closest('.cursor-move');
+    function handleDragStart(e) {
+        draggedElement = e.target.closest('.cursor-move');
         if (!draggedElement || !previewsContainer) return;
         
         const previews = Array.from(previewsContainer.querySelectorAll('.cursor-move'));
@@ -589,7 +758,7 @@ if (Astro.request.method === "POST") {
         }
     }
 
-    function handleDragEnd(e: DragEvent) {
+    function handleDragEnd(e) {
         if (draggedElement) {
             draggedElement.style.opacity = '';
         }
@@ -604,33 +773,33 @@ if (Astro.request.method === "POST") {
         draggedIndex = -1;
     }
 
-    function handleDragOver(e: DragEvent) {
+    function handleDragOver(e) {
         e.preventDefault();
         if (e.dataTransfer) {
             e.dataTransfer.dropEffect = 'move';
         }
     }
 
-    function handleDragEnter(e: DragEvent) {
-        const targetElement = (e.target as HTMLElement).closest('.cursor-move');
+    function handleDragEnter(e) {
+        const targetElement = e.target.closest('.cursor-move');
         if (targetElement && targetElement !== draggedElement) {
             targetElement.classList.add('border-2', 'border-brand-navy', 'scale-105');
         }
     }
 
-    function handleDragLeave(e: DragEvent) {
-        const targetElement = (e.target as HTMLElement).closest('.cursor-move');
-        const relatedTarget = e.relatedTarget as Node;
+    function handleDragLeave(e) {
+        const targetElement = e.target.closest('.cursor-move');
+        const relatedTarget = e.relatedTarget;
         if (targetElement && !targetElement.contains(relatedTarget)) {
             targetElement.classList.remove('border-2', 'border-brand-navy', 'scale-105');
         }
     }
 
-    function handleDrop(e: DragEvent) {
+    function handleDrop(e) {
         e.stopPropagation();
         e.preventDefault();
         
-        const targetElement = (e.target as HTMLElement).closest('.cursor-move');
+        const targetElement = e.target.closest('.cursor-move');
         if (!targetElement || !draggedElement || !previewsContainer || targetElement === draggedElement) {
             return;
         }
