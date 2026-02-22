@@ -2,6 +2,7 @@
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import {
     supabase,
+    getServiceSupabase,
     getCategories,
     getProductSizes,
     updateProductSizes,
@@ -64,7 +65,8 @@ if (Astro.request.method === "POST") {
         const action = formData.get("action")?.toString();
 
         if (action === "delete") {
-            const { count: soldCount, error: soldCountError } = await supabase
+            const adminDb = getServiceSupabase();
+            const { count: soldCount, error: soldCountError } = await adminDb
                 .from("order_items")
                 .select("id", { count: "exact", head: true })
                 .eq("product_id", id);
@@ -76,7 +78,11 @@ if (Astro.request.method === "POST") {
             } else if (soldItemsCount > 0) {
                 error = `No se puede eliminar este producto porque tiene ${soldItemsCount} venta(s) registrada(s). Puedes deshabilitarlo para ocultarlo de la tienda.`;
             } else {
-                const { error: deleteError } = await supabase
+                // Eliminar primero tallas y wishlist
+                await adminDb.from("product_sizes").delete().eq("product_id", id);
+                await adminDb.from("wishlist").delete().eq("product_id", id);
+
+                const { error: deleteError } = await adminDb
                     .from("products")
                     .delete()
                     .eq("id", id);

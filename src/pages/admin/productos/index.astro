@@ -454,16 +454,60 @@ const enrichedProducts = products.map((p) => ({
             const id = btn.getAttribute("data-id");
             const name = btn.getAttribute("data-name");
 
-            const confirmMessage = `¿Estás seguro de que quieres eliminar "${name}"?`;
+            const confirmMessage = `¿Estás seguro de que quieres eliminar "${name}"?\n\nEsta acción es irreversible.`;
             const confirmed =
                 (await (window as any).vantageConfirm?.(confirmMessage, {
                     title: "Eliminar producto",
                     confirmText: "Eliminar",
                 })) ?? confirm(confirmMessage);
 
-            if (confirmed) {
-                // Aquí iría la lógica de eliminación con Supabase
-                alert("Funcionalidad de eliminación - Implementar con API");
+            if (!confirmed) return;
+
+            // Mostrar estado de carga en el botón
+            const btnEl = btn as HTMLButtonElement;
+            const originalHTML = btnEl.innerHTML;
+            btnEl.disabled = true;
+            btnEl.innerHTML = `<svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>`;
+
+            try {
+                const response = await fetch('/api/admin/delete-product', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ productId: Number(id) }),
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Animar y eliminar la fila de la tabla
+                    const row = btnEl.closest('tr');
+                    if (row) {
+                        row.style.transition = 'opacity 0.3s, transform 0.3s';
+                        row.style.opacity = '0';
+                        row.style.transform = 'translateX(20px)';
+                        setTimeout(() => row.remove(), 300);
+                    }
+
+                    // Actualizar contador
+                    const header = document.querySelector('p.text-text-muted');
+                    if (header) {
+                        const remaining = document.querySelectorAll('.product-row:not([style*="display: none"])').length - 1;
+                        header.textContent = `${remaining} productos en el catálogo`;
+                    }
+                } else if (result.cannotDelete) {
+                    // Producto con ventas — no se puede eliminar
+                    alert(`⛔ ${result.error}`);
+                    btnEl.disabled = false;
+                    btnEl.innerHTML = originalHTML;
+                } else {
+                    alert(`Error: ${result.error}`);
+                    btnEl.disabled = false;
+                    btnEl.innerHTML = originalHTML;
+                }
+            } catch (err) {
+                alert('Error de conexión. Inténtalo de nuevo.');
+                btnEl.disabled = false;
+                btnEl.innerHTML = originalHTML;
             }
         });
     });
