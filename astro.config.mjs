@@ -5,10 +5,10 @@ import react from '@astrojs/react';
 import node from '@astrojs/node';
 
 // https://astro.build/config
-// En Astro 5, usamos 'server' con prerender por defecto en las páginas estáticas
+// En Astro 5, usamos 'hybrid': páginas estáticas son SSG por defecto, las dinámicas llevan prerender = false
 export default defineConfig({
     site:'https://nicovantage.victoriafp.online',
-    output: 'server',
+    output: 'hybrid',
     security: {
         checkOrigin: false
     },
