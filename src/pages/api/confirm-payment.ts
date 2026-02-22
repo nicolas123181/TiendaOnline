@@ -395,6 +395,10 @@ export const POST: APIRoute = async ({ request }) => {
         // ==========================================
         // ENVIAR EMAIL DE CONFIRMACIÓN
         // ==========================================
+            name: item.name,
+            originalImage: item.image || item.images?.[0],
+            processedImage: getPublicImageUrl(item.image || item.images?.[0])
+        })));
         try {
             await sendOrderConfirmationEmail({
                 orderNumber: order.id.toString(),

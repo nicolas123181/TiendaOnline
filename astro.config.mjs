@@ -5,7 +5,7 @@ import react from '@astrojs/react';
 import node from '@astrojs/node';
 
 // https://astro.build/config
-// En Astro 5, 'hybrid' fue eliminado. Se usa 'server' con prerender explícito por página (SSG/SSR híbrido)
+// En Astro 5, usamos 'server' con prerender por defecto en las páginas estáticas
 export default defineConfig({
     site:'https://nicovantage.victoriafp.online',
     output: 'server',
